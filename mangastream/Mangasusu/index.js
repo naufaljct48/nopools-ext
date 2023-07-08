@@ -2307,7 +2307,7 @@ class Mangasusu extends MangaStream_1.MangaStream {
         this.homescreen_sections['top_monthly'].enabled = false;
         this.homescreen_sections['top_weekly'].enabled = false;
         this.homescreen_sections['latest_update'].selectorFunc = ($) => $('div.bsx', $('h2:contains(Latest Update)')?.parent()?.next());
-        this.homescreen_sections['latest_update'].subtitleSelectorFunc = ($, element) => $('span.fivchap', element).text().trim();
+        this.homescreen_sections['latest_update'].subtitleSelectorFunc = ($, element) => $('span.fivchap', element).first().text().trim();
     }
 }
 exports.Mangasusu = Mangasusu;

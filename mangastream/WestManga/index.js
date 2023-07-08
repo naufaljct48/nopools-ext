@@ -2359,6 +2359,9 @@ class WestManga extends MangaStream_1.MangaStream {
     }
     configureSections() {
         this.homescreen_sections['new_titles'].enabled = true;
+        this.homescreen_sections['top_alltime'].enabled = false;
+        this.homescreen_sections['top_monthly'].enabled = false;
+        this.homescreen_sections['top_weekly'].enabled = false;
         this.homescreen_sections['new_titles'].selectorFunc = ($) => $('li', $('h3:contains(Project Baru WM)')?.parent()?.next());
         this.homescreen_sections['popular_today'].selectorFunc = ($) => $('div.bsx', $('h2:contains(Komik Popular Hari Ini...)')?.parent()?.next());
         this.homescreen_sections['latest_update'].selectorFunc = ($) => $('div.bsx', $('h2:contains(UPDATE KOMIK LAINYA...)')?.parent()?.next());

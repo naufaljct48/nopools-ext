@@ -1476,7 +1476,8 @@ class Komiku extends MangaStream_1.MangaStream {
         };
     }
     configureSections() {
-        this.homescreen_sections['new_titles'].enabled = false;
+        this.homescreen_sections['new_titles'].enabled = true;
+        this.homescreen_sections['new_titles'].selectorFunc = ($) => $('li', $('h3:contains(Baca Komik Serial Terbaru)')?.parent()?.next());
         this.homescreen_sections['popular_today'].selectorFunc = ($) => $('div.bsx', $('h2:contains(Baca Komik Terpopuler Hari Ini Online)')?.parent()?.next());
         this.homescreen_sections['latest_update'].selectorFunc = ($) => $('div.uta', $('h2:contains(Baca Komik Terbaru Online)')?.parent()?.next());
     }

@@ -1468,7 +1468,7 @@ class KomikIndoTop extends MangaStream_1.MangaStream {
     configureSections() {
         this.homescreen_sections['new_titles'].enabled = false;
         this.homescreen_sections['latest_update'].selectorFunc = ($) => $('div.bsx', $('h2:contains(Latest Update)')?.parent()?.next());
-        this.homescreen_sections['latest_update'].subtitleSelectorFunc = ($, element) => $('span.fivchap', element).text().trim();
+        this.homescreen_sections['latest_update'].subtitleSelectorFunc = ($, element) => $('span.fivchap', element).first().text().trim();
     }
 }
 exports.KomikIndoTop = KomikIndoTop;

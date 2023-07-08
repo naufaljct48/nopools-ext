@@ -1477,8 +1477,9 @@ class KomikIndo extends MangaStream_1.MangaStream {
     }
     configureSections() {
         this.homescreen_sections['new_titles'].enabled = true;
+        this.homescreen_sections['new_titles'].selectorFunc = ($) => $('li', $('h3:contains(MANGA TERBARU)')?.parent()?.next());
         this.homescreen_sections['popular_today'].selectorFunc = ($) => $('div.bsx', $('h2:contains(SEDANG HANGAT DIBACA)')?.parent()?.next());
-        this.homescreen_sections['latest_update'].selectorFunc = ($) => $('div.bsx', $('h2:contains(CHAPTER TERBARU)')?.parent()?.next());
+        this.homescreen_sections['latest_update'].selectorFunc = ($) => $('div.uta', $('h2:contains(CHAPTER TERBARU)')?.parent()?.next());
     }
 }
 exports.KomikIndo = KomikIndo;
