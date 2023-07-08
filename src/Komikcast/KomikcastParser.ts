@@ -79,7 +79,7 @@ export class KomikcastParser extends MangaStreamParser {
         for (const chapter of $('li', 'div.komik_info-chapters').toArray()) {
             const title = $('a.chapter-link-item', chapter).text().trim()
             const date = convertDate($('div.chapter-link-time', chapter).text().trim(), source)
-            const id = title.replace('Chapter ', ''); // Set data-num attribute as id
+            const id = title.replace('Chapter') ?? '' // Set data-num attribute as id
             const chapterNumberRegex = id.match(/(\d+\.?\d?)+/)
             let chapterNumber = 0
             if (chapterNumberRegex && chapterNumberRegex[1]) {

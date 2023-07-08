@@ -55,7 +55,7 @@ export class Komikcast extends MangaStream {
         this.homescreen_sections['popular_today'] = {
             ...DefaultHomeSectionData,
             section: createHomeSection('popular_today', 'Hot Komik Update', true),
-            selectorFunc: ($: CheerioStatic) => $('div.swiper-slide', $('h3:contains(Hot Komik Update)')?.parent()?.next()),
+            selectorFunc: ($: CheerioStatic) => $('div.swiper-slide', $('span:contains(Hot Komik Update)')?.parent()?.next()),
             titleSelectorFunc: ($: CheerioStatic) => $('div.title'),
             subtitleSelectorFunc: ($: CheerioStatic, element: CheerioElement) => $('div.chapter', element).text().trim(),
             getViewMoreItemsFunc: (page: string) => `daftar-komik/page/${page}/?orderby=popular`,
@@ -64,8 +64,8 @@ export class Komikcast extends MangaStream {
         this.homescreen_sections['latest_update'] = {
             ...DefaultHomeSectionData,
             section: createHomeSection('latest_update', 'Rilisan Terbaru', true),
-            selectorFunc: ($: CheerioStatic) => $('div.utao', $('h3:contains(Rilisan Terbaru)')?.parent()?.next()),
-            subtitleSelectorFunc: ($: CheerioStatic) => $('.listupd .utao .uta .luf > ul > li > a').first().text().trim(),
+            selectorFunc: ($: CheerioStatic) => $('div.uta', $('span:contains(Rilisan Terbaru)')?.parent()?.next()),
+            subtitleSelectorFunc: ($: CheerioStatic) => $('div.luf > ul > li > a').first().text().trim(),
             getViewMoreItemsFunc: (page: string) => `daftar-komik/page/${page}/?orderby=update`,
             sortIndex: 20
         }
