@@ -35,7 +35,8 @@ export class Komiku extends MangaStream {
     baseUrl: string = DOMAIN
 
     override configureSections(): void {
-        this.homescreen_sections['new_titles'].enabled = false
+        this.homescreen_sections['new_titles'].enabled = true
+        this.homescreen_sections['new_titles'].selectorFunc = ($: CheerioStatic) => $('li', $('h3:contains(Baca Komik Serial Terbaru)')?.parent()?.next())
         this.homescreen_sections['popular_today'].selectorFunc = ($: CheerioStatic) => $('div.bsx', $('h2:contains(Baca Komik Terpopuler Hari Ini Online)')?.parent()?.next())
         this.homescreen_sections['latest_update'].selectorFunc = ($: CheerioStatic) => $('div.uta', $('h2:contains(Baca Komik Terbaru Online)')?.parent()?.next())
     }

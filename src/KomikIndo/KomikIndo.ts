@@ -36,8 +36,9 @@ export class KomikIndo extends MangaStream {
 
     override configureSections(): void {
         this.homescreen_sections['new_titles'].enabled = true
+        this.homescreen_sections['new_titles'].selectorFunc = ($: CheerioStatic) => $('li', $('h3:contains(MANGA TERBARU)')?.parent()?.next())
         this.homescreen_sections['popular_today'].selectorFunc = ($: CheerioStatic) => $('div.bsx', $('h2:contains(SEDANG HANGAT DIBACA)')?.parent()?.next())
-        this.homescreen_sections['latest_update'].selectorFunc = ($: CheerioStatic) => $('div.bsx', $('h2:contains(CHAPTER TERBARU)')?.parent()?.next())
+        this.homescreen_sections['latest_update'].selectorFunc = ($: CheerioStatic) => $('div.uta', $('h2:contains(CHAPTER TERBARU)')?.parent()?.next())
     }
     override dateMonths = {
         january: 'Januari',
