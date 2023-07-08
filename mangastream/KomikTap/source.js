@@ -1451,10 +1451,12 @@ exports.KomikTapInfo = {
     intents: types_1.SourceIntents.MANGA_CHAPTERS | types_1.SourceIntents.HOMEPAGE_SECTIONS | types_1.SourceIntents.CLOUDFLARE_BYPASS_REQUIRED | types_1.SourceIntents.SETTINGS_UI,
     sourceTags: [
         {
-            text: "Indonesia", color: types_1.BadgeColor.GREY
+            text: "Indonesia",
+            type: types_1.BadgeColor.GREY
         },
         {
-            text: "18+", color: types_1.BadgeColor.RED
+            text: "18+",
+            type: types_1.BadgeColor.RED
         }
     ]
 };

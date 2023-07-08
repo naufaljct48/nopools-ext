@@ -1450,7 +1450,10 @@ exports.KomikuInfo = {
     websiteBaseURL: DOMAIN,
     intents: types_1.SourceIntents.MANGA_CHAPTERS | types_1.SourceIntents.HOMEPAGE_SECTIONS | types_1.SourceIntents.CLOUDFLARE_BYPASS_REQUIRED | types_1.SourceIntents.SETTINGS_UI,
     sourceTags: [
-        { text: "Indonesia", color: types_1.BadgeColor.GREY },
+        {
+            text: "Indonesia",
+            type: types_1.BadgeColor.GREY
+        },
     ]
 };
 class Komiku extends MangaStream_1.MangaStream {
