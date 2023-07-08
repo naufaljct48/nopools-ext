@@ -1700,34 +1700,6 @@ class KomikcastParser extends MangaStreamParser_1.MangaStreamParser {
         }
         return items;
     }
-    async parseHomeSection($, section, source) {
-        const items = [];
-        const mangas = section.selectorFunc($);
-        if (!mangas.length) {
-            console.log(`Unable to parse valid ${section.section.title} section!`);
-            return items;
-        }
-        for (const manga of mangas.toArray()) {
-            const title = section.titleSelectorFunc($, manga);
-            const image = this.getImageSrc($('img', manga)) ?? '';
-            const subtitle = section.subtitleSelectorFunc($, manga) ?? '';
-            const slug = this.idCleaner($('a', manga).attr('href') ?? '');
-            const path = ($('a', manga).attr('href') ?? '').replace(/\/$/, '').split('/').slice(-2).shift() ?? '';
-            const postId = $('a', manga).attr('rel');
-            const mangaId = await source.getUsePostIds() ? (isNaN(Number(postId)) ? await source.slugToPostId(slug, path) : postId) : slug;
-            if (!mangaId || !title) {
-                console.log(`Failed to parse homepage sections for ${source.baseUrl} title (${title}) mangaId (${mangaId})`);
-                continue;
-            }
-            items.push(App.createPartialSourceManga({
-                mangaId,
-                image: image,
-                title: this.decodeHTMLEntity(title),
-                subtitle: this.decodeHTMLEntity(subtitle)
-            }));
-        }
-        return items;
-    }
 }
 exports.KomikcastParser = KomikcastParser;
 
