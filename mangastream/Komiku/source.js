@@ -1460,6 +1460,20 @@ class Komiku extends MangaStream_1.MangaStream {
     constructor() {
         super(...arguments);
         this.baseUrl = DOMAIN;
+        this.dateMonths = {
+            january: 'Januari',
+            february: 'Februari',
+            march: 'Maret',
+            april: 'April',
+            may: 'Mei',
+            june: 'Juni',
+            july: 'Juli',
+            august: 'Agustus',
+            september: 'September',
+            october: 'Oktober',
+            november: 'November',
+            december: 'Desember'
+        };
     }
     configureSections() {
         this.homescreen_sections['new_titles'].enabled = false;
