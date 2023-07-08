@@ -1442,7 +1442,7 @@ const MangaStreamHelper_1 = require("../MangaStreamHelper");
 const KomikcastParser_1 = require("./KomikcastParser");
 const DOMAIN = 'https://komikcast.io';
 exports.KomikcastInfo = {
-    version: (0, MangaStream_1.getExportVersion)('0.0.2'),
+    version: (0, MangaStream_1.getExportVersion)('0.0.3'),
     name: 'Komikcast',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -1484,8 +1484,7 @@ class Komikcast extends MangaStream_1.MangaStream {
             ...MangaStreamHelper_1.DefaultHomeSectionData,
             section: (0, MangaStreamHelper_1.createHomeSection)('latest_update', 'Rilisan Terbaru', true),
             selectorFunc: ($) => $('div.utao', $('h3:contains(Rilisan Terbaru)')?.parent()?.next()),
-            titleSelectorFunc: ($) => $('h3').text(),
-            subtitleSelectorFunc: ($, element) => $('a', $('li', element).first()).text().trim(),
+            subtitleSelectorFunc: ($) => $('.listupd .utao .uta .luf > ul > li > a').first().text().trim(),
             getViewMoreItemsFunc: (page) => `daftar-komik/page/${page}/?orderby=update`,
             sortIndex: 20
         };
@@ -1497,8 +1496,28 @@ exports.Komikcast = Komikcast;
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.KomikcastParser = void 0;
+const LanguageUtils_1 = require("../LanguageUtils");
 const MangaStreamParser_1 = require("../MangaStreamParser");
 class KomikcastParser extends MangaStreamParser_1.MangaStreamParser {
+    constructor() {
+        super(...arguments);
+        this.isLastPage = ($, id) => {
+            let isLast = true;
+            if (id == 'view_more') {
+                const hasNext = Boolean($('a.next.page-numbers')[0]);
+                if (hasNext) {
+                    isLast = false;
+                }
+            }
+            if (id == 'search_request') {
+                const hasNext = Boolean($('a.next.page-numbers')[0]);
+                if (hasNext) {
+                    isLast = false;
+                }
+            }
+            return isLast;
+        };
+    }
     parseMangaDetails($, mangaId, source) {
         const titles = [];
         titles.push(this.decodeHTMLEntity($('h1.komik_info-content-body-title').text().trim().replace(/Komik|Manhwa|Manga|Manhua|Bahasa Indonesia/g, '')));
@@ -1564,7 +1583,7 @@ class KomikcastParser extends MangaStreamParser_1.MangaStreamParser {
             language = '🇮🇩';
         for (const chapter of $('li', 'div.komik_info-chapters').toArray()) {
             const title = $('a.chapter-link-item', chapter).text().trim();
-            const date = convertDate($('span.chapterdate', chapter).text().trim(), source);
+            const date = (0, LanguageUtils_1.convertDate)($('div.chapter-link-time', chapter).text().trim(), source);
             const id = title.replace('Chapter ', ''); // Set data-num attribute as id
             const chapterNumberRegex = id.match(/(\d+\.?\d?)+/);
             let chapterNumber = 0;
@@ -1613,10 +1632,106 @@ class KomikcastParser extends MangaStreamParser_1.MangaStreamParser {
         });
         return chapterDetails;
     }
+    parseTags($) {
+        const tagSections = [
+            { id: '0', label: 'genres', tags: [] },
+            { id: '1', label: 'status', tags: [] },
+            { id: '2', label: 'type', tags: [] },
+            { id: '3', label: 'order', tags: [] }
+        ];
+        const sectionDropDowns = $('ul.komiklist_dropdown-menu genrez').toArray();
+        for (let i = 0; i < 4; ++i) {
+            const sectionDropdown = sectionDropDowns[i];
+            if (!sectionDropdown) {
+                continue;
+            }
+            for (const tag of $('li', sectionDropdown).toArray()) {
+                const label = $('label', tag).text().trim();
+                const id = `${tagSections[i].label}:${$('input', tag).attr('value')}`;
+                if (!id || !label) {
+                    continue;
+                }
+                tagSections[i].tags.push(App.createTag({ id, label }));
+            }
+        }
+        return tagSections.map((x) => App.createTagSection(x));
+    }
+    async parseSearchResults($, source) {
+        const results = [];
+        for (const obj of $('div.list-update_item', 'div.list-update_items-wrapper').toArray()) {
+            const slug = ($('a', obj).attr('href') ?? '').replace(/\/$/, '').split('/').pop() ?? '';
+            const path = ($('a', obj).attr('href') ?? '').replace(/\/$/, '').split('/').slice(-2).shift() ?? '';
+            if (!slug || !path) {
+                throw new Error(`Unable to parse slug (${slug}) or path (${path})!`);
+            }
+            const title = $('h3.title', obj) ?? '';
+            const image = this.getImageSrc($('img', obj)) ?? '';
+            const subtitle = $('div.chapter', obj).text().trim();
+            results.push({
+                slug,
+                path,
+                image: image || source.fallbackImage,
+                title: this.decodeHTMLEntity(title),
+                subtitle: this.decodeHTMLEntity(subtitle)
+            });
+        }
+        return results;
+    }
+    async parseViewMore($, source) {
+        const items = [];
+        for (const manga of $('div.list-update_item', 'div.list-update_items-wrapper').toArray()) {
+            const title = $('h3.title', manga).text();
+            const image = this.getImageSrc($('img', manga)) ?? '';
+            const subtitle = $('div.chapter', manga).text().trim();
+            const slug = this.idCleaner($('a', manga).attr('href') ?? '');
+            const path = ($('a', manga).attr('href') ?? '').replace(/\/$/, '').split('/').slice(-2).shift() ?? '';
+            const postId = $('a', manga).attr('rel');
+            const mangaId = await source.getUsePostIds() ? (isNaN(Number(postId)) ? await source.slugToPostId(slug, path) : postId) : slug;
+            if (!mangaId || !title) {
+                console.log(`Failed to parse homepage sections for ${source.baseUrl}`);
+                continue;
+            }
+            items.push(App.createPartialSourceManga({
+                mangaId,
+                image: image,
+                title: this.decodeHTMLEntity(title),
+                subtitle: this.decodeHTMLEntity(subtitle)
+            }));
+        }
+        return items;
+    }
+    async parseHomeSection($, section, source) {
+        const items = [];
+        const mangas = section.selectorFunc($);
+        if (!mangas.length) {
+            console.log(`Unable to parse valid ${section.section.title} section!`);
+            return items;
+        }
+        for (const manga of mangas.toArray()) {
+            const title = section.titleSelectorFunc($, manga);
+            const image = this.getImageSrc($('img', manga)) ?? '';
+            const subtitle = section.subtitleSelectorFunc($, manga) ?? '';
+            const slug = this.idCleaner($('a', manga).attr('href') ?? '');
+            const path = ($('a', manga).attr('href') ?? '').replace(/\/$/, '').split('/').slice(-2).shift() ?? '';
+            const postId = $('a', manga).attr('rel');
+            const mangaId = await source.getUsePostIds() ? (isNaN(Number(postId)) ? await source.slugToPostId(slug, path) : postId) : slug;
+            if (!mangaId || !title) {
+                console.log(`Failed to parse homepage sections for ${source.baseUrl} title (${title}) mangaId (${mangaId})`);
+                continue;
+            }
+            items.push(App.createPartialSourceManga({
+                mangaId,
+                image: image,
+                title: this.decodeHTMLEntity(title),
+                subtitle: this.decodeHTMLEntity(subtitle)
+            }));
+        }
+        return items;
+    }
 }
 exports.KomikcastParser = KomikcastParser;
 
-},{"../MangaStreamParser":75}],72:[function(require,module,exports){
+},{"../LanguageUtils":72,"../MangaStreamParser":75}],72:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.convertDate = void 0;
