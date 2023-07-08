@@ -1438,9 +1438,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Komikcast = exports.KomikcastInfo = void 0;
 const types_1 = require("@paperback/types");
 const MangaStream_1 = require("../MangaStream");
+const MangaStreamHelper_1 = require("../MangaStreamHelper");
+const KomikcastParser_1 = require("./KomikcastParser");
 const DOMAIN = 'https://komikcast.io';
 exports.KomikcastInfo = {
-    version: (0, MangaStream_1.getExportVersion)('0.0.1'),
+    version: (0, MangaStream_1.getExportVersion)('0.0.2'),
     name: 'Komikcast',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -1461,14 +1463,160 @@ class Komikcast extends MangaStream_1.MangaStream {
         super(...arguments);
         this.baseUrl = DOMAIN;
         this.directoryPath = 'komik';
+        this.parser = new KomikcastParser_1.KomikcastParser();
     }
     configureSections() {
         this.homescreen_sections['new_titles'].enabled = false;
+        this.homescreen_sections['top_alltime'].enabled = false;
+        this.homescreen_sections['top_monthly'].enabled = false;
+        this.homescreen_sections['top_weekly'].enabled = false;
+        //@ts-ignore
+        this.homescreen_sections['popular_today'] = {
+            ...MangaStreamHelper_1.DefaultHomeSectionData,
+            section: (0, MangaStreamHelper_1.createHomeSection)('popular_today', 'Hot Komik Update', true),
+            selectorFunc: ($) => $('div.swiper-slide', $('h3:contains(Hot Komik Update)')?.parent()?.next()),
+            titleSelectorFunc: ($) => $('div.title'),
+            subtitleSelectorFunc: ($, element) => $('div.chapter', element).text().trim(),
+            getViewMoreItemsFunc: (page) => `daftar-komik/page/${page}/?orderby=popular`,
+            sortIndex: 10
+        };
+        this.homescreen_sections['latest_update'] = {
+            ...MangaStreamHelper_1.DefaultHomeSectionData,
+            section: (0, MangaStreamHelper_1.createHomeSection)('latest_update', 'Rilisan Terbaru', true),
+            selectorFunc: ($) => $('div.utao', $('h3:contains(Rilisan Terbaru)')?.parent()?.next()),
+            titleSelectorFunc: ($) => $('h3').text(),
+            subtitleSelectorFunc: ($, element) => $('a', $('li', element).first()).text().trim(),
+            getViewMoreItemsFunc: (page) => `daftar-komik/page/${page}/?orderby=update`,
+            sortIndex: 20
+        };
     }
 }
 exports.Komikcast = Komikcast;
 
-},{"../MangaStream":72,"@paperback/types":61}],71:[function(require,module,exports){
+},{"../MangaStream":73,"../MangaStreamHelper":74,"./KomikcastParser":71,"@paperback/types":61}],71:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.KomikcastParser = void 0;
+const MangaStreamParser_1 = require("../MangaStreamParser");
+class KomikcastParser extends MangaStreamParser_1.MangaStreamParser {
+    parseMangaDetails($, mangaId, source) {
+        const titles = [];
+        titles.push(this.decodeHTMLEntity($('h1.komik_info-content-body-title').text().trim().replace(/Komik|Manhwa|Manga|Manhua|Bahasa Indonesia/g, '')));
+        const altTitles = $(`span:contains(${source.manga_selector_AlternativeTitles}), b:contains(${source.manga_selector_AlternativeTitles})+span, .imptdt:contains(${source.manga_selector_AlternativeTitles}) i, h1.entry-title+span`).contents().remove().last().text().split(','); // Language dependant
+        for (const title of altTitles) {
+            if (title == '') {
+                continue;
+            }
+            titles.push(this.decodeHTMLEntity(title.trim()));
+        }
+        const author = $(`.komik_info-content-info:contains(${source.manga_selector_author})`).contents().remove().last().text().trim(); // Language dependant
+        const artist = $(`span:contains(${source.manga_selector_artist}), .fmed b:contains(${source.manga_selector_artist})+span, td:contains(${source.manga_selector_artist})+td, .imptdt:contains(${source.manga_selector_artist}) i`).contents().remove().last().text().trim(); // Language dependant
+        const image = this.getImageSrc($('img', 'div[itemprop="image"]'));
+        const description = this.decodeHTMLEntity($('div[itemprop="articleBody"]  p').text().trim());
+        const arrayTags = [];
+        for (const tag of $('a', 'span.komik_info-content-genre').toArray()) {
+            const label = $(tag).text().trim();
+            const id = this.idCleaner($(tag).attr('href') ?? '');
+            if (!id || !label) {
+                continue;
+            }
+            arrayTags.push({ id, label });
+        }
+        const rawStatus = $(`.komik_info-content-info b:contains(${source.manga_selector_status})`).contents().remove().last().text().trim();
+        let status;
+        switch (rawStatus.toLowerCase()) {
+            case source.manga_StatusTypes.ONGOING.toLowerCase():
+                status = 'Ongoing';
+                break;
+            case source.manga_StatusTypes.COMPLETED.toLowerCase():
+                status = 'Completed';
+                break;
+            default:
+                status = 'Ongoing';
+                break;
+        }
+        const tagSections = [
+            App.createTagSection({
+                id: '0',
+                label: 'genres',
+                tags: arrayTags.map((x) => App.createTag(x))
+            })
+        ];
+        return App.createSourceManga({
+            id: mangaId,
+            mangaInfo: App.createMangaInfo({
+                titles,
+                image: image,
+                status,
+                author: author == '' ? 'Unknown' : author,
+                artist: artist == '' ? 'Unknown' : artist,
+                tags: tagSections,
+                desc: description
+            })
+        });
+    }
+    parseChapterList($, mangaId, source) {
+        const chapters = [];
+        let sortingIndex = 0;
+        let language = source.language;
+        // Usually for Manhwa sites
+        if (mangaId.toUpperCase().endsWith('-RAW') && source.language == '🇬🇧')
+            language = '🇮🇩';
+        for (const chapter of $('li', 'div.komik_info-chapters').toArray()) {
+            const title = $('a.chapter-link-item', chapter).text().trim();
+            const date = convertDate($('span.chapterdate', chapter).text().trim(), source);
+            const id = title.replace('Chapter ', ''); // Set data-num attribute as id
+            const chapterNumberRegex = id.match(/(\d+\.?\d?)+/);
+            let chapterNumber = 0;
+            if (chapterNumberRegex && chapterNumberRegex[1]) {
+                chapterNumber = Number(chapterNumberRegex[1]);
+            }
+            if (!id || typeof id === 'undefined') {
+                throw new Error(`Could not parse out ID when getting chapters for postId:${mangaId}`);
+            }
+            chapters.push({
+                id: id,
+                langCode: language,
+                chapNum: chapterNumber,
+                name: title,
+                time: date,
+                sortingIndex,
+                volume: 0,
+                group: ''
+            });
+            sortingIndex--;
+        }
+        // If there are no chapters, throw error to avoid losing progress
+        if (chapters.length == 0) {
+            throw new Error(`Couldn't find any chapters for mangaId: ${mangaId}!`);
+        }
+        return chapters.map((chapter) => {
+            chapter.sortingIndex += chapters.length;
+            return App.createChapter(chapter);
+        });
+    }
+    parseChapterDetails($, mangaId, chapterId) {
+        var _a, _b;
+        const pages = [];
+        for (const p of $('img', 'div.main-reading-area').toArray()) {
+            let image = (_a = $(p).attr('src')) !== null && _a !== void 0 ? _a : '';
+            if (!image)
+                image = (_b = $(p).attr('data-src')) !== null && _b !== void 0 ? _b : '';
+            if (!image)
+                throw new Error(`Unable to parse image(s) for chapterID: ${chapterId}`);
+            pages.push(image);
+        }
+        const chapterDetails = App.createChapterDetails({
+            id: chapterId,
+            mangaId: mangaId,
+            pages: pages
+        });
+        return chapterDetails;
+    }
+}
+exports.KomikcastParser = KomikcastParser;
+
+},{"../MangaStreamParser":75}],72:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.convertDate = void 0;
@@ -1491,7 +1639,7 @@ function convertDate(dateString, source) {
 }
 exports.convertDate = convertDate;
 
-},{}],72:[function(require,module,exports){
+},{}],73:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.MangaStream = exports.getExportVersion = void 0;
@@ -1986,7 +2134,7 @@ class MangaStream {
 }
 exports.MangaStream = MangaStream;
 
-},{"./MangaStreamHelper":73,"./MangaStreamParser":74,"./UrlBuilder":75,"@paperback/types":61}],73:[function(require,module,exports){
+},{"./MangaStreamHelper":74,"./MangaStreamParser":75,"./UrlBuilder":76,"@paperback/types":61}],74:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getFilterTagsBySection = exports.getIncludedTagBySection = exports.createHomeSection = exports.DefaultHomeSectionData = void 0;
@@ -2025,7 +2173,7 @@ function getFilterTagsBySection(section, tags, included, supportsExclusion = fal
 }
 exports.getFilterTagsBySection = getFilterTagsBySection;
 
-},{"@paperback/types":61}],74:[function(require,module,exports){
+},{"@paperback/types":61}],75:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.MangaStreamParser = void 0;
@@ -2303,7 +2451,7 @@ class MangaStreamParser {
 }
 exports.MangaStreamParser = MangaStreamParser;
 
-},{"./LanguageUtils":71,"entities":69}],75:[function(require,module,exports){
+},{"./LanguageUtils":72,"entities":69}],76:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.URLBuilder = void 0;
