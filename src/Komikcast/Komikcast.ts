@@ -20,7 +20,7 @@ import { KomikcastParser } from './KomikcastParser'
 const DOMAIN = 'https://komikcast.io'
 
 export const KomikcastInfo: SourceInfo = {
-    version: getExportVersion('0.0.2'),
+    version: getExportVersion('0.0.3'),
     name: 'Komikcast',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -65,8 +65,7 @@ export class Komikcast extends MangaStream {
             ...DefaultHomeSectionData,
             section: createHomeSection('latest_update', 'Rilisan Terbaru', true),
             selectorFunc: ($: CheerioStatic) => $('div.utao', $('h3:contains(Rilisan Terbaru)')?.parent()?.next()),
-            titleSelectorFunc: ($: CheerioStatic) => $('h3').text(),
-            subtitleSelectorFunc: ($: CheerioStatic, element: CheerioElement) => $('a', $('li', element).first()).text().trim(),
+            subtitleSelectorFunc: ($: CheerioStatic) => $('.listupd .utao .uta .luf > ul > li > a').first().text().trim(),
             getViewMoreItemsFunc: (page: string) => `daftar-komik/page/${page}/?orderby=update`,
             sortIndex: 20
         }
