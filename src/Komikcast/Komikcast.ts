@@ -20,7 +20,7 @@ import { KomikcastParser } from './KomikcastParser'
 const DOMAIN = 'https://komikcast.io'
 
 export const KomikcastInfo: SourceInfo = {
-    version: getExportVersion('0.0.4'),
+    version: getExportVersion('0.0.5'),
     name: 'Komikcast',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -56,17 +56,18 @@ export class Komikcast extends MangaStream {
             ...DefaultHomeSectionData,
             section: createHomeSection('popular_today', 'Hot Komik Update', true),
             selectorFunc: ($: CheerioStatic) => $('div.swiper-slide', $('span:contains(Hot Komik Update)')?.parent()?.next()),
-            titleSelectorFunc: ($: CheerioStatic) => $('div.title'),
+            titleSelectorFunc: ($: CheerioStatic) => $('div.title').text().trim(),
             subtitleSelectorFunc: ($: CheerioStatic, element: CheerioElement) => $('div.chapter', element).text().trim(),
-            getViewMoreItemsFunc: (page: string) => `daftar-komik/page/${page}/?orderby=popular`,
-            sortIndex: 10
+            getViewMoreItemsFunc: (page: string) => `/daftar-komik/page/${page}/?orderby=popular`,
+            sortIndex: 9
         }
         this.homescreen_sections['latest_update'] = {
             ...DefaultHomeSectionData,
             section: createHomeSection('latest_update', 'Rilisan Terbaru', true),
             selectorFunc: ($: CheerioStatic) => $('div.uta', $('span:contains(Rilisan Terbaru)')?.parent()?.next()),
-            subtitleSelectorFunc: ($: CheerioStatic) => $('div.luf > ul > li > a').first().text().trim(),
-            getViewMoreItemsFunc: (page: string) => `daftar-komik/page/${page}/?orderby=update`,
+            titleSelectorFunc: ($: CheerioStatic) => $('h3').text(),
+            subtitleSelectorFunc: ($: CheerioStatic, element: CheerioElement) => $('a', $('li', element).first()).text().trim(),
+            getViewMoreItemsFunc: (page: string) => `/daftar-komik/page/${page}/?orderby=update`,
             sortIndex: 20
         }
     }

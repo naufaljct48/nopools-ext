@@ -115,23 +115,28 @@ export class KomikcastParser extends MangaStreamParser {
     }
 
     override parseChapterDetails($: CheerioStatic, mangaId: string, chapterId: string): ChapterDetails {
-        var _a, _b;
+        // const data = $.html()
+    
         const pages: string[] = []
-        for (const p of $('img', 'div.main-reading-area').toArray()) {
-            let image = (_a = $(p).attr('src')) !== null && _a !== void 0 ? _a : '';
-            if (!image)
-                image = (_b = $(p).attr('data-src')) !== null && _b !== void 0 ? _b : '';
-            if (!image)
-                throw new Error(`Unable to parse image(s) for chapterID: ${chapterId}`);
-            pages.push(image);
+    
+        const obj = $('img', 'div.main-reading-area').toArray()
+    
+        if (obj.length === 0) {
+            throw new Error(`Failed to find page details script for manga ${mangaId}`)
         }
-
+    
+        for (const index of obj) {
+            const images = $(index).attr('src')
+            if (!images) continue
+            pages.push(encodeURI(images))
+        }
+    
         const chapterDetails = App.createChapterDetails({
             id: chapterId,
             mangaId: mangaId,
             pages: pages
         })
-
+    
         return chapterDetails
     }
 
