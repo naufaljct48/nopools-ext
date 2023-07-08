@@ -1474,7 +1474,7 @@ class Komikcast extends MangaStream_1.MangaStream {
         this.homescreen_sections['popular_today'] = {
             ...MangaStreamHelper_1.DefaultHomeSectionData,
             section: (0, MangaStreamHelper_1.createHomeSection)('popular_today', 'Hot Komik Update', true),
-            selectorFunc: ($) => $('div.swiper-slide', $('h3:contains(Hot Komik Update)')?.parent()?.next()),
+            selectorFunc: ($) => $('div.swiper-slide', $('span:contains(Hot Komik Update)')?.parent()?.next()),
             titleSelectorFunc: ($) => $('div.title'),
             subtitleSelectorFunc: ($, element) => $('div.chapter', element).text().trim(),
             getViewMoreItemsFunc: (page) => `daftar-komik/page/${page}/?orderby=popular`,
@@ -1483,8 +1483,8 @@ class Komikcast extends MangaStream_1.MangaStream {
         this.homescreen_sections['latest_update'] = {
             ...MangaStreamHelper_1.DefaultHomeSectionData,
             section: (0, MangaStreamHelper_1.createHomeSection)('latest_update', 'Rilisan Terbaru', true),
-            selectorFunc: ($) => $('div.utao', $('h3:contains(Rilisan Terbaru)')?.parent()?.next()),
-            subtitleSelectorFunc: ($) => $('.listupd .utao .uta .luf > ul > li > a').first().text().trim(),
+            selectorFunc: ($) => $('div.uta', $('span:contains(Rilisan Terbaru)')?.parent()?.next()),
+            subtitleSelectorFunc: ($) => $('div.luf > ul > li > a').first().text().trim(),
             getViewMoreItemsFunc: (page) => `daftar-komik/page/${page}/?orderby=update`,
             sortIndex: 20
         };
@@ -1584,7 +1584,7 @@ class KomikcastParser extends MangaStreamParser_1.MangaStreamParser {
         for (const chapter of $('li', 'div.komik_info-chapters').toArray()) {
             const title = $('a.chapter-link-item', chapter).text().trim();
             const date = (0, LanguageUtils_1.convertDate)($('div.chapter-link-time', chapter).text().trim(), source);
-            const id = title.replace('Chapter ', ''); // Set data-num attribute as id
+            const id = title.replace('Chapter') ?? ''; // Set data-num attribute as id
             const chapterNumberRegex = id.match(/(\d+\.?\d?)+/);
             let chapterNumber = 0;
             if (chapterNumberRegex && chapterNumberRegex[1]) {
