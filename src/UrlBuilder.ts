@@ -2,6 +2,7 @@ export class URLBuilder {
     parameters: Record<string, any | any[]> = {}
     pathComponents: string[] = []
     baseUrl: string
+
     constructor(baseUrl: string) {
         this.baseUrl = baseUrl.replace(/(^\/)?(?=.*)(\/$)?/gim, '')
     }
@@ -12,21 +13,41 @@ export class URLBuilder {
     }
 
     addQueryParameter(key: string, value: any | any[]): URLBuilder {
-        this.parameters[key] = value
+        if (Array.isArray(value) && !value.length) {
+            return this
+        }
+
+        const array = (this.parameters[key] as any[])
+        if (array?.length) {
+            array.push(value)
+        } else {
+            this.parameters[key] = value
+        }
         return this
     }
 
-    buildUrl({ addTrailingSlash, includeUndefinedParameters } = { addTrailingSlash: false, includeUndefinedParameters: false }): string {
+    buildUrl({ addTrailingSlash, includeUndefinedParameters } = {
+        addTrailingSlash: false,
+        includeUndefinedParameters: false
+    }): string {
         let finalUrl = this.baseUrl + '/'
 
         finalUrl += this.pathComponents.join('/')
-        finalUrl += addTrailingSlash ? '/' : ''
-        finalUrl += Object.values(this.parameters).length > 0 ? '?' : ''
+        finalUrl += addTrailingSlash
+            ? '/'
+            : ''
+        finalUrl += Object.values(this.parameters).length > 0
+            ? '?'
+            : ''
         finalUrl += Object.entries(this.parameters).map(entry => {
-            if (entry[1] == null && !includeUndefinedParameters) { return undefined }
+            if (entry[1] == null && !includeUndefinedParameters) {
+                return undefined
+            }
 
-            if (Array.isArray(entry[1])) {
-                return entry[1].map(value => value || includeUndefinedParameters ? `${entry[0]}[]=${value}` : undefined)
+            if (Array.isArray(entry[1]) && entry[1].length) {
+                return entry[1].map(value => value || includeUndefinedParameters
+                    ? `${entry[0]}${encodeURI('[]')}=${value}`
+                    : undefined)
                     .filter(x => x !== undefined)
                     .join('&')
             }
