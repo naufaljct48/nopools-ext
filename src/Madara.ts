@@ -131,7 +131,7 @@ export abstract class Madara
   /**
    * The language code the source's content is served in in string form.
    */
-  language = "🇬🇧";
+  language = "🇮🇩";
 
   /**
    * Different Madara sources might have a slightly different selector which is required to parse out
