@@ -9,7 +9,6 @@ import {
     getExportVersion,
     MangaStream
 } from '../MangaStream'
-import { Months } from '../MangaStreamInterfaces'
 
 const DOMAIN = 'https://komiku.com'
 
@@ -37,8 +36,10 @@ export class Komiku extends MangaStream {
 
     override configureSections(): void {
         this.homescreen_sections['new_titles'].enabled = false
+        this.homescreen_sections['popular_today'].selectorFunc = ($: CheerioStatic) => $('div.bsx', $('h2:contains(Baca Komik Terpopuler Hari Ini Online)')?.parent()?.next())
+        this.homescreen_sections['latest_update'].selectorFunc = ($: CheerioStatic) => $('div.uta', $('h2:contains(Baca Komik Terbaru Online)')?.parent()?.next())
     }
-    override dateMonths: Months = {
+    override dateMonths = {
         january: 'Januari',
         february: 'Februari',
         march: 'Maret',

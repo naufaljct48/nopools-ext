@@ -18,7 +18,7 @@ export class MangaStreamParser {
 
     parseMangaDetails($: CheerioStatic, mangaId: string, source: any): SourceManga {
         const titles: string[] = []
-        titles.push(this.decodeHTMLEntity($('h1.entry-title').text().trim()))
+        titles.push(this.decodeHTMLEntity($('h1.entry-title').text().trim().replace(/Komik|Manhwa|Manga|Manhua|Bahasa Indonesia/g, '')));
 
         const altTitles = $(`span:contains(${source.manga_selector_AlternativeTitles}), b:contains(${source.manga_selector_AlternativeTitles})+span, .imptdt:contains(${source.manga_selector_AlternativeTitles}) i, h1.entry-title+span`).contents().remove().last().text().split(',') // Language dependant
         for (const title of altTitles) {
@@ -28,8 +28,8 @@ export class MangaStreamParser {
             titles.push(this.decodeHTMLEntity(title.trim()))
         }
 
-        const author = $(`span:contains(${source.manga_selector_author}), .fmed b:contains(${source.manga_selector_author})+span, .imptdt:contains(${source.manga_selector_author}) i`).contents().remove().last().text().trim() // Language dependant
-        const artist = $(`span:contains(${source.manga_selector_artist}), .fmed b:contains(${source.manga_selector_artist})+span, .imptdt:contains(${source.manga_selector_artist}) i`).contents().remove().last().text().trim() // Language dependant
+        const author = $(`span:contains(${source.manga_selector_author}), .fmed b:contains(${source.manga_selector_author})+span, td:contains(${source.manga_selector_author})+td, .imptdt:contains(${source.manga_selector_author}) i`).contents().remove().last().text().trim() // Language dependant
+        const artist = $(`span:contains(${source.manga_selector_artist}), .fmed b:contains(${source.manga_selector_artist})+span, td:contains(${source.manga_selector_artist})+td, .imptdt:contains(${source.manga_selector_artist}) i`).contents().remove().last().text().trim() // Language dependant
         const image = this.getImageSrc($('img', 'div[itemprop="image"]'))
         const description = this.decodeHTMLEntity($('div[itemprop="description"]  p').text().trim())
 

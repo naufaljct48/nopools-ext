@@ -9,7 +9,6 @@ import {
     getExportVersion,
     MangaStream
 } from '../MangaStream'
-import { Months } from '../MangaStreamInterfaces'
 
 const DOMAIN = 'https://kiryuu.id'
 
@@ -36,9 +35,10 @@ export class Kiryuu extends MangaStream {
     baseUrl: string = DOMAIN
 
     override configureSections(): void {
-        this.homescreen_sections['new_titles'].enabled = false
+        this.homescreen_sections['new_titles'].enabled = true
+        this.homescreen_sections['new_titles'].selectorFunc = ($: CheerioStatic) => $('li', $('h3:contains(Serial baru)')?.parent()?.next())
     }
-    override dateMonths: Months = {
+    override dateMonths = {
         january: 'Januari',
         february: 'Februari',
         march: 'Maret',

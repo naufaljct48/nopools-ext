@@ -38,9 +38,14 @@ export class Mangasusu extends MangaStream {
 
     baseUrl: string = DOMAIN
 
-    override directoryPath: string = 'komik'
+    override directoryPath = 'komik'
 
     override configureSections(): void {
         this.homescreen_sections['new_titles'].enabled = false
+        this.homescreen_sections['top_alltime'].enabled = false
+        this.homescreen_sections['top_monthly'].enabled = false
+        this.homescreen_sections['top_weekly'].enabled = false
+        this.homescreen_sections['latest_update'].selectorFunc = ($: CheerioStatic) => $('div.bsx', $('h2:contains(Latest Update)')?.parent()?.next())
+        this.homescreen_sections['latest_update'].subtitleSelectorFunc = ($: CheerioStatic, element: CheerioElement) => $('span.fivchap', element).text().trim()
     }
 }

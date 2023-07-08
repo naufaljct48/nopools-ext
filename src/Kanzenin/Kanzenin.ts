@@ -9,7 +9,6 @@ import {
     getExportVersion,
     MangaStream
 } from '../MangaStream'
-import { Months } from '../MangaStreamInterfaces'
 
 const DOMAIN = 'https://kanzenin.xyz'
 
@@ -41,9 +40,11 @@ export class Kanzenin extends MangaStream {
 
     override configureSections(): void {
         this.homescreen_sections['new_titles'].enabled = false
+        this.homescreen_sections['latest_update'].selectorFunc = ($: CheerioStatic) => $('div.bsx', $('h2:contains(Latest Update)')?.parent()?.next())
+        this.homescreen_sections['latest_update'].subtitleSelectorFunc = ($: CheerioStatic, element: CheerioElement) => $('div.epxs', element).text().trim()
     }
 
-    override dateMonths: Months = {
+    override dateMonths = {
         january: 'Januari',
         february: 'Februari',
         march: 'Maret',

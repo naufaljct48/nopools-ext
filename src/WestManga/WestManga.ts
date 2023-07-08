@@ -35,6 +35,10 @@ export class WestManga extends MangaStream {
     baseUrl: string = DOMAIN
 
     override configureSections(): void {
-        this.homescreen_sections['new_titles'].enabled = false
+        this.homescreen_sections['new_titles'].enabled = true
+        this.homescreen_sections['new_titles'].selectorFunc = ($: CheerioStatic) => $('li', $('h3:contains(Project Baru WM)')?.parent()?.next())
+        this.homescreen_sections['popular_today'].selectorFunc = ($: CheerioStatic) => $('div.bsx', $('h2:contains(Komik Popular Hari Ini...)')?.parent()?.next())
+        this.homescreen_sections['latest_update'].selectorFunc = ($: CheerioStatic) => $('div.bsx', $('h2:contains(UPDATE KOMIK LAINYA...)')?.parent()?.next())
+        this.homescreen_sections['latest_update'].subtitleSelectorFunc = ($: CheerioStatic, element: CheerioElement) => $('div.epxs', element).text().trim()
     }
 }

@@ -35,6 +35,7 @@ export class Mangatale extends MangaStream {
     baseUrl: string = DOMAIN
 
     override configureSections(): void {
-        this.homescreen_sections['new_titles'].enabled = false
+        this.homescreen_sections['new_titles'].enabled = true
+        this.homescreen_sections['new_titles'].selectorFunc = ($: CheerioStatic) => $('li', $('h3:contains(Serial baru)')?.parent()?.next())
     }
 }

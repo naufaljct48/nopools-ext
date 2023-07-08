@@ -10,7 +10,7 @@ import {
     MangaStream
 } from '../MangaStream'
 
-const DOMAIN = 'https://Komikcast.io'
+const DOMAIN = 'https://komikcast.io'
 
 export const KomikcastInfo: SourceInfo = {
     version: getExportVersion('0.0.0'),
@@ -34,7 +34,7 @@ export class Komikcast extends MangaStream {
 
     baseUrl: string = DOMAIN
 
-    override directoryPath: string = 'komik'
+    override directoryPath = 'komik'
 
     override configureSections(): void {
         this.homescreen_sections['new_titles'].enabled = false

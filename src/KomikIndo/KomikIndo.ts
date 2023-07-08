@@ -9,7 +9,6 @@ import {
     getExportVersion,
     MangaStream
 } from '../MangaStream'
-import { Months } from '../MangaStreamInterfaces'
 
 const DOMAIN = 'https://komikindo.co'
 
@@ -36,9 +35,11 @@ export class KomikIndo extends MangaStream {
     baseUrl: string = DOMAIN
 
     override configureSections(): void {
-        this.homescreen_sections['new_titles'].enabled = false
+        this.homescreen_sections['new_titles'].enabled = true
+        this.homescreen_sections['popular_today'].selectorFunc = ($: CheerioStatic) => $('div.bsx', $('h2:contains(SEDANG HANGAT DIBACA)')?.parent()?.next())
+        this.homescreen_sections['latest_update'].selectorFunc = ($: CheerioStatic) => $('div.bsx', $('h2:contains(CHAPTER TERBARU)')?.parent()?.next())
     }
-    override dateMonths: Months = {
+    override dateMonths = {
         january: 'Januari',
         february: 'Februari',
         march: 'Maret',
