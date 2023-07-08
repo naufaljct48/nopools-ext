@@ -13,7 +13,7 @@ import {
 const DOMAIN = 'https://mangatale.co'
 
 export const MangataleInfo: SourceInfo = {
-    version: getExportVersion('0.0.0'),
+    version: getExportVersion('0.0.1'),
     name: 'Mangatale',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',

@@ -13,7 +13,7 @@ import {
 const DOMAIN = 'https://komikcast.io'
 
 export const KomikcastInfo: SourceInfo = {
-    version: getExportVersion('0.0.0'),
+    version: getExportVersion('0.0.1'),
     name: 'Komikcast',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',

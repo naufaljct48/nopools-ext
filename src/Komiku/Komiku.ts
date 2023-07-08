@@ -13,7 +13,7 @@ import {
 const DOMAIN = 'https://komiku.com'
 
 export const KomikuInfo: SourceInfo = {
-    version: getExportVersion('0.0.0'),
+    version: getExportVersion('0.0.1'),
     name: 'Komiku',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
