@@ -1518,7 +1518,7 @@ class Madara {
         /**
          * The language code the source's content is served in in string form.
          */
-        this.language = "🇬🇧";
+        this.language = "🇮🇩";
         /**
          * Different Madara sources might have a slightly different selector which is required to parse out
          * each manga object while on a search result page. This is the selector
