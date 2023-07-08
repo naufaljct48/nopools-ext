@@ -1442,7 +1442,7 @@ const MangaStreamHelper_1 = require("../MangaStreamHelper");
 const KomikcastParser_1 = require("./KomikcastParser");
 const DOMAIN = 'https://komikcast.io';
 exports.KomikcastInfo = {
-    version: (0, MangaStream_1.getExportVersion)('0.0.4'),
+    version: (0, MangaStream_1.getExportVersion)('0.0.5'),
     name: 'Komikcast',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -1475,17 +1475,18 @@ class Komikcast extends MangaStream_1.MangaStream {
             ...MangaStreamHelper_1.DefaultHomeSectionData,
             section: (0, MangaStreamHelper_1.createHomeSection)('popular_today', 'Hot Komik Update', true),
             selectorFunc: ($) => $('div.swiper-slide', $('span:contains(Hot Komik Update)')?.parent()?.next()),
-            titleSelectorFunc: ($) => $('div.title'),
+            titleSelectorFunc: ($) => $('div.title').text().trim(),
             subtitleSelectorFunc: ($, element) => $('div.chapter', element).text().trim(),
-            getViewMoreItemsFunc: (page) => `daftar-komik/page/${page}/?orderby=popular`,
-            sortIndex: 10
+            getViewMoreItemsFunc: (page) => `/daftar-komik/page/${page}/?orderby=popular`,
+            sortIndex: 9
         };
         this.homescreen_sections['latest_update'] = {
             ...MangaStreamHelper_1.DefaultHomeSectionData,
             section: (0, MangaStreamHelper_1.createHomeSection)('latest_update', 'Rilisan Terbaru', true),
             selectorFunc: ($) => $('div.uta', $('span:contains(Rilisan Terbaru)')?.parent()?.next()),
-            subtitleSelectorFunc: ($) => $('div.luf > ul > li > a').first().text().trim(),
-            getViewMoreItemsFunc: (page) => `daftar-komik/page/${page}/?orderby=update`,
+            titleSelectorFunc: ($) => $('h3').text(),
+            subtitleSelectorFunc: ($, element) => $('a', $('li', element).first()).text().trim(),
+            getViewMoreItemsFunc: (page) => `/daftar-komik/page/${page}/?orderby=update`,
             sortIndex: 20
         };
     }
@@ -1615,15 +1616,17 @@ class KomikcastParser extends MangaStreamParser_1.MangaStreamParser {
         });
     }
     parseChapterDetails($, mangaId, chapterId) {
-        var _a, _b;
+        // const data = $.html()
         const pages = [];
-        for (const p of $('img', 'div.main-reading-area').toArray()) {
-            let image = (_a = $(p).attr('src')) !== null && _a !== void 0 ? _a : '';
-            if (!image)
-                image = (_b = $(p).attr('data-src')) !== null && _b !== void 0 ? _b : '';
-            if (!image)
-                throw new Error(`Unable to parse image(s) for chapterID: ${chapterId}`);
-            pages.push(image);
+        const obj = $('img', 'div.main-reading-area').toArray();
+        if (obj.length === 0) {
+            throw new Error(`Failed to find page details script for manga ${mangaId}`);
+        }
+        for (const index of obj) {
+            const images = $(index).attr('src');
+            if (!images)
+                continue;
+            pages.push(encodeURI(images));
         }
         const chapterDetails = App.createChapterDetails({
             id: chapterId,
