@@ -9,6 +9,7 @@ import {
     getExportVersion,
     MangaStream
 } from '../MangaStream'
+import { Months } from '../MangaStreamInterfaces'
 
 const DOMAIN = 'https://kanzenin.xyz'
 
@@ -40,5 +41,20 @@ export class Kanzenin extends MangaStream {
 
     override configureSections(): void {
         this.homescreen_sections['new_titles'].enabled = false
+    }
+
+    override dateMonths: Months = {
+        january: 'Januari',
+        february: 'Februari',
+        march: 'Maret',
+        april: 'April',
+        may: 'Mei',
+        june: 'Juni',
+        july: 'Juli',
+        august: 'Agustus',
+        september: 'September',
+        october: 'Oktober',
+        november: 'November',
+        december: 'Desember'
     }
 }
