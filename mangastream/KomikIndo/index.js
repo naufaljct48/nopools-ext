@@ -1440,7 +1440,7 @@ const types_1 = require("@paperback/types");
 const MangaStream_1 = require("../MangaStream");
 const DOMAIN = 'https://komikindo.co';
 exports.KomikIndoInfo = {
-    version: (0, MangaStream_1.getExportVersion)('0.0.0'),
+    version: (0, MangaStream_1.getExportVersion)('0.0.1'),
     name: 'KomikIndo',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -1476,7 +1476,9 @@ class KomikIndo extends MangaStream_1.MangaStream {
         };
     }
     configureSections() {
-        this.homescreen_sections['new_titles'].enabled = false;
+        this.homescreen_sections['new_titles'].enabled = true;
+        this.homescreen_sections['popular_today'].selectorFunc = ($) => $('div.bsx', $('h2:contains(SEDANG HANGAT DIBACA)')?.parent()?.next());
+        this.homescreen_sections['latest_update'].selectorFunc = ($) => $('div.bsx', $('h2:contains(CHAPTER TERBARU)')?.parent()?.next());
     }
 }
 exports.KomikIndo = KomikIndo;
@@ -2065,7 +2067,7 @@ class MangaStreamParser {
     }
     parseMangaDetails($, mangaId, source) {
         const titles = [];
-        titles.push(this.decodeHTMLEntity($('h1.entry-title').text().trim()));
+        titles.push(this.decodeHTMLEntity($('h1.entry-title').text().trim().replace(/Komik|Manhwa|Manga|Manhua|Bahasa Indonesia/g, '')));
         const altTitles = $(`span:contains(${source.manga_selector_AlternativeTitles}), b:contains(${source.manga_selector_AlternativeTitles})+span, .imptdt:contains(${source.manga_selector_AlternativeTitles}) i, h1.entry-title+span`).contents().remove().last().text().split(','); // Language dependant
         for (const title of altTitles) {
             if (title == '') {
@@ -2073,8 +2075,8 @@ class MangaStreamParser {
             }
             titles.push(this.decodeHTMLEntity(title.trim()));
         }
-        const author = $(`span:contains(${source.manga_selector_author}), .fmed b:contains(${source.manga_selector_author})+span, .imptdt:contains(${source.manga_selector_author}) i`).contents().remove().last().text().trim(); // Language dependant
-        const artist = $(`span:contains(${source.manga_selector_artist}), .fmed b:contains(${source.manga_selector_artist})+span, .imptdt:contains(${source.manga_selector_artist}) i`).contents().remove().last().text().trim(); // Language dependant
+        const author = $(`span:contains(${source.manga_selector_author}), .fmed b:contains(${source.manga_selector_author})+span, td:contains(${source.manga_selector_author})+td, .imptdt:contains(${source.manga_selector_author}) i`).contents().remove().last().text().trim(); // Language dependant
+        const artist = $(`span:contains(${source.manga_selector_artist}), .fmed b:contains(${source.manga_selector_artist})+span, td:contains(${source.manga_selector_artist})+td, .imptdt:contains(${source.manga_selector_artist}) i`).contents().remove().last().text().trim(); // Language dependant
         const image = this.getImageSrc($('img', 'div[itemprop="image"]'));
         const description = this.decodeHTMLEntity($('div[itemprop="description"]  p').text().trim());
         const arrayTags = [];
