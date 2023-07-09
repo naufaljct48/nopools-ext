@@ -1440,7 +1440,7 @@ const types_1 = require("@paperback/types");
 const MangaStream_1 = require("../MangaStream");
 const DOMAIN = 'https://kiryuu.id';
 exports.KiryuuInfo = {
-    version: (0, MangaStream_1.getExportVersion)('0.0.3'),
+    version: (0, MangaStream_1.getExportVersion)('0.0.4'),
     name: 'Kiryuu',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
