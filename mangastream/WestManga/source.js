@@ -2335,7 +2335,7 @@ const types_1 = require("@paperback/types");
 const MangaStream_1 = require("../MangaStream");
 const DOMAIN = 'https://westmanga.info';
 exports.WestMangaInfo = {
-    version: (0, MangaStream_1.getExportVersion)('0.0.3'),
+    version: (0, MangaStream_1.getExportVersion)('0.0.4'),
     name: 'WestManga',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -2357,11 +2357,10 @@ class WestManga extends MangaStream_1.MangaStream {
         this.baseUrl = DOMAIN;
     }
     configureSections() {
-        this.homescreen_sections['new_titles'].enabled = true;
+        this.homescreen_sections['new_titles'].enabled = false;
         this.homescreen_sections['top_alltime'].enabled = false;
         this.homescreen_sections['top_monthly'].enabled = false;
         this.homescreen_sections['top_weekly'].enabled = false;
-        this.homescreen_sections['new_titles'].selectorFunc = ($) => $('li', $('h3:contains(Project Baru WM)')?.parent()?.next());
         this.homescreen_sections['popular_today'].selectorFunc = ($) => $('div.bsx', $('h2:contains(Komik Popular Hari Ini...)')?.parent()?.next());
         this.homescreen_sections['latest_update'].selectorFunc = ($) => $('div.bsx', $('h2:contains(UPDATE KOMIK LAINYA...)')?.parent()?.next());
         this.homescreen_sections['latest_update'].subtitleSelectorFunc = ($, element) => $('div.epxs', element).text().trim();

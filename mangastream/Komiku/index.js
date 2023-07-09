@@ -1440,7 +1440,7 @@ const types_1 = require("@paperback/types");
 const MangaStream_1 = require("../MangaStream");
 const DOMAIN = 'https://komiku.com';
 exports.KomikuInfo = {
-    version: (0, MangaStream_1.getExportVersion)('0.0.4'),
+    version: (0, MangaStream_1.getExportVersion)('0.0.5'),
     name: 'Komiku',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -1476,8 +1476,7 @@ class Komiku extends MangaStream_1.MangaStream {
         };
     }
     configureSections() {
-        this.homescreen_sections['new_titles'].enabled = true;
-        this.homescreen_sections['new_titles'].selectorFunc = ($) => $('li', $('h3:contains(Baca Komik Serial Terbaru)')?.parent()?.next());
+        this.homescreen_sections['new_titles'].enabled = false;
         this.homescreen_sections['popular_today'].selectorFunc = ($) => $('div.bsx', $('h2:contains(Baca Komik Terpopuler Hari Ini Online)')?.parent()?.next());
         this.homescreen_sections['latest_update'].selectorFunc = ($) => $('div.uta', $('h2:contains(Baca Komik Terbaru Online)')?.parent()?.next());
         this.homescreen_sections['top_alltime'].enabled = false;

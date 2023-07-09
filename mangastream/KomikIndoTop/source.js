@@ -1440,7 +1440,7 @@ const types_1 = require("@paperback/types");
 const MangaStream_1 = require("../MangaStream");
 const DOMAIN = 'https://komikindo.top';
 exports.KomikIndoTopInfo = {
-    version: (0, MangaStream_1.getExportVersion)('0.0.4'),
+    version: (0, MangaStream_1.getExportVersion)('0.0.5'),
     name: 'KomikIndoTop',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -1469,6 +1469,7 @@ class KomikIndoTop extends MangaStream_1.MangaStream {
         this.homescreen_sections['new_titles'].enabled = false;
         this.homescreen_sections['top_alltime'].enabled = false;
         this.homescreen_sections['top_monthly'].enabled = false;
+        this.homescreen_sections['top_weekly'].enabled = false;
         this.homescreen_sections['latest_update'].selectorFunc = ($) => $('div.bsx', $('h2:contains(Latest Update)')?.parent()?.next());
         this.homescreen_sections['latest_update'].subtitleSelectorFunc = ($, element) => $('span.fivchap', element).first().text().trim();
     }

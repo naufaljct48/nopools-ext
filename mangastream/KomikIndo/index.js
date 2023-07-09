@@ -1440,7 +1440,7 @@ const types_1 = require("@paperback/types");
 const MangaStream_1 = require("../MangaStream");
 const DOMAIN = 'https://komikindo.co';
 exports.KomikIndoInfo = {
-    version: (0, MangaStream_1.getExportVersion)('0.0.4'),
+    version: (0, MangaStream_1.getExportVersion)('0.0.5'),
     name: 'KomikIndo',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -1476,8 +1476,7 @@ class KomikIndo extends MangaStream_1.MangaStream {
         };
     }
     configureSections() {
-        this.homescreen_sections['new_titles'].enabled = true;
-        this.homescreen_sections['new_titles'].selectorFunc = ($) => $('li', $('h3:contains(MANGA TERBARU)')?.parent()?.next());
+        this.homescreen_sections['new_titles'].enabled = false;
         this.homescreen_sections['popular_today'].selectorFunc = ($) => $('div.bsx', $('h2:contains(SEDANG HANGAT DIBACA)')?.parent()?.next());
         this.homescreen_sections['latest_update'].selectorFunc = ($) => $('div.uta', $('h2:contains(CHAPTER TERBARU)')?.parent()?.next());
         this.homescreen_sections['top_alltime'].enabled = false;

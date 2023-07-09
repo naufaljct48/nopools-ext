@@ -2274,7 +2274,7 @@ const types_1 = require("@paperback/types");
 const MangaStream_1 = require("../MangaStream");
 const DOMAIN = 'https://mangatale.co';
 exports.MangataleInfo = {
-    version: (0, MangaStream_1.getExportVersion)('0.0.4'),
+    version: (0, MangaStream_1.getExportVersion)('0.0.5'),
     name: 'Mangatale',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -2296,8 +2296,7 @@ class Mangatale extends MangaStream_1.MangaStream {
         this.baseUrl = DOMAIN;
     }
     configureSections() {
-        this.homescreen_sections['new_titles'].enabled = true;
-        this.homescreen_sections['new_titles'].selectorFunc = ($) => $('li', $('h3:contains(Serial Baru)')?.parent()?.next());
+        this.homescreen_sections['new_titles'].enabled = false;
         this.homescreen_sections['top_alltime'].enabled = false;
         this.homescreen_sections['top_monthly'].enabled = false;
         this.homescreen_sections['top_weekly'].enabled = false;
