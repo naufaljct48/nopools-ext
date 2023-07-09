@@ -1440,6 +1440,7 @@ const types_1 = require("@paperback/types");
 const MangaStream_1 = require("../MangaStream");
 const MangaStreamHelper_1 = require("../MangaStreamHelper");
 const KomikcastParser_1 = require("./KomikcastParser");
+const UrlBuilder_1 = require("../UrlBuilder");
 const DOMAIN = 'https://komikcast.io';
 exports.KomikcastInfo = {
     version: (0, MangaStream_1.getExportVersion)('0.0.6'),
@@ -1466,29 +1467,18 @@ class Komikcast extends MangaStream_1.MangaStream {
         this.parser = new KomikcastParser_1.KomikcastParser();
     }
     configureSections() {
+        this.homescreen_sections['popular_today'].selectorFunc = ($) => $('div.swiper-slide', $('h3:contains(Hot Komik Update)')?.parent()?.next());
+        this.homescreen_sections['popular_today'].titleSelectorFunc = ($) => $('div.title').text().trim();
+        this.homescreen_sections['popular_today'].subtitleSelectorFunc = ($, element) => $('div.chapter', element).text().trim();
+        this.homescreen_sections['popular_today'].getViewMoreItemsFunc = (page) => `daftar-komik/page/${page}/?orderby=popular`;
+        this.homescreen_sections['latest_update'].selectorFunc = ($) => $('div.utao', $('span:contains(Rilisan Terbaru)')?.parent()?.next());
+        this.homescreen_sections['latest_update'].titleSelectorFunc = ($) => $('h3').text().trim();
+        this.homescreen_sections['latest_update'].subtitleSelectorFunc = ($, element) => $('div.chapter', element).text().trim();
+        this.homescreen_sections['latest_update'].getViewMoreItemsFunc = (page) => `daftar-komik/page/${page}/?orderby=update`;
         this.homescreen_sections['new_titles'].enabled = false;
         this.homescreen_sections['top_alltime'].enabled = false;
         this.homescreen_sections['top_monthly'].enabled = false;
         this.homescreen_sections['top_weekly'].enabled = false;
-        //@ts-ignore
-        this.homescreen_sections['popular_today'] = {
-            ...MangaStreamHelper_1.DefaultHomeSectionData,
-            section: (0, MangaStreamHelper_1.createHomeSection)('popular_today', 'Hot Komik Update', true),
-            selectorFunc: ($) => $('div.swiper-slide', $('span:contains(Hot Komik Update)')?.parent()?.next()),
-            titleSelectorFunc: ($) => $('div.title').text().trim(),
-            subtitleSelectorFunc: ($, element) => $('div.chapter', element).text().trim(),
-            getViewMoreItemsFunc: (page) => `/daftar-komik/page/${page}/?orderby=popular`,
-            sortIndex: 9
-        };
-        this.homescreen_sections['latest_update'] = {
-            ...MangaStreamHelper_1.DefaultHomeSectionData,
-            section: (0, MangaStreamHelper_1.createHomeSection)('latest_update', 'Rilisan Terbaru', true),
-            selectorFunc: ($) => $('div.uta', $('span:contains(Rilisan Terbaru)')?.parent()?.next()),
-            titleSelectorFunc: ($) => $('h3').text(),
-            subtitleSelectorFunc: ($, element) => $('a', $('li', element).first()).text().trim(),
-            getViewMoreItemsFunc: (page) => `/daftar-komik/page/${page}/?orderby=update`,
-            sortIndex: 20
-        };
     }
     async getChapterDetails(mangaId, chapterId) {
         // Request the manga page
@@ -1518,10 +1508,68 @@ class Komikcast extends MangaStream_1.MangaStream {
         const _$ = this.cheerio.load(_response.data);
         return this.parser.parseChapterDetails(_$, mangaId, chapterId);
     }
+    async getSearchTags() {
+        const request = App.createRequest({
+            url: `${this.baseUrl}/`,
+            method: 'GET',
+            param: `${this.directoryPath}/`
+        });
+        const response = await this.requestManager.schedule(request, 1);
+        this.checkResponseError(response);
+        const $ = this.cheerio.load(response.data);
+        return this.parser.parseTags($);
+    }
+    async getSearchResults(query, metadata) {
+        const page = metadata?.page ?? 1;
+        const request = await this.constructSearchRequest(page, query);
+        const response = await this.requestManager.schedule(request, 1);
+        this.checkResponseError(response);
+        const $ = this.cheerio.load(response.data);
+        const results = await this.parser.parseSearchResults($, this);
+        const manga = [];
+        for (const result of results) {
+            let mangaId = result.slug;
+            if (await this.getUsePostIds()) {
+                mangaId = await this.slugToPostId(result.slug, result.path);
+            }
+            manga.push(App.createPartialSourceManga({
+                mangaId,
+                image: result.image,
+                title: result.title,
+                subtitle: result.subtitle
+            }));
+        }
+        metadata = !this.parser.isLastPage($, 'view_more') ? { page: page + 1 } : undefined;
+        return App.createPagedResults({
+            results: manga,
+            metadata
+        });
+    }
+    async constructSearchRequest(page, query) {
+        let urlBuilder = new UrlBuilder_1.URLBuilder(this.baseUrl)
+            .addPathComponent(this.directoryPath)
+            .addQueryParameter('page', page.toString());
+        if (query?.title) {
+            urlBuilder = urlBuilder.addQueryParameter('s', encodeURIComponent(query?.title.replace(/[’–][a-z]*/g, '') ?? ''));
+        }
+        else {
+            urlBuilder = urlBuilder
+                .addQueryParameter('genre', (0, MangaStreamHelper_1.getFilterTagsBySection)('genres', query?.includedTags, true))
+                .addQueryParameter('genre', (0, MangaStreamHelper_1.getFilterTagsBySection)('genres', query?.excludedTags, false, await this.supportsTagExclusion()))
+                .addQueryParameter('status', (0, MangaStreamHelper_1.getIncludedTagBySection)('status', query?.includedTags))
+                .addQueryParameter('type', (0, MangaStreamHelper_1.getIncludedTagBySection)('type', query?.includedTags))
+                .addQueryParameter('order', (0, MangaStreamHelper_1.getIncludedTagBySection)('order', query?.includedTags));
+        }
+        const requestObject = {
+            url: urlBuilder.buildUrl({ addTrailingSlash: true, includeUndefinedParameters: false }),
+            method: 'GET'
+        };
+        return createRequestObject(requestObject);
+    }
 }
 exports.Komikcast = Komikcast;
 
-},{"../MangaStream":73,"../MangaStreamHelper":74,"./KomikcastParser":71,"@paperback/types":61}],71:[function(require,module,exports){
+},{"../MangaStream":73,"../MangaStreamHelper":74,"../UrlBuilder":76,"./KomikcastParser":71,"@paperback/types":61}],71:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.KomikcastParser = void 0;
