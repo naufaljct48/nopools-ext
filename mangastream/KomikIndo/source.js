@@ -1440,7 +1440,7 @@ const types_1 = require("@paperback/types");
 const MangaStream_1 = require("../MangaStream");
 const DOMAIN = 'https://komikindo.co';
 exports.KomikIndoInfo = {
-    version: (0, MangaStream_1.getExportVersion)('0.0.3'),
+    version: (0, MangaStream_1.getExportVersion)('0.0.4'),
     name: 'KomikIndo',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
