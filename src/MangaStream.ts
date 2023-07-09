@@ -248,11 +248,10 @@ export abstract class MangaStream implements ChapterProviding, HomePageSectionsP
         },
         'new_titles': {
             ...DefaultHomeSectionData,
-            section: createHomeSection('new_titles', 'New Titles'),
+            section: createHomeSection('new_titles', 'New Titles', false),
             selectorFunc: ($: CheerioStatic) => $('li', $('h3:contains(New Series)')?.parent()?.next()),
             subtitleSelectorFunc: ($: CheerioStatic, element: CheerioElement) => $('span a', element).toArray().map(x => $(x).text().trim()).join(', '),
-            getViewMoreItemsFunc: (page: string) => `${this.directoryPath}/?page=${page}&order=latest`,
-            sortIndex: 30
+            sortIndex: 5
         },
         'top_alltime': {
             ...DefaultHomeSectionData,
