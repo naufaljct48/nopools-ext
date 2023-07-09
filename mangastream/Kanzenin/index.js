@@ -1440,7 +1440,7 @@ const types_1 = require("@paperback/types");
 const MangaStream_1 = require("../MangaStream");
 const DOMAIN = 'https://kanzenin.xyz';
 exports.KanzeninInfo = {
-    version: (0, MangaStream_1.getExportVersion)('0.0.1'),
+    version: (0, MangaStream_1.getExportVersion)('0.0.2'),
     name: 'Kanzenin',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -1481,6 +1481,7 @@ class Kanzenin extends MangaStream_1.MangaStream {
     }
     configureSections() {
         this.homescreen_sections['new_titles'].enabled = false;
+        this.homescreen_sections['top_alltime'].enabled = false;
         this.homescreen_sections['latest_update'].selectorFunc = ($) => $('div.bsx', $('h2:contains(Latest Update)')?.parent()?.next());
         this.homescreen_sections['latest_update'].subtitleSelectorFunc = ($, element) => $('div.epxs', element).text().trim();
     }
