@@ -13,7 +13,7 @@ import {
 const DOMAIN = 'https://kiryuu.id'
 
 export const KiryuuInfo: SourceInfo = {
-    version: getExportVersion('0.0.4'),
+    version: getExportVersion('0.0.5'),
     name: 'Kiryuu',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -35,8 +35,7 @@ export class Kiryuu extends MangaStream {
     baseUrl: string = DOMAIN
 
     override configureSections(): void {
-        this.homescreen_sections['new_titles'].enabled = true
-        this.homescreen_sections['new_titles'].selectorFunc = ($: CheerioStatic) => $('li', $('h3:contains(Serial baru)')?.parent()?.next())
+        this.homescreen_sections['new_titles'].enabled = false
         this.homescreen_sections['top_alltime'].enabled = false
         this.homescreen_sections['top_monthly'].enabled = false
         this.homescreen_sections['top_weekly'].enabled = false

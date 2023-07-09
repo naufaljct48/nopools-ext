@@ -13,7 +13,7 @@ import {
 const DOMAIN = 'https://92.87.6.124'
 
 export const KomikTapInfo: SourceInfo = {
-    version: getExportVersion('0.0.3'),
+    version: getExportVersion('0.0.4'),
     name: 'KomikTap',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -42,6 +42,7 @@ export class KomikTap extends MangaStream {
         this.homescreen_sections['new_titles'].enabled = false
         this.homescreen_sections['top_alltime'].enabled = false
         this.homescreen_sections['top_monthly'].enabled = false
+        this.homescreen_sections['top_weekly'].enabled = false
     }
     override dateMonths = {
         january: 'Januari',
