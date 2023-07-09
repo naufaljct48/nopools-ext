@@ -4109,7 +4109,7 @@
                   id: "popular_today",
                   title: "Popular",
                   view_more: true,
-                  HomeSectionType: featured,
+                  type: types_1.HomeSectionType.featured,
                 });
                 const section2 = createHomeSection({
                   id: "latest_update",
