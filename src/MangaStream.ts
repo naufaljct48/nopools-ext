@@ -216,6 +216,7 @@ export abstract class MangaStream implements ChapterProviding, HomePageSectionsP
         december: 'December'
     }
 
+
     // ----HOMESCREEN SELECTORS----
     /**
      * Enable or disable the "Popular Today" section on the homescreen
