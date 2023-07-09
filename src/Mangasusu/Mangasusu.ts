@@ -13,13 +13,13 @@ import {
 const DOMAIN = 'https://mangasusuku.xyz'
 
 export const MangasusuInfo: SourceInfo = {
-    version: getExportVersion('0.0.3'),
+    version: getExportVersion('0.0.4'),
     name: 'Mangasusu',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
     authorWebsite: 'http://github.com/NaufalJCT48',
     icon: 'icon.png',
-    contentRating: ContentRating.MATURE,
+    contentRating: ContentRating.ADULT,
     websiteBaseURL: DOMAIN,
     intents: SourceIntents.MANGA_CHAPTERS | SourceIntents.HOMEPAGE_SECTIONS | SourceIntents.CLOUDFLARE_BYPASS_REQUIRED | SourceIntents.SETTINGS_UI,
     sourceTags: [

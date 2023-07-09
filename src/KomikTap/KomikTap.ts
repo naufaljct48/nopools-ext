@@ -13,13 +13,13 @@ import {
 const DOMAIN = 'https://92.87.6.124'
 
 export const KomikTapInfo: SourceInfo = {
-    version: getExportVersion('0.0.4'),
+    version: getExportVersion('0.0.5'),
     name: 'KomikTap',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
     authorWebsite: 'http://github.com/NaufalJCT48',
     icon: 'icon.png',
-    contentRating: ContentRating.MATURE,
+    contentRating: ContentRating.ADULT,
     websiteBaseURL: DOMAIN,
     intents: SourceIntents.MANGA_CHAPTERS | SourceIntents.HOMEPAGE_SECTIONS | SourceIntents.CLOUDFLARE_BYPASS_REQUIRED | SourceIntents.SETTINGS_UI,
     sourceTags: [

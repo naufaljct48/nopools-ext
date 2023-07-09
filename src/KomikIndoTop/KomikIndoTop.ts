@@ -13,13 +13,13 @@ import {
 const DOMAIN = 'https://komikindo.top'
 
 export const KomikIndoTopInfo: SourceInfo = {
-    version: getExportVersion('0.0.5'),
+    version: getExportVersion('0.0.6'),
     name: 'KomikIndoTop',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
     authorWebsite: 'http://github.com/NaufalJCT48',
     icon: 'icon.png',
-    contentRating: ContentRating.MATURE,
+    contentRating: ContentRating.ADULT,
     websiteBaseURL: DOMAIN,
     intents: SourceIntents.MANGA_CHAPTERS | SourceIntents.HOMEPAGE_SECTIONS | SourceIntents.CLOUDFLARE_BYPASS_REQUIRED | SourceIntents.SETTINGS_UI,
     sourceTags: [
