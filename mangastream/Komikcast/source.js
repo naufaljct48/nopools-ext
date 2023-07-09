@@ -934,7 +934,7 @@ const paperback_extensions_common_1 = require("paperback-extensions-common");
 const KomikcastMain_1 = require("./KomikcastMain");
 const KOMIKCAST_DOMAIN = 'https://komikcast.io';
 exports.KomikcastInfo = {
-    version: KomikcastMain_1.getExportVersion('0.1.2'),
+    version: KomikcastMain_1.getExportVersion('0.1.3'),
     name: 'Komikcast',
     description: 'Extension that pulls manga from Komikcast',
     author: 'NaufalJCT48',
@@ -962,7 +962,7 @@ class Komikcast extends KomikcastMain_1.KomikcastMain {
         //FOR ALL THE SELECTIONS, PLEASE CHECK THE MangaSteam.ts FILE!!!
         super(...arguments);
         this.baseUrl = KOMIKCAST_DOMAIN;
-        this.languageCode = paperback_extensions_common_1.LanguageCode.INDONESIAN;
+        this.languageCode = '🇮🇩';
         //----MANGA DETAILS SELECTORS
         /*
         If a website uses different names/words for the status below, change them to these.
@@ -1619,7 +1619,7 @@ class KomikcastMainParser {
                     const id = this.idCleaner((_h = $('a', manga).attr('href')) !== null && _h !== void 0 ? _h : '', source);
                     const title = $('h3', manga).text();
                     const image = (_k = (_j = this.getImageSrc($('img', manga))) === null || _j === void 0 ? void 0 : _j.split('?resize')[0]) !== null && _k !== void 0 ? _k : '';
-                    const subtitle = $("div.luf > ul > li a").first().text().trim();
+                    const subtitle = $("div.luf > ul > li a").first().text().trim();;
                     if (!id || !title)
                         continue;
                     latestUpdate.push(createMangaTile({
