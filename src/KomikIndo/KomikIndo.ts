@@ -13,7 +13,7 @@ import {
 const DOMAIN = 'https://komikindo.co'
 
 export const KomikIndoInfo: SourceInfo = {
-    version: getExportVersion('0.0.2'),
+    version: getExportVersion('0.0.3'),
     name: 'KomikIndo',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -39,6 +39,9 @@ export class KomikIndo extends MangaStream {
         this.homescreen_sections['new_titles'].selectorFunc = ($: CheerioStatic) => $('li', $('h3:contains(MANGA TERBARU)')?.parent()?.next())
         this.homescreen_sections['popular_today'].selectorFunc = ($: CheerioStatic) => $('div.bsx', $('h2:contains(SEDANG HANGAT DIBACA)')?.parent()?.next())
         this.homescreen_sections['latest_update'].selectorFunc = ($: CheerioStatic) => $('div.uta', $('h2:contains(CHAPTER TERBARU)')?.parent()?.next())
+        this.homescreen_sections['top_alltime'].enabled = false
+        this.homescreen_sections['top_monthly'].enabled = false
+        this.homescreen_sections['top_weekly'].enabled = false
     }
     override dateMonths = {
         january: 'Januari',

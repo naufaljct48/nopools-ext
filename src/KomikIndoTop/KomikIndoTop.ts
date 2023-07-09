@@ -13,7 +13,7 @@ import {
 const DOMAIN = 'https://komikindo.top'
 
 export const KomikIndoTopInfo: SourceInfo = {
-    version: getExportVersion('0.0.2'),
+    version: getExportVersion('0.0.3'),
     name: 'KomikIndoTop',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -40,6 +40,8 @@ export class KomikIndoTop extends MangaStream {
 
     override configureSections(): void {
         this.homescreen_sections['new_titles'].enabled = false
+        this.homescreen_sections['top_alltime'].enabled = false
+        this.homescreen_sections['top_monthly'].enabled = false
         this.homescreen_sections['latest_update'].selectorFunc = ($: CheerioStatic) => $('div.bsx', $('h2:contains(Latest Update)')?.parent()?.next())
         this.homescreen_sections['latest_update'].subtitleSelectorFunc = ($: CheerioStatic, element: CheerioElement) => $('span.fivchap', element).first().text().trim()
     }

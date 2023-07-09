@@ -13,7 +13,7 @@ import {
 const DOMAIN = 'https://mangatale.co'
 
 export const MangataleInfo: SourceInfo = {
-    version: getExportVersion('0.0.2'),
+    version: getExportVersion('0.0.3'),
     name: 'Mangatale',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -37,5 +37,8 @@ export class Mangatale extends MangaStream {
     override configureSections(): void {
         this.homescreen_sections['new_titles'].enabled = true
         this.homescreen_sections['new_titles'].selectorFunc = ($: CheerioStatic) => $('li', $('h3:contains(Serial Baru)')?.parent()?.next())
+        this.homescreen_sections['top_alltime'].enabled = false
+        this.homescreen_sections['top_monthly'].enabled = false
+        this.homescreen_sections['top_weekly'].enabled = false
     }
 }
