@@ -934,7 +934,7 @@ const paperback_extensions_common_1 = require("paperback-extensions-common");
 const KomikcastMain_1 = require("./KomikcastMain");
 const KOMIKCAST_DOMAIN = 'https://komikcast.io';
 exports.KomikcastInfo = {
-    version: KomikcastMain_1.getExportVersion('0.0.8'),
+    version: KomikcastMain_1.getExportVersion('0.0.9'),
     name: 'Komikcast',
     description: 'Extension that pulls manga from Komikcast',
     author: 'NaufalJCT48',
@@ -1299,7 +1299,7 @@ class KomikcastMain extends paperback_extensions_common_1.Source {
     }
     getHomePageSections(sectionCallback) {
         return __awaiter(this, void 0, void 0, function* () {
-            const section1 = createHomeSection({ id: 'popular_today', title: 'Popular', view_more: true, type: types_1.HomeSectionType.featured });
+            const section1 = createHomeSection({ id: 'popular_today', title: 'Popular', view_more: true });
             const section2 = createHomeSection({ id: 'latest_update', title: 'Latest Updates', view_more: true });
             const section3 = createHomeSection({ id: 'new_titles', title: 'New Titles', view_more: true });
             const section4 = createHomeSection({ id: 'top_alltime', title: 'Top All Time', view_more: false });
