@@ -20,7 +20,7 @@ import { KomikcastParser } from './KomikcastParser'
 const DOMAIN = 'https://komikcast.io'
 
 export const KomikcastInfo: SourceInfo = {
-    version: getExportVersion('0.0.5'),
+    version: getExportVersion('0.0.6'),
     name: 'Komikcast',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -70,5 +70,39 @@ export class Komikcast extends MangaStream {
             getViewMoreItemsFunc: (page: string) => `/daftar-komik/page/${page}/?orderby=update`,
             sortIndex: 20
         }
+    }
+
+    override async getChapterDetails(mangaId: string, chapterId: string): Promise<ChapterDetails> {
+        // Request the manga page
+        const request = App.createRequest({
+            url: await this.getUsePostIds() ? `${this.baseUrl}/?p=${mangaId}/` : `${this.baseUrl}/${this.directoryPath}/${mangaId}/`,
+            method: 'GET'
+        })
+
+        const response = await this.requestManager.schedule(request, 1)
+        this.checkResponseError(response)
+        const $ = this.cheerio.load(response.data as string)
+
+        const chapter = $('li', 'div.komik_info-chapters')
+        if (!chapter) {
+            throw new Error(`Unable to fetch a chapter for chapter numer: ${chapterId}`)
+        }
+
+        // Fetch the ID (URL) of the chapter
+        const id = $('a', chapter).attr('href') ?? ''
+        if (!id) {
+            throw new Error(`Unable to fetch id for chapter numer: ${chapterId}`)
+        }
+        // Request the chapter page
+        const _request = App.createRequest({
+            url: id,
+            method: 'GET'
+        })
+
+        const _response = await this.requestManager.schedule(_request, 1)
+        this.checkResponseError(_response)
+        const _$ = this.cheerio.load(_response.data as string)
+
+        return this.parser.parseChapterDetails(_$, mangaId, chapterId)
     }
 }
