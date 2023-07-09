@@ -1678,11 +1678,10 @@ class MangaStream {
             },
             'new_titles': {
                 ...MangaStreamHelper_1.DefaultHomeSectionData,
-                section: (0, MangaStreamHelper_1.createHomeSection)('new_titles', 'New Titles'),
+                section: (0, MangaStreamHelper_1.createHomeSection)('new_titles', 'New Titles', false),
                 selectorFunc: ($) => $('li', $('h3:contains(New Series)')?.parent()?.next()),
                 subtitleSelectorFunc: ($, element) => $('span a', element).toArray().map(x => $(x).text().trim()).join(', '),
-                getViewMoreItemsFunc: (page) => `${this.directoryPath}/?page=${page}&order=latest`,
-                sortIndex: 30
+                sortIndex: 5
             },
             'top_alltime': {
                 ...MangaStreamHelper_1.DefaultHomeSectionData,
