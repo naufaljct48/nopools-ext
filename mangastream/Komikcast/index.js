@@ -1442,7 +1442,7 @@ const MangaStreamHelper_1 = require("../MangaStreamHelper");
 const KomikcastParser_1 = require("./KomikcastParser");
 const DOMAIN = 'https://komikcast.io';
 exports.KomikcastInfo = {
-    version: (0, MangaStream_1.getExportVersion)('0.0.5'),
+    version: (0, MangaStream_1.getExportVersion)('0.0.6'),
     name: 'Komikcast',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -1489,6 +1489,34 @@ class Komikcast extends MangaStream_1.MangaStream {
             getViewMoreItemsFunc: (page) => `/daftar-komik/page/${page}/?orderby=update`,
             sortIndex: 20
         };
+    }
+    async getChapterDetails(mangaId, chapterId) {
+        // Request the manga page
+        const request = App.createRequest({
+            url: await this.getUsePostIds() ? `${this.baseUrl}/?p=${mangaId}/` : `${this.baseUrl}/${this.directoryPath}/${mangaId}/`,
+            method: 'GET'
+        });
+        const response = await this.requestManager.schedule(request, 1);
+        this.checkResponseError(response);
+        const $ = this.cheerio.load(response.data);
+        const chapter = $('li', 'div.komik_info-chapters');
+        if (!chapter) {
+            throw new Error(`Unable to fetch a chapter for chapter numer: ${chapterId}`);
+        }
+        // Fetch the ID (URL) of the chapter
+        const id = $('a', chapter).attr('href') ?? '';
+        if (!id) {
+            throw new Error(`Unable to fetch id for chapter numer: ${chapterId}`);
+        }
+        // Request the chapter page
+        const _request = App.createRequest({
+            url: id,
+            method: 'GET'
+        });
+        const _response = await this.requestManager.schedule(_request, 1);
+        this.checkResponseError(_response);
+        const _$ = this.cheerio.load(_response.data);
+        return this.parser.parseChapterDetails(_$, mangaId, chapterId);
     }
 }
 exports.Komikcast = Komikcast;
