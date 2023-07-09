@@ -2341,7 +2341,7 @@ exports.WestMangaInfo = {
     author: 'NaufalJCT48',
     authorWebsite: 'http://github.com/NaufalJCT48',
     icon: 'icon.png',
-    contentRating: types_1.ContentRating.MATURE,
+    contentRating: types_1.ContentRating.EVERYONE,
     websiteBaseURL: DOMAIN,
     intents: types_1.SourceIntents.MANGA_CHAPTERS | types_1.SourceIntents.HOMEPAGE_SECTIONS | types_1.SourceIntents.CLOUDFLARE_BYPASS_REQUIRED | types_1.SourceIntents.SETTINGS_UI,
     sourceTags: [

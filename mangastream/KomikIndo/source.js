@@ -1440,13 +1440,13 @@ const types_1 = require("@paperback/types");
 const MangaStream_1 = require("../MangaStream");
 const DOMAIN = 'https://komikindo.co';
 exports.KomikIndoInfo = {
-    version: (0, MangaStream_1.getExportVersion)('0.0.5'),
+    version: (0, MangaStream_1.getExportVersion)('0.0.6'),
     name: 'KomikIndo',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
     authorWebsite: 'http://github.com/NaufalJCT48',
     icon: 'icon.png',
-    contentRating: types_1.ContentRating.MATURE,
+    contentRating: types_1.ContentRating.EVERYONE,
     websiteBaseURL: DOMAIN,
     intents: types_1.SourceIntents.MANGA_CHAPTERS | types_1.SourceIntents.HOMEPAGE_SECTIONS | types_1.SourceIntents.CLOUDFLARE_BYPASS_REQUIRED | types_1.SourceIntents.SETTINGS_UI,
     sourceTags: [
