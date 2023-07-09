@@ -10,7 +10,7 @@ import { getExportVersion, Madara } from "../Madara";
 const DOMAIN = "https://shinigami.id";
 
 export const ShinigamiInfo: SourceInfo = {
-  version: getExportVersion("0.0.0"),
+  version: getExportVersion("0.0.1"),
   name: "Shinigami",
   description: `Extension that pulls manga from ${DOMAIN}`,
   author: "NaufalJCT48",
@@ -37,4 +37,6 @@ export class Shinigami extends Madara {
   override alternativeChapterAjaxEndpoint = true;
 
   override hasAdvancedSearchPage = true;
+
+  override directoryPath = "series";
 }
