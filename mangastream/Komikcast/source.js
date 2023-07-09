@@ -934,7 +934,7 @@ const paperback_extensions_common_1 = require("paperback-extensions-common");
 const KomikcastMain_1 = require("./KomikcastMain");
 const KOMIKCAST_DOMAIN = 'https://komikcast.io';
 exports.KomikcastInfo = {
-    version: KomikcastMain_1.getExportVersion('0.0.1'),
+    version: KomikcastMain_1.getExportVersion('0.0.8'),
     name: 'Komikcast',
     description: 'Extension that pulls manga from Komikcast',
     author: 'NaufalJCT48',
