@@ -13,7 +13,7 @@ import {
 const DOMAIN = 'https://westmanga.info'
 
 export const WestMangaInfo: SourceInfo = {
-    version: getExportVersion('0.0.2'),
+    version: getExportVersion('0.0.3'),
     name: 'WestManga',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
