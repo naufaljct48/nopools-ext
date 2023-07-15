@@ -65,7 +65,7 @@ export class Komikcast extends MangaStream {
     override async getChapterDetails(mangaId: string, chapterId: string): Promise<ChapterDetails> {
         // Request the manga page
         const request = App.createRequest({
-            url: `${this.baseUrl}/${this.directoryPath}/${mangaId}/`,
+            url: url: await this.getUsePostIds() ? `${this.baseUrl}/?p=${mangaId}/` : `${this.baseUrl}/${this.directoryPath}/${mangaId}/`,
             method: 'GET'
         })
 
