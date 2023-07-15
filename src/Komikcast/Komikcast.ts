@@ -21,7 +21,7 @@ import { URLBuilder } from '../UrlBuilder'
 const DOMAIN = 'https://komikcast.io'
 
 export const KomikcastInfo: SourceInfo = {
-    version: getExportVersion('0.0.8'),
+    version: getExportVersion('0.0.9'),
     name: 'Komikcast',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
