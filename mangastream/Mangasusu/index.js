@@ -2274,7 +2274,7 @@ const types_1 = require("@paperback/types");
 const MangaStream_1 = require("../MangaStream");
 const DOMAIN = 'https://mangasusuku.xyz';
 exports.MangasusuInfo = {
-    version: (0, MangaStream_1.getExportVersion)('0.0.4'),
+    version: (0, MangaStream_1.getExportVersion)('0.0.5'),
     name: 'Mangasusu',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -2298,6 +2298,7 @@ class Mangasusu extends MangaStream_1.MangaStream {
     constructor() {
         super(...arguments);
         this.baseUrl = DOMAIN;
+        this.manga_tag_selector_box = 'div.seriestugenre';
         this.directoryPath = 'komik';
     }
     configureSections() {

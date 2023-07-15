@@ -1443,7 +1443,7 @@ const KomikcastParser_1 = require("./KomikcastParser");
 const UrlBuilder_1 = require("../UrlBuilder");
 const DOMAIN = 'https://komikcast.io';
 exports.KomikcastInfo = {
-    version: (0, MangaStream_1.getExportVersion)('0.0.7'),
+    version: (0, MangaStream_1.getExportVersion)('0.0.8'),
     name: 'Komikcast',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -1483,7 +1483,7 @@ class Komikcast extends MangaStream_1.MangaStream {
     async getChapterDetails(mangaId, chapterId) {
         // Request the manga page
         const request = App.createRequest({
-            url: await this.getUsePostIds() ? `${this.baseUrl}/?p=${mangaId}/` : `${this.baseUrl}/${this.directoryPath}/${mangaId}/`,
+            url: `${this.baseUrl}/${this.directoryPath}/${mangaId}/`,
             method: 'GET'
         });
         const response = await this.requestManager.schedule(request, 1);

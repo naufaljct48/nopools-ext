@@ -1440,7 +1440,7 @@ const types_1 = require("@paperback/types");
 const MangaStream_1 = require("../MangaStream");
 const DOMAIN = 'https://kiryuu.id';
 exports.KiryuuInfo = {
-    version: (0, MangaStream_1.getExportVersion)('0.0.5'),
+    version: (0, MangaStream_1.getExportVersion)('0.0.6'),
     name: 'Kiryuu',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -1460,6 +1460,7 @@ class Kiryuu extends MangaStream_1.MangaStream {
     constructor() {
         super(...arguments);
         this.baseUrl = DOMAIN;
+        this.manga_tag_selector_box = 'div.seriestugenre';
         this.dateMonths = {
             january: 'Januari',
             february: 'Februari',

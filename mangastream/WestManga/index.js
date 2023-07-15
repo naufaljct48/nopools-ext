@@ -2335,7 +2335,7 @@ const types_1 = require("@paperback/types");
 const MangaStream_1 = require("../MangaStream");
 const DOMAIN = 'https://westmanga.info';
 exports.WestMangaInfo = {
-    version: (0, MangaStream_1.getExportVersion)('0.0.4'),
+    version: (0, MangaStream_1.getExportVersion)('0.0.5'),
     name: 'WestManga',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -2355,6 +2355,7 @@ class WestManga extends MangaStream_1.MangaStream {
     constructor() {
         super(...arguments);
         this.baseUrl = DOMAIN;
+        this.manga_tag_selector_box = 'div.seriestugenre';
     }
     configureSections() {
         this.homescreen_sections['new_titles'].enabled = false;
