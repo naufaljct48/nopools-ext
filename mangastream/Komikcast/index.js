@@ -1443,7 +1443,7 @@ const KomikcastParser_1 = require("./KomikcastParser");
 const UrlBuilder_1 = require("../UrlBuilder");
 const DOMAIN = 'https://komikcast.io';
 exports.KomikcastInfo = {
-    version: (0, MangaStream_1.getExportVersion)('0.0.8'),
+    version: (0, MangaStream_1.getExportVersion)('0.0.9'),
     name: 'Komikcast',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
