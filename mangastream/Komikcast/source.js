@@ -1483,7 +1483,7 @@ class Komikcast extends MangaStream_1.MangaStream {
     async getChapterDetails(mangaId, chapterId) {
         // Request the manga page
         const request = App.createRequest({
-            url: `${this.baseUrl}/${this.directoryPath}/${mangaId}/`,
+            url: url, await: this.getUsePostIds() ? `${this.baseUrl}/?p=${mangaId}/` : `${this.baseUrl}/${this.directoryPath}/${mangaId}/`,
             method: 'GET'
         });
         const response = await this.requestManager.schedule(request, 1);
