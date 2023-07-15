@@ -13,7 +13,7 @@ import {
 const DOMAIN = 'https://mangasusuku.xyz'
 
 export const MangasusuInfo: SourceInfo = {
-    version: getExportVersion('0.0.4'),
+    version: getExportVersion('0.0.5'),
     name: 'Mangasusu',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -37,6 +37,8 @@ export const MangasusuInfo: SourceInfo = {
 export class Mangasusu extends MangaStream {
 
     baseUrl: string = DOMAIN
+
+    override manga_tag_selector_box = 'div.seriestugenre'
 
     override directoryPath = 'komik'
 

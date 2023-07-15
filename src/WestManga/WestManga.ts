@@ -13,7 +13,7 @@ import {
 const DOMAIN = 'https://westmanga.info'
 
 export const WestMangaInfo: SourceInfo = {
-    version: getExportVersion('0.0.4'),
+    version: getExportVersion('0.0.5'),
     name: 'WestManga',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -33,6 +33,8 @@ export const WestMangaInfo: SourceInfo = {
 export class WestManga extends MangaStream {
 
     baseUrl: string = DOMAIN
+
+    override manga_tag_selector_box = 'div.seriestugenre'
 
     override configureSections(): void {
         this.homescreen_sections['new_titles'].enabled = false

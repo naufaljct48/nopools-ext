@@ -13,7 +13,7 @@ import {
 const DOMAIN = 'https://kiryuu.id'
 
 export const KiryuuInfo: SourceInfo = {
-    version: getExportVersion('0.0.5'),
+    version: getExportVersion('0.0.6'),
     name: 'Kiryuu',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -33,6 +33,8 @@ export const KiryuuInfo: SourceInfo = {
 export class Kiryuu extends MangaStream {
 
     baseUrl: string = DOMAIN
+
+    override manga_tag_selector_box = 'div.seriestugenre'
 
     override configureSections(): void {
         this.homescreen_sections['new_titles'].enabled = false

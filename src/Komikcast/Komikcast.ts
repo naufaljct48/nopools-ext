@@ -21,7 +21,7 @@ import { URLBuilder } from '../UrlBuilder'
 const DOMAIN = 'https://komikcast.io'
 
 export const KomikcastInfo: SourceInfo = {
-    version: getExportVersion('0.0.7'),
+    version: getExportVersion('0.0.8'),
     name: 'Komikcast',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -65,7 +65,7 @@ export class Komikcast extends MangaStream {
     override async getChapterDetails(mangaId: string, chapterId: string): Promise<ChapterDetails> {
         // Request the manga page
         const request = App.createRequest({
-            url: await this.getUsePostIds() ? `${this.baseUrl}/?p=${mangaId}/` : `${this.baseUrl}/${this.directoryPath}/${mangaId}/`,
+            url: `${this.baseUrl}/${this.directoryPath}/${mangaId}/`,
             method: 'GET'
         })
 

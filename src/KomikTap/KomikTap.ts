@@ -13,7 +13,7 @@ import {
 const DOMAIN = 'https://92.87.6.124'
 
 export const KomikTapInfo: SourceInfo = {
-    version: getExportVersion('0.0.5'),
+    version: getExportVersion('0.0.6'),
     name: 'KomikTap',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -37,6 +37,8 @@ export const KomikTapInfo: SourceInfo = {
 export class KomikTap extends MangaStream {
 
     baseUrl: string = DOMAIN
+
+    override manga_tag_selector_box = 'div.seriestugenre'
 
     override configureSections(): void {
         this.homescreen_sections['new_titles'].enabled = false

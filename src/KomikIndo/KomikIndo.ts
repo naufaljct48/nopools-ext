@@ -13,7 +13,7 @@ import {
 const DOMAIN = 'https://komikindo.co'
 
 export const KomikIndoInfo: SourceInfo = {
-    version: getExportVersion('0.0.6'),
+    version: getExportVersion('0.0.7'),
     name: 'KomikIndo',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -33,6 +33,8 @@ export const KomikIndoInfo: SourceInfo = {
 export class KomikIndo extends MangaStream {
 
     baseUrl: string = DOMAIN
+
+    override manga_tag_selector_box = 'div.seriestugenre'
 
     override configureSections(): void {
         this.homescreen_sections['new_titles'].enabled = false
