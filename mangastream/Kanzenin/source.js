@@ -1438,7 +1438,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Kanzenin = exports.KanzeninInfo = void 0;
 const types_1 = require("@paperback/types");
 const MangaStream_1 = require("../MangaStream");
-const DOMAIN = 'https://kanzenin.xyz';
+const DOMAIN = 'https://kanzenin.info';
 exports.KanzeninInfo = {
     version: (0, MangaStream_1.getExportVersion)('0.0.0'),
     name: 'Kanzenin',
