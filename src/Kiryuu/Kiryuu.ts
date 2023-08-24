@@ -13,7 +13,7 @@ import {
 const DOMAIN = 'https://kiryuu.id'
 
 export const KiryuuInfo: SourceInfo = {
-    version: getExportVersion('0.0.7'),
+    version: getExportVersion('0.0.0'),
     name: 'Kiryuu',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',

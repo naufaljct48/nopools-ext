@@ -36,7 +36,7 @@ import {
 } from './MangaStreamInterfaces'
 
 // Set the version for the base, changing this version will change the versions of all sources
-const BASE_VERSION = '1.0.0'
+const BASE_VERSION = '2.0.0'
 export const getExportVersion = (EXTENSION_VERSION: string): string => {
     return BASE_VERSION.split('.').map((x, index) => Number(x) + Number(EXTENSION_VERSION.split('.')[index])).join('.')
 }
@@ -216,7 +216,6 @@ export abstract class MangaStream implements ChapterProviding, HomePageSectionsP
         december: 'December'
     }
 
-
     // ----HOMESCREEN SELECTORS----
     /**
      * Enable or disable the "Popular Today" section on the homescreen
@@ -248,10 +247,11 @@ export abstract class MangaStream implements ChapterProviding, HomePageSectionsP
         },
         'new_titles': {
             ...DefaultHomeSectionData,
-            section: createHomeSection('new_titles', 'New Titles', false),
+            section: createHomeSection('new_titles', 'New Titles'),
             selectorFunc: ($: CheerioStatic) => $('li', $('h3:contains(New Series)')?.parent()?.next()),
             subtitleSelectorFunc: ($: CheerioStatic, element: CheerioElement) => $('span a', element).toArray().map(x => $(x).text().trim()).join(', '),
-            sortIndex: 5
+            getViewMoreItemsFunc: (page: string) => `${this.directoryPath}/?page=${page}&order=latest`,
+            sortIndex: 30
         },
         'top_alltime': {
             ...DefaultHomeSectionData,

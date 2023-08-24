@@ -18,10 +18,10 @@ import {
 import { KomikcastParser } from './KomikcastParser'
 import { URLBuilder } from '../UrlBuilder'
 
-const DOMAIN = 'https://komikcast.io'
+const DOMAIN = 'https://komikcast.vip'
 
 export const KomikcastInfo: SourceInfo = {
-    version: getExportVersion('0.0.9'),
+    version: getExportVersion('0.0.0'),
     name: 'Komikcast',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -54,7 +54,7 @@ export class Komikcast extends MangaStream {
         this.homescreen_sections['latest_update'].selectorFunc = ($: CheerioStatic) => $('div.utao', $('span:contains(Rilisan Terbaru)')?.parent()?.next())
         this.homescreen_sections['latest_update'].titleSelectorFunc = ($: CheerioStatic) => $('h3').text().trim()
         this.homescreen_sections['latest_update'].subtitleSelectorFunc = ($: CheerioStatic, element: CheerioElement) => $('div.chapter', element).text().trim()
-        this.homescreen_sections['latest_update'].getViewMoreItemsFunc = (page: string) => `daftar-komik/page/${page}/?orderby=update`
+        this.homescreen_sections['latest_update'].getViewMoreItemsFunc = (page: string) => `daftar-komik/page/${page}/?sortby=update`
         this.homescreen_sections['new_titles'].enabled = false
         this.homescreen_sections['top_alltime'].enabled = false
         this.homescreen_sections['top_monthly'].enabled = false
