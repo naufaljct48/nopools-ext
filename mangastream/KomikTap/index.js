@@ -1440,7 +1440,7 @@ const types_1 = require("@paperback/types");
 const MangaStream_1 = require("../MangaStream");
 const DOMAIN = 'https://92.87.6.124';
 exports.KomikTapInfo = {
-    version: (0, MangaStream_1.getExportVersion)('0.0.6'),
+    version: (0, MangaStream_1.getExportVersion)('0.0.0'),
     name: 'KomikTap',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -1521,7 +1521,7 @@ const MangaStreamParser_1 = require("./MangaStreamParser");
 const UrlBuilder_1 = require("./UrlBuilder");
 const MangaStreamHelper_1 = require("./MangaStreamHelper");
 // Set the version for the base, changing this version will change the versions of all sources
-const BASE_VERSION = '1.0.0';
+const BASE_VERSION = '2.0.0';
 const getExportVersion = (EXTENSION_VERSION) => {
     return BASE_VERSION.split('.').map((x, index) => Number(x) + Number(EXTENSION_VERSION.split('.')[index])).join('.');
 };
@@ -1680,10 +1680,11 @@ class MangaStream {
             },
             'new_titles': {
                 ...MangaStreamHelper_1.DefaultHomeSectionData,
-                section: (0, MangaStreamHelper_1.createHomeSection)('new_titles', 'New Titles', false),
+                section: (0, MangaStreamHelper_1.createHomeSection)('new_titles', 'New Titles'),
                 selectorFunc: ($) => $('li', $('h3:contains(New Series)')?.parent()?.next()),
                 subtitleSelectorFunc: ($, element) => $('span a', element).toArray().map(x => $(x).text().trim()).join(', '),
-                sortIndex: 5
+                getViewMoreItemsFunc: (page) => `${this.directoryPath}/?page=${page}&order=latest`,
+                sortIndex: 30
             },
             'top_alltime': {
                 ...MangaStreamHelper_1.DefaultHomeSectionData,

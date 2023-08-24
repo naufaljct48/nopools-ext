@@ -1441,9 +1441,9 @@ const MangaStream_1 = require("../MangaStream");
 const MangaStreamHelper_1 = require("../MangaStreamHelper");
 const KomikcastParser_1 = require("./KomikcastParser");
 const UrlBuilder_1 = require("../UrlBuilder");
-const DOMAIN = 'https://komikcast.io';
+const DOMAIN = 'https://komikcast.vip';
 exports.KomikcastInfo = {
-    version: (0, MangaStream_1.getExportVersion)('0.0.9'),
+    version: (0, MangaStream_1.getExportVersion)('0.0.0'),
     name: 'Komikcast',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -1474,7 +1474,7 @@ class Komikcast extends MangaStream_1.MangaStream {
         this.homescreen_sections['latest_update'].selectorFunc = ($) => $('div.utao', $('span:contains(Rilisan Terbaru)')?.parent()?.next());
         this.homescreen_sections['latest_update'].titleSelectorFunc = ($) => $('h3').text().trim();
         this.homescreen_sections['latest_update'].subtitleSelectorFunc = ($, element) => $('div.chapter', element).text().trim();
-        this.homescreen_sections['latest_update'].getViewMoreItemsFunc = (page) => `daftar-komik/page/${page}/?orderby=update`;
+        this.homescreen_sections['latest_update'].getViewMoreItemsFunc = (page) => `daftar-komik/page/${page}/?sortby=update`;
         this.homescreen_sections['new_titles'].enabled = false;
         this.homescreen_sections['top_alltime'].enabled = false;
         this.homescreen_sections['top_monthly'].enabled = false;
@@ -1814,7 +1814,7 @@ const MangaStreamParser_1 = require("./MangaStreamParser");
 const UrlBuilder_1 = require("./UrlBuilder");
 const MangaStreamHelper_1 = require("./MangaStreamHelper");
 // Set the version for the base, changing this version will change the versions of all sources
-const BASE_VERSION = '1.0.0';
+const BASE_VERSION = '2.0.0';
 const getExportVersion = (EXTENSION_VERSION) => {
     return BASE_VERSION.split('.').map((x, index) => Number(x) + Number(EXTENSION_VERSION.split('.')[index])).join('.');
 };
@@ -1973,10 +1973,11 @@ class MangaStream {
             },
             'new_titles': {
                 ...MangaStreamHelper_1.DefaultHomeSectionData,
-                section: (0, MangaStreamHelper_1.createHomeSection)('new_titles', 'New Titles', false),
+                section: (0, MangaStreamHelper_1.createHomeSection)('new_titles', 'New Titles'),
                 selectorFunc: ($) => $('li', $('h3:contains(New Series)')?.parent()?.next()),
                 subtitleSelectorFunc: ($, element) => $('span a', element).toArray().map(x => $(x).text().trim()).join(', '),
-                sortIndex: 5
+                getViewMoreItemsFunc: (page) => `${this.directoryPath}/?page=${page}&order=latest`,
+                sortIndex: 30
             },
             'top_alltime': {
                 ...MangaStreamHelper_1.DefaultHomeSectionData,
