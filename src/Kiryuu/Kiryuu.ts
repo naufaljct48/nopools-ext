@@ -41,6 +41,8 @@ export class Kiryuu extends MangaStream {
         this.homescreen_sections['top_alltime'].enabled = false
         this.homescreen_sections['top_monthly'].enabled = false
         this.homescreen_sections['top_weekly'].enabled = false
+        this.homescreen_sections['popular_today'].selectorFunc = ($: CheerioStatic) => $('div.bsx', $('h2:contains(Hot Update)')?.parent()?.next())
+        this.homescreen_sections['latest_update'].selectorFunc = ($: CheerioStatic) => $('div.utao', $('h2:contains(Rilisan Terbaru)')?.parent()?.next())
     }
     override dateMonths = {
         january: 'Januari',
