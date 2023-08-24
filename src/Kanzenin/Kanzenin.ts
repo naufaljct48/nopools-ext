@@ -10,7 +10,7 @@ import {
     MangaStream
 } from '../MangaStream'
 
-const DOMAIN = 'https://kanzenin.xyz'
+const DOMAIN = 'https://kanzenin.info'
 
 export const KanzeninInfo: SourceInfo = {
     version: getExportVersion('0.0.0'),
