@@ -10,7 +10,7 @@ import { getExportVersion, Madara } from "../Madara";
 const DOMAIN = "https://pojokmanga.net";
 
 export const PojokmangaInfo: SourceInfo = {
-  version: getExportVersion("0.0.0"),
+  version: getExportVersion("0.0.1"),
   name: "Pojokmanga",
   description: `Extension that pulls manga from ${DOMAIN}`,
   author: "NaufalJCT48",
