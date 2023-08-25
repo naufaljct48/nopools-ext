@@ -9132,12 +9132,12 @@ exports.Parser = Parser;
 },{"./MadaraDecrypter":107,"entities":105}],110:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Shinigami = exports.ShinigamiInfo = void 0;
+exports.WorldManhwas = exports.WorldManhwasInfo = void 0;
 const types_1 = require("@paperback/types");
 const Madara_1 = require("../Madara");
 const DOMAIN = "https://worldmanhwas.bar";
-exports.ShinigamiInfo = {
-    version: (0, Madara_1.getExportVersion)("0.0.0"),
+exports.WorldManhwasInfo = {
+    version: (0, Madara_1.getExportVersion)("0.0.1"),
     name: "WorldManhwas",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",
@@ -9156,7 +9156,7 @@ exports.ShinigamiInfo = {
         types_1.SourceIntents.CLOUDFLARE_BYPASS_REQUIRED |
         types_1.SourceIntents.SETTINGS_UI,
 };
-class Shinigami extends Madara_1.Madara {
+class WorldManhwas extends Madara_1.Madara {
     constructor() {
         super(...arguments);
         this.baseUrl = DOMAIN;
@@ -9165,7 +9165,7 @@ class Shinigami extends Madara_1.Madara {
         this.directoryPath = "komik";
     }
 }
-exports.Shinigami = Shinigami;
+exports.WorldManhwas = WorldManhwas;
 
 },{"../Madara":106,"@paperback/types":61}]},{},[110])(110)
 });
