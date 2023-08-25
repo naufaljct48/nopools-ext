@@ -1443,7 +1443,7 @@ const KomikcastParser_1 = require("./KomikcastParser");
 const UrlBuilder_1 = require("../UrlBuilder");
 const DOMAIN = 'https://komikcast.vip';
 exports.KomikcastInfo = {
-    version: (0, MangaStream_1.getExportVersion)('0.0.0'),
+    version: (0, MangaStream_1.getExportVersion)('0.0.1'),
     name: 'Komikcast',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -1578,6 +1578,23 @@ const MangaStreamParser_1 = require("../MangaStreamParser");
 class KomikcastParser extends MangaStreamParser_1.MangaStreamParser {
     constructor() {
         super(...arguments);
+        this.parseChapterDetails = ($, mangaId, chapterId) => {
+            const pages = [];
+            for (const img of $('img', '.chapter_body div.main-reading-area').toArray()) {
+                let image = $(img).attr('src') ?? '';
+                if (!image)
+                    image = $(img).attr('data-src') ?? '';
+                if (!image)
+                    throw new Error(`Unable to parse image(s) for Chapter ID: ${chapterId}`);
+                pages.push(image);
+            }
+            const chapterDetails = App.createChapterDetails({
+                id: chapterId,
+                mangaId: mangaId,
+                pages: pages
+            });
+            return chapterDetails;
+        };
         this.isLastPage = ($, id) => {
             let isLast = true;
             if (id == 'view_more') {
@@ -1690,26 +1707,6 @@ class KomikcastParser extends MangaStreamParser_1.MangaStreamParser {
             chapter.sortingIndex += chapters.length;
             return App.createChapter(chapter);
         });
-    }
-    parseChapterDetails($, mangaId, chapterId) {
-        // const data = $.html()
-        const pages = [];
-        const obj = $('img', 'div.main-reading-area').toArray();
-        if (obj.length === 0) {
-            throw new Error(`Failed to find page details script for manga ${mangaId}`);
-        }
-        for (const index of obj) {
-            const images = $(index).attr('src');
-            if (!images)
-                continue;
-            pages.push(encodeURI(images));
-        }
-        const chapterDetails = App.createChapterDetails({
-            id: chapterId,
-            mangaId: mangaId,
-            pages: pages
-        });
-        return chapterDetails;
     }
     parseTags($) {
         const tagSections = [
