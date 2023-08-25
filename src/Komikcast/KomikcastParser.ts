@@ -114,31 +114,23 @@ export class KomikcastParser extends MangaStreamParser {
         })
     }
 
-    override parseChapterDetails($: CheerioStatic, mangaId: string, chapterId: string): ChapterDetails {
-        // const data = $.html()
-    
-        const pages: string[] = []
-    
-        const obj = $('img', 'div.main-reading-area').toArray()
-    
-        if (obj.length === 0) {
-            throw new Error(`Failed to find page details script for manga ${mangaId}`)
+    override parseChapterDetails = ($: CheerioStatic, mangaId: string, chapterId: string): ChapterDetails {
+            const pages = [];
+            for (const img of $('img', '.chapter_body div.main-reading-area').toArray()) {
+                let image = $(img).attr('src') ?? '';
+                if (!image)
+                    image = $(img).attr('data-src') ?? '';
+                if (!image)
+                    throw new Error(`Unable to parse image(s) for Chapter ID: ${chapterId}`);
+                pages.push(image);
+            }
+            const chapterDetails = App.createChapterDetails({
+                id: chapterId,
+                mangaId: mangaId,
+                pages: pages
+            });
+            return chapterDetails;
         }
-    
-        for (const index of obj) {
-            const images = $(index).attr('src')
-            if (!images) continue
-            pages.push(encodeURI(images))
-        }
-    
-        const chapterDetails = App.createChapterDetails({
-            id: chapterId,
-            mangaId: mangaId,
-            pages: pages
-        })
-    
-        return chapterDetails
-    }
 
     override parseTags($: CheerioSelector): TagSection[] {
         const tagSections: any[] = [
