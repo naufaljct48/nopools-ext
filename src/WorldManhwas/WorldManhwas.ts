@@ -9,8 +9,8 @@ import { getExportVersion, Madara } from "../Madara";
 
 const DOMAIN = "https://worldmanhwas.bar";
 
-export const ShinigamiInfo: SourceInfo = {
-  version: getExportVersion("0.0.0"),
+export const WorldManhwasInfo: SourceInfo = {
+  version: getExportVersion("0.0.1"),
   name: "WorldManhwas",
   description: `Extension that pulls manga from ${DOMAIN}`,
   author: "NaufalJCT48",
@@ -31,7 +31,7 @@ export const ShinigamiInfo: SourceInfo = {
     SourceIntents.SETTINGS_UI,
 };
 
-export class Shinigami extends Madara {
+export class WorldManhwas extends Madara {
   baseUrl: string = DOMAIN;
 
   override alternativeChapterAjaxEndpoint = true;
