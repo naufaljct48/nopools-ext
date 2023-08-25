@@ -1443,7 +1443,7 @@ const KomikcastParser_1 = require("./KomikcastParser");
 const UrlBuilder_1 = require("../UrlBuilder");
 const DOMAIN = 'https://komikcast.vip';
 exports.KomikcastInfo = {
-    version: (0, MangaStream_1.getExportVersion)('0.0.1'),
+    version: (0, MangaStream_1.getExportVersion)('0.0.2'),
     name: 'Komikcast',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -1464,10 +1464,11 @@ class Komikcast extends MangaStream_1.MangaStream {
         super(...arguments);
         this.baseUrl = DOMAIN;
         this.directoryPath = 'komik';
+        this.usePostIds = false;
         this.parser = new KomikcastParser_1.KomikcastParser();
     }
     configureSections() {
-        this.homescreen_sections['popular_today'].selectorFunc = ($) => $('div.swiper-slide', $('h3:contains(Hot Komik Update)')?.parent()?.next());
+        this.homescreen_sections['popular_today'].selectorFunc = ($) => $('div.swiper-slide', $('span:contains(Hot Komik Update)')?.parent()?.next());
         this.homescreen_sections['popular_today'].titleSelectorFunc = ($) => $('div.title').text().trim();
         this.homescreen_sections['popular_today'].subtitleSelectorFunc = ($, element) => $('div.chapter', element).text().trim();
         this.homescreen_sections['popular_today'].getViewMoreItemsFunc = (page) => `daftar-komik/page/${page}/?orderby=popular`;
