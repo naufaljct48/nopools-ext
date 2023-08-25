@@ -21,7 +21,7 @@ import { URLBuilder } from '../UrlBuilder'
 const DOMAIN = 'https://komikcast.vip'
 
 export const KomikcastInfo: SourceInfo = {
-    version: getExportVersion('0.0.1'),
+    version: getExportVersion('0.0.2'),
     name: 'Komikcast',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -44,10 +44,12 @@ export class Komikcast extends MangaStream {
 
     override directoryPath = 'komik'
 
+    override usePostIds = false
+
     override parser = new KomikcastParser()
 
     override configureSections() {
-        this.homescreen_sections['popular_today'].selectorFunc = ($: CheerioStatic) => $('div.swiper-slide', $('h3:contains(Hot Komik Update)')?.parent()?.next())
+        this.homescreen_sections['popular_today'].selectorFunc = ($: CheerioStatic) => $('div.swiper-slide', $('span:contains(Hot Komik Update)')?.parent()?.next())
         this.homescreen_sections['popular_today'].titleSelectorFunc = ($: CheerioStatic) => $('div.title').text().trim()
         this.homescreen_sections['popular_today'].subtitleSelectorFunc = ($: CheerioStatic, element: CheerioElement) => $('div.chapter', element).text().trim()
         this.homescreen_sections['popular_today'].getViewMoreItemsFunc = (page: string) => `daftar-komik/page/${page}/?orderby=popular`
