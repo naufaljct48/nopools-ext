@@ -9135,9 +9135,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Shinigami = exports.ShinigamiInfo = void 0;
 const types_1 = require("@paperback/types");
 const Madara_1 = require("../Madara");
-const DOMAIN = "https://shinigami.id";
+const DOMAIN = "https://shinigami.ae";
 exports.ShinigamiInfo = {
-    version: (0, Madara_1.getExportVersion)("0.0.2"),
+    version: (0, Madara_1.getExportVersion)("0.0.3"),
     name: "Shinigami",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",
