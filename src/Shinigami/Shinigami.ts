@@ -7,10 +7,10 @@ import {
 
 import { getExportVersion, Madara } from "../Madara";
 
-const DOMAIN = "https://shinigami.id";
+const DOMAIN = "https://shinigami.ae";
 
 export const ShinigamiInfo: SourceInfo = {
-  version: getExportVersion("0.0.2"),
+  version: getExportVersion("0.0.3"),
   name: "Shinigami",
   description: `Extension that pulls manga from ${DOMAIN}`,
   author: "NaufalJCT48",
