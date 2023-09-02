@@ -1581,7 +1581,7 @@ class KomikcastParser extends MangaStreamParser_1.MangaStreamParser {
         super(...arguments);
         this.parseChapterDetails = ($, mangaId, chapterId) => {
             const pages = [];
-            for (const img of $('img', '.chapter_body div.main-reading-area').toArray()) {
+            for (const img of $('img', '.main-reading-area').toArray()) {
                 let image = $(img).attr('src') ?? '';
                 if (!image)
                     image = $(img).attr('data-src') ?? '';
