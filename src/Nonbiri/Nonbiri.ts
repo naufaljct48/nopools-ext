@@ -13,7 +13,7 @@ import {
 const DOMAIN = 'https://nonbiri.space'
 
 export const NonbiriInfo: SourceInfo = {
-    version: getExportVersion('0.0.0'),
+    version: getExportVersion('0.0.1'),
     name: 'Nonbiri',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
