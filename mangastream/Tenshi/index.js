@@ -2275,7 +2275,7 @@ const types_1 = require("@paperback/types");
 const MangaStream_1 = require("../MangaStream");
 const DOMAIN = 'https://tenshi.id';
 exports.TenshiInfo = {
-    version: (0, MangaStream_1.getExportVersion)('0.0.0'),
+    version: (0, MangaStream_1.getExportVersion)('0.0.1'),
     name: 'Tenshi',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -2295,6 +2295,7 @@ class Tenshi extends MangaStream_1.MangaStream {
     constructor() {
         super(...arguments);
         this.baseUrl = DOMAIN;
+        this.directoryPath = 'komik';
         this.manga_tag_selector_box = 'div.seriestugenre';
         this.dateMonths = {
             january: 'Januari',
@@ -2317,7 +2318,7 @@ class Tenshi extends MangaStream_1.MangaStream {
         this.homescreen_sections['top_monthly'].enabled = false;
         this.homescreen_sections['top_weekly'].enabled = false;
         this.homescreen_sections['popular_today'].selectorFunc = ($) => $('div.bsx', $('h2:contains(Terpopuler Hari Ini)')?.parent()?.next());
-        this.homescreen_sections['latest_update'].selectorFunc = ($) => $('div.utao', $('h2:contains(Rilisan Terbaru)')?.parent()?.next());
+        this.homescreen_sections['latest_update'].selectorFunc = ($) => $('div.bsx', $('h2:contains(Rilisan Terbaru)')?.parent()?.next());
     }
 }
 exports.Tenshi = Tenshi;
