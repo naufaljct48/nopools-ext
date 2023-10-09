@@ -42,7 +42,7 @@ export class Nonbiri extends MangaStream {
         this.homescreen_sections['top_monthly'].enabled = false
         this.homescreen_sections['top_weekly'].enabled = false
         this.homescreen_sections['popular_today'].selectorFunc = ($: CheerioStatic) => $('div.bsx', $('h2:contains(Terpopuler Hari Ini)')?.parent()?.next())
-        this.homescreen_sections['latest_update'].selectorFunc = ($: CheerioStatic) => $('div.utao', $('h2:contains(Rilisan Terbaru)')?.parent()?.next())
+        this.homescreen_sections['latest_update'].selectorFunc = ($: CheerioStatic) => $('div.bsx', $('h2:contains(Rilisan Terbaru)')?.parent()?.next())
     }
     override dateMonths = {
         january: 'Januari',
