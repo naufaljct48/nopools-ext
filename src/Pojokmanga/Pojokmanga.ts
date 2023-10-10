@@ -10,7 +10,7 @@ import { getExportVersion, Madara } from "../Madara";
 const DOMAIN = "https://pojokmanga.net";
 
 export const PojokmangaInfo: SourceInfo = {
-  version: getExportVersion("0.0.1"),
+  version: getExportVersion("0.0.2"),
   name: "Pojokmanga",
   description: `Extension that pulls manga from ${DOMAIN}`,
   author: "NaufalJCT48",
@@ -37,6 +37,8 @@ export class Pojokmanga extends Madara {
   override alternativeChapterAjaxEndpoint = true;
 
   override hasAdvancedSearchPage = true;
+
+  override hasProtectedChapters = true;
 
   override directoryPath = "komik";
 }
