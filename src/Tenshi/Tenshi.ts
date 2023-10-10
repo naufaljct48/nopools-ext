@@ -13,7 +13,7 @@ import {
 const DOMAIN = 'https://tenshi.id'
 
 export const TenshiInfo: SourceInfo = {
-    version: getExportVersion('0.0.2'),
+    version: getExportVersion('0.0.3'),
     name: 'Tenshi',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -45,7 +45,7 @@ export class Tenshi extends MangaStream {
         this.homescreen_sections['top_weekly'].enabled = false
         this.homescreen_sections['popular_today'].selectorFunc = ($: CheerioStatic) => $('div.bsx', $('h2:contains(Terpopuler Hari Ini)')?.parent()?.next())
         this.homescreen_sections['latest_update'].selectorFunc = ($: CheerioStatic) => $('div.bsx', $('h2:contains(Rilisan Terbaru)')?.parent()?.next())
-        this.homescreen_sections['latest_update'].subtitleSelectorFunc: ($: CheerioStatic, element: CheerioElement) => $('div.fivchap', element).text().trim()
+        this.homescreen_sections['latest_update'].subtitleSelectorFunc = ($: CheerioStatic, element: CheerioElement) => $('span.fivchap', element).first().text().trim()
     }
     override dateMonths = {
         january: 'Januari',
