@@ -2275,7 +2275,7 @@ const types_1 = require("@paperback/types");
 const MangaStream_1 = require("../MangaStream");
 const DOMAIN = 'https://mangasusuku.xyz';
 exports.MangasusuInfo = {
-    version: (0, MangaStream_1.getExportVersion)('0.0.0'),
+    version: (0, MangaStream_1.getExportVersion)('0.0.1'),
     name: 'Mangasusu',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -2307,8 +2307,8 @@ class Mangasusu extends MangaStream_1.MangaStream {
         this.homescreen_sections['top_alltime'].enabled = false;
         this.homescreen_sections['top_monthly'].enabled = false;
         this.homescreen_sections['top_weekly'].enabled = false;
-        this.homescreen_sections['latest_update'].selectorFunc = ($) => $('div.bsx', $('h2:contains(Latest Update)')?.parent()?.next());
-        this.homescreen_sections['latest_update'].subtitleSelectorFunc = ($, element) => $('span.fivchap', element).first().text().trim();
+        this.homescreen_sections['latest_update'].selectorFunc = ($) => $('div.stylesven', $('h2:contains(Latest Update)')?.parent()?.next());
+        this.homescreen_sections['latest_update'].subtitleSelectorFunc = ($, element) => $('ul.svenchapters.Manhwa li:first-child a', element).first().text().trim();
     }
 }
 exports.Mangasusu = Mangasusu;
