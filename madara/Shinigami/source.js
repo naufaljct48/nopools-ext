@@ -9137,7 +9137,7 @@ const types_1 = require("@paperback/types");
 const Madara_1 = require("../Madara");
 const DOMAIN = "https://shinigami.sh";
 exports.ShinigamiInfo = {
-    version: (0, Madara_1.getExportVersion)("0.0.4"),
+    version: (0, Madara_1.getExportVersion)("0.0.5"),
     name: "Shinigami",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",
@@ -9160,7 +9160,6 @@ class Shinigami extends Madara_1.Madara {
     constructor() {
         super(...arguments);
         this.baseUrl = DOMAIN;
-        this.alternativeChapterAjaxEndpoint = true;
         this.hasAdvancedSearchPage = true;
         this.directoryPath = "series";
     }
