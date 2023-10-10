@@ -13,7 +13,7 @@ import {
 const DOMAIN = 'https://mangasusuku.xyz'
 
 export const MangasusuInfo: SourceInfo = {
-    version: getExportVersion('0.0.0'),
+    version: getExportVersion('0.0.1'),
     name: 'Mangasusu',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -47,7 +47,7 @@ export class Mangasusu extends MangaStream {
         this.homescreen_sections['top_alltime'].enabled = false
         this.homescreen_sections['top_monthly'].enabled = false
         this.homescreen_sections['top_weekly'].enabled = false
-        this.homescreen_sections['latest_update'].selectorFunc = ($: CheerioStatic) => $('div.bsx', $('h2:contains(Latest Update)')?.parent()?.next())
-        this.homescreen_sections['latest_update'].subtitleSelectorFunc = ($: CheerioStatic, element: CheerioElement) => $('span.fivchap', element).first().text().trim()
+        this.homescreen_sections['latest_update'].selectorFunc = ($: CheerioStatic) => $('div.stylesven', $('h2:contains(Latest Update)')?.parent()?.next())
+        this.homescreen_sections['latest_update'].subtitleSelectorFunc = ($: CheerioStatic, element: CheerioElement) => $('ul.svenchapters.Manhwa li:first-child a', element).first().text().trim()
     }
 }
