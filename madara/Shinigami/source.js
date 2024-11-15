@@ -16168,7 +16168,6 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
       this.hasProtectedChapters = true;
       this.directoryPath = "series";
       this.chapterEndpoint = 3;
-      this.usePostIds = false;
     }
   };
   return __toCommonJS(Shinigami_exports);
