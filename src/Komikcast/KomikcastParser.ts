@@ -114,7 +114,7 @@ export class KomikcastParser extends MangaStreamParser {
         })
     }
 
-    override parseChapterDetails = ($: CheerioStatic, mangaId: string, chapterId: string): ChapterDetails {
+    override parseChapterDetails($: CheerioStatic, mangaId: string, chapterId: string): ChapterDetails {
             const pages = [];
             for (const img of $('img', '.main-reading-area').toArray()) {
                 let image = $(img).attr('src') ?? '';
