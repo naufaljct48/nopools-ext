@@ -14647,7 +14647,7 @@ var _Sources = (() => {
     }
     parseMangaDetails($2, mangaId, source) {
       const titles = [];
-      titles.push((0, import_html_entities.decode)($2("h1.entry-title").text().trim().replace(/Komik|Manhwa|Manga|Manhua|Bahasa Indonesia/g, "")));
+      titles.push((0, import_html_entities.decode)($2("h1.entry-title").text().trim().replace(/\s*(Komik|Manhwa|Manga|Manhua|Bahasa\s?Indonesia)\s*/g, "").replace(/\s+/g, " ").trim()));
       const altTitles = $2(`span:contains(${source.manga_selector_AlternativeTitles}), b:contains(${source.manga_selector_AlternativeTitles})+span, .imptdt:contains(${source.manga_selector_AlternativeTitles}) i, h1.entry-title+span`).contents().remove().last().text().split(",");
       for (const title of altTitles) {
         if (title == "") {
@@ -15450,7 +15450,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
   // src/Komiku/Komiku.ts
   var DOMAIN = "https://komiku.com";
   var KomikuInfo = {
-    version: getExportVersion("0.0.2"),
+    version: getExportVersion("0.0.3"),
     name: "Komiku",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",
