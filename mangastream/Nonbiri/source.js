@@ -14647,7 +14647,7 @@ var _Sources = (() => {
     }
     parseMangaDetails($2, mangaId, source) {
       const titles = [];
-      titles.push((0, import_html_entities.decode)($2("h1.entry-title").text().trim()));
+      titles.push((0, import_html_entities.decode)($2("h1.entry-title").text().trim().replace(/Komik|Manhwa|Manga|Manhua|Bahasa Indonesia/g, "")));
       const altTitles = $2(`span:contains(${source.manga_selector_AlternativeTitles}), b:contains(${source.manga_selector_AlternativeTitles})+span, .imptdt:contains(${source.manga_selector_AlternativeTitles}) i, h1.entry-title+span`).contents().remove().last().text().split(",");
       for (const title of altTitles) {
         if (title == "") {
@@ -15450,7 +15450,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
   // src/Nonbiri/Nonbiri.ts
   var DOMAIN = "https://comic21.me";
   var NonbiriInfo = {
-    version: getExportVersion("0.0.2"),
+    version: getExportVersion("0.0.3"),
     name: "Nonbiri",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",
@@ -15477,7 +15477,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
       this.homescreen_sections["top_monthly"].enabled = false;
       this.homescreen_sections["top_weekly"].enabled = false;
       this.homescreen_sections["popular_today"].selectorFunc = ($2, element) => $2("div.bsx", $2("h2:contains(Terpopuler Hari Ini)")?.parent()?.next());
-      this.homescreen_sections["latest_update"].selectorFunc = ($2, element) => $2("div.bsx", $2("h2:contains(Rilisan Terbaru)")?.parent()?.next());
+      this.homescreen_sections["latest_update"].selectorFunc = ($2, element) => $2("div.utao", $2("h2:contains(Rilisan Terbaru)")?.parent()?.next());
     }
   };
   return __toCommonJS(Nonbiri_exports);

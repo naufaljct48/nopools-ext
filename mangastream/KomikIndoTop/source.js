@@ -14647,7 +14647,7 @@ var _Sources = (() => {
     }
     parseMangaDetails($2, mangaId, source) {
       const titles = [];
-      titles.push((0, import_html_entities.decode)($2("h1.entry-title").text().trim()));
+      titles.push((0, import_html_entities.decode)($2("h1.entry-title").text().trim().replace(/Komik|Manhwa|Manga|Manhua|Bahasa Indonesia/g, "")));
       const altTitles = $2(`span:contains(${source.manga_selector_AlternativeTitles}), b:contains(${source.manga_selector_AlternativeTitles})+span, .imptdt:contains(${source.manga_selector_AlternativeTitles}) i, h1.entry-title+span`).contents().remove().last().text().split(",");
       for (const title of altTitles) {
         if (title == "") {

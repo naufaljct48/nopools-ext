@@ -449,8 +449,8 @@ var _Sources = (() => {
       Object.defineProperty(exports, "__esModule", { value: true });
       exports.urlEncodeObject = exports.convertTime = exports.Source = void 0;
       var Source = class {
-        constructor(cheerio) {
-          this.cheerio = cheerio;
+        constructor(cheerio2) {
+          this.cheerio = cheerio2;
         }
         /**
          * @deprecated use {@link Source.getSearchResults getSearchResults} instead
@@ -5596,9 +5596,9 @@ var _Sources = (() => {
       const initialRoot = parse6(content, internalOpts, isDocument2, null);
       class LoadedCheerio extends Cheerio {
         _make(selector, context) {
-          const cheerio = initialize(selector, context);
-          cheerio.prevObject = this;
-          return cheerio;
+          const cheerio2 = initialize(selector, context);
+          cheerio2.prevObject = this;
+          return cheerio2;
         }
         _parse(content2, options2, isDocument3, context) {
           return parse6(content2, options2, isDocument3, context);
@@ -14647,7 +14647,7 @@ var _Sources = (() => {
     }
     parseMangaDetails($2, mangaId, source) {
       const titles = [];
-      titles.push((0, import_html_entities.decode)($2("h1.entry-title").text().trim()));
+      titles.push((0, import_html_entities.decode)($2("h1.entry-title").text().trim().replace(/Komik|Manhwa|Manga|Manhua|Bahasa Indonesia/g, "")));
       const altTitles = $2(`span:contains(${source.manga_selector_AlternativeTitles}), b:contains(${source.manga_selector_AlternativeTitles})+span, .imptdt:contains(${source.manga_selector_AlternativeTitles}) i, h1.entry-title+span`).contents().remove().last().text().split(",");
       for (const title of altTitles) {
         if (title == "") {
@@ -15532,76 +15532,21 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
       for (const chapter of $2("li", "div.komik_info-chapters").toArray()) {
         const title = $2("a.chapter-link-item", chapter).text().trim();
         const date = convertDate($2("div.chapter-link-time", chapter).text().trim(), source);
-        const id = title.replace("Chapter") ?? "";
-        const chapterNumberRegex = id.match(/(\d+\.?\d?)+/);
-        let chapterNumber = 0;
-        if (chapterNumberRegex && chapterNumberRegex[1]) {
-          chapterNumber = Number(chapterNumberRegex[1]);
-        }
-        if (!id || typeof id === "undefined") {
-          throw new Error(`Could not parse out ID when getting chapters for postId:${mangaId}`);
-        }
-        chapters.push({
-          id,
-          // Store chapterNumber as id
-          langCode: language,
-          chapNum: chapterNumber,
-          name: title,
-          time: date,
-          sortingIndex,
-          volume: 0,
-          group: ""
-        });
-        sortingIndex--;
-      }
-      if (chapters.length == 0) {
-        throw new Error(`Couldn't find any chapters for mangaId: ${mangaId}!`);
-      }
-      return chapters.map((chapter) => {
-        chapter.sortingIndex += chapters.length;
-        return App.createChapter(chapter);
-      });
-    }
-    parseChapterDetails($2, mangaId, chapterId) {
-      const pages = [];
-      for (const img of $2("img", ".main-reading-area").toArray()) {
-        let image = $2(img).attr("src") ?? "";
-        if (!image)
-          image = $2(img).attr("data-src") ?? "";
-        if (!image)
-          throw new Error(`Unable to parse image(s) for Chapter ID: ${chapterId}`);
-        pages.push(image);
-      }
-      const chapterDetails = App.createChapterDetails({
-        id: chapterId,
-        mangaId,
-        pages
-      });
-      return chapterDetails;
-    }
-    parseTags($2) {
-      const tagSections = [
-        { id: "0", label: "genres", tags: [] },
-        { id: "1", label: "status", tags: [] },
-        { id: "2", label: "type", tags: [] },
-        { id: "3", label: "order", tags: [] }
-      ];
-      const sectionDropDowns = $2("ul.komiklist_dropdown-menu genrez").toArray();
-      for (let i = 0; i < 4; ++i) {
-        const sectionDropdown = sectionDropDowns[i];
-        if (!sectionDropdown) {
+        const chapterId = this.idCleaner($2("a.chapter-link-item", chapter).attr("href") ?? "");
+        if (!chapterId || !title) {
           continue;
         }
-        for (const tag of $2("li", sectionDropdown).toArray()) {
-          const label = $2("label", tag).text().trim();
-          const id = `${tagSections[i].label}:${$2("input", tag).attr("value")}`;
-          if (!id || !label) {
-            continue;
-          }
-          tagSections[i].tags.push(App.createTag({ id, label }));
-        }
+        chapters.push(App.createChapter({
+          id: chapterId,
+          mangaId,
+          name: title,
+          langCode: language,
+          chapNum: sortingIndex,
+          time: date
+        }));
+        sortingIndex++;
       }
-      return tagSections.map((x) => App.createTagSection(x));
+      return chapters;
     }
     async parseSearchResults($2, source) {
       const results = [];
@@ -15611,23 +15556,22 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
         if (!slug || !path) {
           throw new Error(`Unable to parse slug (${slug}) or path (${path})!`);
         }
-        const title = $2("h3.title", obj) ?? "";
+        const title = $2("h3.title", obj).text().trim();
         const image = this.getImageSrc($2("img", obj)) ?? "";
         const subtitle = $2("div.chapter", obj).text().trim();
-        results.push({
-          slug,
-          path,
+        results.push(App.createPartialSourceManga({
+          mangaId: slug,
           image: image || source.fallbackImage,
           title: this.decodeHTMLEntity(title),
           subtitle: this.decodeHTMLEntity(subtitle)
-        });
+        }));
       }
       return results;
     }
     async parseViewMore($2, source) {
       const items = [];
       for (const manga of $2("div.list-update_item", "div.list-update_items-wrapper").toArray()) {
-        const title = $2("h3.title", manga).text();
+        const title = $2("h3.title", manga).text().trim();
         const image = this.getImageSrc($2("img", manga)) ?? "";
         const subtitle = $2("div.chapter", manga).text().trim();
         const slug = this.idCleaner($2("a", manga).attr("href") ?? "");
@@ -15652,7 +15596,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
   // src/Komikcast/Komikcast.ts
   var DOMAIN = "https://komikcast.cz";
   var KomikcastInfo = {
-    version: getExportVersion("0.0.4"),
+    version: getExportVersion("0.0.5"),
     name: "Komikcast",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",
@@ -15678,11 +15622,11 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
     }
     configureSections() {
       this.homescreen_sections["popular_today"].selectorFunc = ($2, element) => $2("div.swiper-slide", $2("span:contains(Hot Komik Update)")?.parent()?.next());
-      this.homescreen_sections["popular_today"].titleSelectorFunc = ($2, element) => $2("div.title").text().trim();
+      this.homescreen_sections["popular_today"].titleSelectorFunc = ($2, element) => $2("div.title", element).text().trim();
       this.homescreen_sections["popular_today"].subtitleSelectorFunc = ($2, element) => $2("div.chapter", element).text().trim();
       this.homescreen_sections["popular_today"].getViewMoreItemsFunc = (page) => `daftar-komik/page/${page}/?orderby=popular`;
       this.homescreen_sections["latest_update"].selectorFunc = ($2, element) => $2("div.utao", $2("span:contains(Rilisan Terbaru)")?.parent()?.next());
-      this.homescreen_sections["latest_update"].titleSelectorFunc = ($2, element) => $2("h3").text().trim();
+      this.homescreen_sections["latest_update"].titleSelectorFunc = ($2, element) => $2("h3", element).text().trim();
       this.homescreen_sections["latest_update"].subtitleSelectorFunc = ($2, element) => $2("div.chapter", element).text().trim();
       this.homescreen_sections["latest_update"].getViewMoreItemsFunc = (page) => `daftar-komik/page/${page}/?sortby=update`;
       this.homescreen_sections["new_titles"].enabled = false;
@@ -15697,7 +15641,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
       });
       const response = await this.requestManager.schedule(request, 1);
       this.checkResponseError(response);
-      const $2 = this.cheerio.load(response.data);
+      const $2 = cheerio.load(response.data);
       const chapterElement = $2("li", "div.komik_info-chapters").filter((_, el) => {
         return $2("a", el).attr("href")?.includes(chapterId);
       });
@@ -15714,18 +15658,17 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
       });
       const _response = await this.requestManager.schedule(_request, 1);
       this.checkResponseError(_response);
-      const _$ = this.cheerio.load(_response.data);
+      const _$ = cheerio.load(_response.data);
       return this.parser.parseChapterDetails(_$, mangaId, chapterId);
     }
     async getSearchTags() {
       const request = App.createRequest({
         url: `${this.baseUrl}/`,
-        method: "GET",
-        param: `${this.directoryPath}/`
+        method: "GET"
       });
       const response = await this.requestManager.schedule(request, 1);
       this.checkResponseError(response);
-      const $2 = this.cheerio.load(response.data);
+      const $2 = cheerio.load(response.data);
       return this.parser.parseTags($2);
     }
     async getSearchResults(query, metadata) {
@@ -15733,7 +15676,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
       const request = await this.constructSearchRequest(page, query);
       const response = await this.requestManager.schedule(request, 1);
       this.checkResponseError(response);
-      const $2 = this.cheerio.load(response.data);
+      const $2 = cheerio.load(response.data);
       const results = await this.parser.parseSearchResults($2, this);
       const manga = [];
       for (const result of results) {
@@ -15761,11 +15704,10 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
       } else {
         urlBuilder = urlBuilder.addQueryParameter("genre", getFilterTagsBySection("genres", query?.includedTags, true)).addQueryParameter("genre", getFilterTagsBySection("genres", query?.excludedTags, false, await this.supportsTagExclusion())).addQueryParameter("status", getIncludedTagBySection("status", query?.includedTags)).addQueryParameter("type", getIncludedTagBySection("type", query?.includedTags)).addQueryParameter("order", getIncludedTagBySection("order", query?.includedTags));
       }
-      const requestObject = {
+      return App.createRequest({
         url: urlBuilder.buildUrl({ addTrailingSlash: true, includeUndefinedParameters: false }),
         method: "GET"
-      };
-      return createRequestObject(requestObject);
+      });
     }
   };
   return __toCommonJS(Komikcast_exports);
