@@ -16145,7 +16145,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
   // src/Shinigami/Shinigami.ts
   var DOMAIN = "https://shinigami07.com";
   var ShinigamiInfo = {
-    version: getExportVersion("0.0.2"),
+    version: getExportVersion("0.0.3"),
     name: "Shinigami",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",
@@ -16167,7 +16167,8 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
       this.baseUrl = DOMAIN;
       this.hasProtectedChapters = true;
       this.directoryPath = "series";
-      this.chapterEndpoint = 2;
+      this.chapterEndpoint = 3;
+      this.usePostIds = false;
     }
   };
   return __toCommonJS(Shinigami_exports);
