@@ -15131,7 +15131,7 @@ var _Sources = (() => {
           section: createHomeSection("latest_update", "Latest Updates"),
           selectorFunc: ($2) => $2("div.uta", $2("h2:contains(Latest Update)")?.parent()?.next()),
           titleSelectorFunc: ($2, element) => $2("a", element).attr("title"),
-          subtitleSelectorFunc: ($2, element) => $2("li > a, div.epxs", $2("div.luf, div.bigor", element)).first().text().trim(),
+          subtitleSelectorFunc: ($2, element) => $2("li > a, div.epxs", $2("span.eggchap, div.luf, div.bigor", element)).first().text().trim(),
           getViewMoreItemsFunc: (page) => `${this.directoryPath}/?page=${page}&order=update`,
           sortIndex: 20
         },
@@ -15450,7 +15450,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
   // src/KomikTap/KomikTap.ts
   var DOMAIN = "https://komiktap.info";
   var KomikTapInfo = {
-    version: getExportVersion("0.0.2"),
+    version: getExportVersion("0.0.3"),
     name: "KomikTap",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",

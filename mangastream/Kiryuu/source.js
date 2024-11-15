@@ -15131,7 +15131,7 @@ var _Sources = (() => {
           section: createHomeSection("latest_update", "Latest Updates"),
           selectorFunc: ($2) => $2("div.uta", $2("h2:contains(Latest Update)")?.parent()?.next()),
           titleSelectorFunc: ($2, element) => $2("a", element).attr("title"),
-          subtitleSelectorFunc: ($2, element) => $2("li > a, div.epxs", $2("div.luf, div.bigor", element)).first().text().trim(),
+          subtitleSelectorFunc: ($2, element) => $2("li > a, div.epxs", $2("span.eggchap, div.luf, div.bigor", element)).first().text().trim(),
           getViewMoreItemsFunc: (page) => `${this.directoryPath}/?page=${page}&order=update`,
           sortIndex: 20
         },
@@ -15450,7 +15450,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
   // src/Kiryuu/Kiryuu.ts
   var DOMAIN = "https://kiryuu.org";
   var KiryuuInfo = {
-    version: getExportVersion("0.0.1"),
+    version: getExportVersion("0.0.2"),
     name: "Kiryuu",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",

@@ -15131,7 +15131,7 @@ var _Sources = (() => {
           section: createHomeSection("latest_update", "Latest Updates"),
           selectorFunc: ($2) => $2("div.uta", $2("h2:contains(Latest Update)")?.parent()?.next()),
           titleSelectorFunc: ($2, element) => $2("a", element).attr("title"),
-          subtitleSelectorFunc: ($2, element) => $2("li > a, div.epxs", $2("div.luf, div.bigor", element)).first().text().trim(),
+          subtitleSelectorFunc: ($2, element) => $2("li > a, div.epxs", $2("span.eggchap, div.luf, div.bigor", element)).first().text().trim(),
           getViewMoreItemsFunc: (page) => `${this.directoryPath}/?page=${page}&order=update`,
           sortIndex: 20
         },
@@ -15480,7 +15480,6 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
       this.homescreen_sections["top_weekly"].enabled = false;
       this.homescreen_sections["popular_today"].selectorFunc = ($2, element) => $2("div.bsx", $2("h2:contains(Terpopuler Hari Ini)")?.parent()?.next());
       this.homescreen_sections["latest_update"].selectorFunc = ($2, element) => $2("div.utao", $2("h2:contains(Rilisan Terbaru)")?.parent()?.next());
-      this.homescreen_sections["latest_update"].subtitleSelectorFunc = ($2, element) => $2("span.fivchap", element).first().text().trim();
     }
   };
   return __toCommonJS(Tenshi_exports);
