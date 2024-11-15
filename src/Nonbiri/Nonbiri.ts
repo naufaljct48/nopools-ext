@@ -18,7 +18,7 @@ import {
 const DOMAIN = 'https://comic21.me'
 
 export const NonbiriInfo: SourceInfo = {
-    version: getExportVersion('0.0.3'),
+    version: getExportVersion('0.0.4'),
     name: 'Nonbiri',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',

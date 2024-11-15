@@ -244,7 +244,7 @@ export abstract class MangaStream implements ChapterProviding, HomePageSectionsP
             section: createHomeSection('latest_update', 'Latest Updates'),
             selectorFunc: ($: cheerio.CheerioAPI) => $('div.uta', $('h2:contains(Latest Update)')?.parent()?.next()),
             titleSelectorFunc: ($: cheerio.CheerioAPI, element: cheerio.BasicAcceptedElems<AnyNode>) => $('a', element).attr('title'),
-            subtitleSelectorFunc: ($: cheerio.CheerioAPI, element: cheerio.BasicAcceptedElems<AnyNode>) => $('li > a, div.epxs', $('div.luf, div.bigor', element)).first().text().trim(),
+            subtitleSelectorFunc: ($: cheerio.CheerioAPI, element: cheerio.BasicAcceptedElems<AnyNode>) => $('li > a, div.epxs', $('span.eggchap, div.luf, div.bigor', element)).first().text().trim(),
             getViewMoreItemsFunc: (page: string) => `${this.directoryPath}/?page=${page}&order=update`,
             sortIndex: 20
         },
