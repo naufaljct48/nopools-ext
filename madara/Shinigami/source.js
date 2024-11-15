@@ -16145,7 +16145,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
   // src/Shinigami/Shinigami.ts
   var DOMAIN = "https://shinigami07.com";
   var ShinigamiInfo = {
-    version: getExportVersion("0.0.1"),
+    version: getExportVersion("0.0.2"),
     name: "Shinigami",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",
