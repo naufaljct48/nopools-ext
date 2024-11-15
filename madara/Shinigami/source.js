@@ -16142,6 +16142,52 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
     }
   };
 
+  // src/Shinigami/ShinigamiParser.ts
+  var import_html_entities2 = __toESM(require_lib2());
+  var ShinigamiParser = class extends Parser3 {
+    parseChapterList($2, mangaId, source) {
+      const chapters = [];
+      let sortingIndex = 0;
+      for (const obj of $2("li.wp-manga-chapter  ").toArray()) {
+        const id = this.idCleaner($2("a", obj).first().attr("href") ?? "");
+        const chapName = $2("a > p", obj).first().text().trim() ?? "";
+        const chapNumRegex = id.match(/(?:chapter|ch.*?)(\d+\.?\d?(?:[-_]\d+)?)|(\d+\.?\d?(?:[-_]\d+)?)$/);
+        let chapNum = chapNumRegex && chapNumRegex[1] ? chapNumRegex[1].replace(/[-_]/gm, ".") : chapNumRegex?.[2] ?? "0";
+        chapNum = parseFloat(chapNum) ?? 0;
+        let mangaTime;
+        const timeSelector = $2("span.chapter-release-date > a, span.chapter-release-date > span.c-new-tag > a", obj).attr("title");
+        if (typeof timeSelector !== "undefined") {
+          mangaTime = this.parseDate(timeSelector ?? "");
+        } else {
+          mangaTime = this.parseDate($2("span.chapter-release-date > i", obj).text().trim());
+        }
+        if (!mangaTime.getTime()) mangaTime = /* @__PURE__ */ new Date();
+        if (!id || typeof id === "undefined" || id === "#") {
+          console.log(`Could not parse out ID when getting chapters for postId:${mangaId} parsedId: ${id}`);
+          continue;
+        }
+        chapters.push({
+          id,
+          langCode: source.language,
+          chapNum,
+          name: chapName ? (0, import_html_entities2.decode)(chapName) : "",
+          time: mangaTime,
+          sortingIndex,
+          volume: 0,
+          group: ""
+        });
+        sortingIndex--;
+      }
+      if (chapters.length == 0) {
+        throw new Error(`Couldn't find any chapters for mangaId: ${mangaId}!`);
+      }
+      return chapters.map((chapter) => {
+        chapter.sortingIndex += chapters.length;
+        return App.createChapter(chapter);
+      });
+    }
+  };
+
   // src/Shinigami/Shinigami.ts
   var DOMAIN = "https://shinigami07.com";
   var ShinigamiInfo = {
@@ -16167,13 +16213,16 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
       this.baseUrl = DOMAIN;
       this.hasProtectedChapters = true;
       this.directoryPath = "series";
-      this.chapterEndpoint = 0;
+      this.chapterEndpoint = 1;
+      this.useListParameter = false;
+      this.bypassPage = `${DOMAIN}/?p`;
+      this.parser = new ShinigamiParser();
     }
     async getHomePageSections(sectionCallback) {
       const sections = [
         {
           request: App.createRequest({
-            url: `${this.baseUrl}/terbaru/?m_orderby=latest`,
+            url: `${this.baseUrl}/${this.directoryPath}/?m_orderby=latest`,
             method: "GET"
           }),
           section: App.createHomeSection({
@@ -16185,7 +16234,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
         },
         {
           request: App.createRequest({
-            url: `${this.baseUrl}/terbaru/?m_orderby=trending`,
+            url: `${this.baseUrl}/${this.directoryPath}/?m_orderby=trending`,
             method: "GET"
           }),
           section: App.createHomeSection({
@@ -16197,7 +16246,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
         },
         {
           request: App.createRequest({
-            url: `${this.baseUrl}/terbaru/?m_orderby=views`,
+            url: `${this.baseUrl}/${this.directoryPath}/?m_orderby=views`,
             method: "GET"
           }),
           section: App.createHomeSection({
@@ -16209,7 +16258,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
         },
         {
           request: App.createRequest({
-            url: `${this.baseUrl}/terbaru/?m_orderby=new-manga`,
+            url: `${this.baseUrl}/${this.directoryPath}/?m_orderby=new-manga`,
             method: "GET"
           }),
           section: App.createHomeSection({
