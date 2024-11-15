@@ -16145,7 +16145,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
   // src/Pojokmanga/Pojokmanga.ts
   var DOMAIN = "https://pojokmanga.info";
   var PojokmangaInfo = {
-    version: getExportVersion("0.0.0"),
+    version: getExportVersion("0.0.1"),
     name: "Pojokmanga",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",
@@ -16165,7 +16165,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
     constructor() {
       super(...arguments);
       this.baseUrl = DOMAIN;
-      this.hasProtectedChapters = true;
+      // override hasProtectedChapters = true
       this.directoryPath = "komik";
       this.chapterEndpoint = 1;
     }
