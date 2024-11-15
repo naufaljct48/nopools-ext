@@ -4,16 +4,21 @@ import {
     SourceInfo,
     SourceIntents
 } from '@paperback/types'
+import {
+    BasicAcceptedElems,
+    CheerioAPI
+} from 'cheerio'
+import { AnyNode } from 'domhandler'
 
 import {
     getExportVersion,
     MangaStream
 } from '../MangaStream'
 
-const DOMAIN = 'https://westmanga.info'
+const DOMAIN = 'https://westmanga.fun'
 
 export const WestMangaInfo: SourceInfo = {
-    version: getExportVersion('0.0.0'),
+    version: getExportVersion('0.0.1'),
     name: 'WestManga',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -41,8 +46,8 @@ export class WestManga extends MangaStream {
         this.homescreen_sections['top_alltime'].enabled = false
         this.homescreen_sections['top_monthly'].enabled = false
         this.homescreen_sections['top_weekly'].enabled = false
-        this.homescreen_sections['popular_today'].selectorFunc = ($: CheerioStatic) => $('div.bsx', $('h2:contains(Komik Popular Hari Ini...)')?.parent()?.next())
-        this.homescreen_sections['latest_update'].selectorFunc = ($: CheerioStatic) => $('div.bsx', $('h2:contains(UPDATE KOMIK LAINYA...)')?.parent()?.next())
-        this.homescreen_sections['latest_update'].subtitleSelectorFunc = ($: CheerioStatic, element: CheerioElement) => $('div.epxs', element).text().trim()
+        this.homescreen_sections['popular_today'].selectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('div.bsx', $('h2:contains(Komik Popular Hari Ini...)')?.parent()?.next())
+        this.homescreen_sections['latest_update'].selectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('div.bsx', $('h2:contains(UPDATE KOMIK LAINYA...)')?.parent()?.next())
+        this.homescreen_sections['latest_update'].subtitleSelectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('div.epxs', element).text().trim()
     }
 }

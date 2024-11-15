@@ -7,31 +7,36 @@ import {
     Tag,
     TagSection
 } from '@paperback/types'
-
-import { convertDate } from './LanguageUtils'
+import { decode as decodeHTMLEntity } from 'html-entities'
+import {
+    Cheerio,
+    CheerioAPI
+} from 'cheerio'
+import { Element } from 'domhandler'
 
 import { HomeSectionData } from './MangaStreamHelper'
 
-import entities = require('entities')
+import { convertDate } from './LanguageUtils'
+
 
 export class MangaStreamParser {
 
-    parseMangaDetails($: CheerioStatic, mangaId: string, source: any): SourceManga {
+    parseMangaDetails($: CheerioAPI, mangaId: string, source: any): SourceManga {
         const titles: string[] = []
-        titles.push(this.decodeHTMLEntity($('h1.entry-title').text().trim().replace(/Komik|Manhwa|Manga|Manhua|Bahasa Indonesia/g, '')));
+        titles.push(decodeHTMLEntity($('h1.entry-title').text().trim()))
 
         const altTitles = $(`span:contains(${source.manga_selector_AlternativeTitles}), b:contains(${source.manga_selector_AlternativeTitles})+span, .imptdt:contains(${source.manga_selector_AlternativeTitles}) i, h1.entry-title+span`).contents().remove().last().text().split(',') // Language dependant
         for (const title of altTitles) {
             if (title == '') {
                 continue
             }
-            titles.push(this.decodeHTMLEntity(title.trim()))
+            titles.push(decodeHTMLEntity(title.trim()))
         }
 
-        const author = $(`span:contains(${source.manga_selector_author}), .fmed b:contains(${source.manga_selector_author})+span, td:contains(${source.manga_selector_author})+td, .imptdt:contains(${source.manga_selector_author}) i`).contents().remove().last().text().trim() // Language dependant
-        const artist = $(`span:contains(${source.manga_selector_artist}), .fmed b:contains(${source.manga_selector_artist})+span, td:contains(${source.manga_selector_artist})+td, .imptdt:contains(${source.manga_selector_artist}) i`).contents().remove().last().text().trim() // Language dependant
+        const author = $(`span:contains(${source.manga_selector_author}), .fmed b:contains(${source.manga_selector_author})+span, .imptdt:contains(${source.manga_selector_author}) i, tr td:contains(${source.manga_selector_author}) + td`).contents().remove().last().text().trim() // Language dependant
+        const artist = $(`span:contains(${source.manga_selector_artist}), .fmed b:contains(${source.manga_selector_artist})+span, .imptdt:contains(${source.manga_selector_artist}) i, tr td:contains(${source.manga_selector_artist}) + td`).contents().remove().last().text().trim() // Language dependant
         const image = this.getImageSrc($('img', 'div[itemprop="image"]'))
-        const description = this.decodeHTMLEntity($('div[itemprop="description"]  p').text().trim())
+        const description = decodeHTMLEntity($('div[itemprop="description"]  p').text().trim())
 
         const arrayTags: Tag[] = []
         for (const tag of $('a', source.manga_tag_selector_box).toArray()) {
@@ -79,7 +84,7 @@ export class MangaStreamParser {
         })
     }
 
-    parseChapterList($: CheerioSelector, mangaId: string, source: any): Chapter[] {
+    parseChapterList($: CheerioAPI, mangaId: string, source: any): Chapter[] {
         const chapters: Chapter[] = []
         let sortingIndex = 0
         let language = source.language
@@ -88,9 +93,10 @@ export class MangaStreamParser {
         if (mangaId.toUpperCase().endsWith('-RAW') && source.language == '🇬🇧') language = '🇰🇷'
 
         for (const chapter of $('li', 'div#chapterlist').toArray()) {
-            const title = $('span.chapternum', chapter).text().trim()
+            const title = decodeHTMLEntity($('span.chapternum', chapter).text().trim())
             const date = convertDate($('span.chapterdate', chapter).text().trim(), source)
-            const id = chapter.attribs['data-num'] ?? '' // Set data-num attribute as id
+            // Set data-num attribute as id
+            const id = chapter.attribs['data-num'] ?? ''
             const chapterNumberRegex = id.match(/(\d+\.?\d?)+/)
             let chapterNumber = 0
             if (chapterNumberRegex && chapterNumberRegex[1]) {
@@ -98,7 +104,7 @@ export class MangaStreamParser {
             }
 
             if (!id || typeof id === 'undefined') {
-                throw new Error(`Could not parse out ID when getting chapters for postId:${mangaId}`)
+                throw new Error(`Could not parse out ID when getting chapters for postId: ${mangaId}`)
             }
 
             chapters.push({
@@ -125,26 +131,43 @@ export class MangaStreamParser {
         })
     }
 
-    parseChapterDetails($: CheerioStatic, mangaId: string, chapterId: string): ChapterDetails {
-        const data = $.html()
-
+    parseChapterDetails($: CheerioAPI, mangaId: string, chapterId: string): ChapterDetails {
         const pages: string[] = []
 
-        // To avoid our regex capturing more scrips, we stop at the first match of ";", also known as the first ending the matching script.
-        let obj: any = /ts_reader.run\((.[^;]+)\)/.exec(data)?.[1] ?? '' //Get the data else return null.
-        if (obj == '') {
-            throw new Error(`Failed to find page details script for manga ${mangaId}`) //If null, throw error, else parse data to json.
+        //@ts-expect-error Ignore index
+        const readerScript = $('script').filter((i, el) => {
+            return $(el).html()?.includes('ts_reader.run')
+        })
+
+        if (!readerScript) {
+            throw new Error(`Failed to find page details script for manga ${mangaId}`) // If null, throw error, else parse data to json.
         }
 
-        obj = JSON.parse(obj)
+        const scriptMatch = readerScript.html()?.match(/ts_reader\.run\((.*?(?=\);|},))/)
 
-        if (!obj?.sources) {
+        let scriptObj: any = ''
+
+        if (scriptMatch && scriptMatch[1]) {
+            scriptObj = scriptMatch[1]
+        }
+
+        if (!scriptObj) {
+            throw new Error(`Failed to parse script for manga ${mangaId}`) // If null, throw error, else parse data to json.
+        }
+
+        if (!scriptObj.endsWith('}')) {
+            scriptObj = scriptObj + '}'
+        }
+
+        scriptObj = JSON.parse(scriptObj)
+
+        if (!scriptObj?.sources) {
             throw new Error(`Failed for find sources property for manga ${mangaId}`)
         }
 
-        for (const index of obj.sources) { // Check all sources, if empty continue.
+        for (const index of scriptObj.sources) { // Check all sources, if empty continue.
             if (index?.images.length == 0) continue
-            index.images.map((p: string) => pages.push(encodeURI(p)))
+            index.images.map((p: string) => pages.push(encodeURI(p.trim())))
         }
 
         const chapterDetails = App.createChapterDetails({
@@ -156,7 +179,7 @@ export class MangaStreamParser {
         return chapterDetails
     }
 
-    parseTags($: CheerioSelector): TagSection[] {
+    parseTags($: CheerioAPI): TagSection[] {
         const tagSections: any[] = [
             { id: '0', label: 'genres', tags: [] },
             { id: '1', label: 'status', tags: [] },
@@ -186,7 +209,7 @@ export class MangaStreamParser {
         return tagSections.map((x) => App.createTagSection(x))
     }
 
-    async parseSearchResults($: CheerioSelector, source: any): Promise<any[]> {
+    async parseSearchResults($: CheerioAPI, source: any): Promise<any[]> {
         const results: any[] = []
 
         for (const obj of $('div.bs', 'div.listupd').toArray()) {
@@ -204,15 +227,15 @@ export class MangaStreamParser {
                 slug,
                 path,
                 image: image || source.fallbackImage,
-                title: this.decodeHTMLEntity(title),
-                subtitle: this.decodeHTMLEntity(subtitle)
+                title: decodeHTMLEntity(title),
+                subtitle: decodeHTMLEntity(subtitle)
             })
         }
 
         return results
     }
 
-    async parseViewMore($: CheerioStatic, source: any): Promise<PartialSourceManga[]> {
+    async parseViewMore($: CheerioAPI, source: any): Promise<PartialSourceManga[]> {
         const items: PartialSourceManga[] = []
 
         for (const manga of $('div.bs', 'div.listupd').toArray()) {
@@ -233,15 +256,15 @@ export class MangaStreamParser {
             items.push(App.createPartialSourceManga({
                 mangaId,
                 image: image,
-                title: this.decodeHTMLEntity(title),
-                subtitle: this.decodeHTMLEntity(subtitle)
+                title: decodeHTMLEntity(title),
+                subtitle: decodeHTMLEntity(subtitle)
             }))
         }
 
         return items
     }
 
-    async parseHomeSection($: CheerioStatic, section: HomeSectionData, source: any): Promise<PartialSourceManga[]> {
+    async parseHomeSection($: CheerioAPI, section: HomeSectionData, source: any): Promise<PartialSourceManga[]> {
         const items: PartialSourceManga[] = []
 
         const mangas = section.selectorFunc($)
@@ -269,15 +292,15 @@ export class MangaStreamParser {
             items.push(App.createPartialSourceManga({
                 mangaId,
                 image: image,
-                title: this.decodeHTMLEntity(title),
-                subtitle: this.decodeHTMLEntity(subtitle)
+                title: decodeHTMLEntity(title),
+                subtitle: decodeHTMLEntity(subtitle)
             }))
         }
 
         return items
     }
 
-    isLastPage = ($: CheerioStatic, id: string): boolean => {
+    isLastPage = ($: CheerioAPI, id: string): boolean => {
         let isLast = true
         if (id == 'view_more') {
             const hasNext = Boolean($('a.r')[0])
@@ -296,7 +319,7 @@ export class MangaStreamParser {
         return isLast
     }
 
-    getImageSrc(imageObj: Cheerio | undefined): string {
+    getImageSrc(imageObj: Cheerio<Element> | undefined): string {
         let image: string | undefined
         if ((typeof imageObj?.attr('data-src')) != 'undefined') {
             image = imageObj?.attr('data-src')
@@ -321,11 +344,7 @@ export class MangaStreamParser {
         image = image.replace(/^\//, 'https:/')
 
 
-        return encodeURI(decodeURI(this.decodeHTMLEntity(image?.trim() ?? '')))
-    }
-
-    protected decodeHTMLEntity(str: string): string {
-        return entities.decodeHTML(str)
+        return encodeURI(decodeURI(decodeHTMLEntity(image?.trim())))
     }
 
     protected idCleaner(str: string): string {

@@ -4,16 +4,22 @@ import {
     SourceInfo,
     SourceIntents
 } from '@paperback/types'
+import {
+    BasicAcceptedElems,
+    CheerioAPI
+} from 'cheerio'
+import { AnyNode } from 'domhandler'
+
 
 import {
     getExportVersion,
     MangaStream
 } from '../MangaStream'
 
-const DOMAIN = 'https://komikindo.top'
+const DOMAIN = 'https://komikindo.nl'
 
 export const KomikIndoTopInfo: SourceInfo = {
-    version: getExportVersion('0.0.0'),
+    version: getExportVersion('0.0.1'),
     name: 'KomikIndoTop',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -45,7 +51,7 @@ export class KomikIndoTop extends MangaStream {
         this.homescreen_sections['top_alltime'].enabled = false
         this.homescreen_sections['top_monthly'].enabled = false
         this.homescreen_sections['top_weekly'].enabled = false
-        this.homescreen_sections['latest_update'].selectorFunc = ($: CheerioStatic) => $('div.bsx', $('h2:contains(Latest Update)')?.parent()?.next())
-        this.homescreen_sections['latest_update'].subtitleSelectorFunc = ($: CheerioStatic, element: CheerioElement) => $('span.fivchap', element).first().text().trim()
+        this.homescreen_sections['latest_update'].selectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('div.bsx', $('h2:contains(Latest Update)')?.parent()?.next())
+        this.homescreen_sections['latest_update'].subtitleSelectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('span.fivchap', element).first().text().trim()
     }
 }

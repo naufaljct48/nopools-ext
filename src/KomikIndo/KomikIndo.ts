@@ -4,16 +4,22 @@ import {
     SourceInfo,
     SourceIntents
 } from '@paperback/types'
+import {
+    BasicAcceptedElems,
+    CheerioAPI
+} from 'cheerio'
+import { AnyNode } from 'domhandler'
+
 
 import {
     getExportVersion,
     MangaStream
 } from '../MangaStream'
 
-const DOMAIN = 'https://komikindo.co'
+const DOMAIN = 'https://komiksin.id'
 
 export const KomikIndoInfo: SourceInfo = {
-    version: getExportVersion('0.0.0'),
+    version: getExportVersion('0.0.1'),
     name: 'KomikIndo',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -38,8 +44,8 @@ export class KomikIndo extends MangaStream {
 
     override configureSections(): void {
         this.homescreen_sections['new_titles'].enabled = false
-        this.homescreen_sections['popular_today'].selectorFunc = ($: CheerioStatic) => $('div.bsx', $('h2:contains(SEDANG HANGAT DIBACA)')?.parent()?.next())
-        this.homescreen_sections['latest_update'].selectorFunc = ($: CheerioStatic) => $('div.uta', $('h2:contains(CHAPTER TERBARU)')?.parent()?.next())
+        this.homescreen_sections['popular_today'].selectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('div.bsx', $('h2:contains(Terpopuler Hari Ini)')?.parent()?.next())
+        this.homescreen_sections['latest_update'].selectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('div.uta', $('h2:contains(Rilisan Terbaru)')?.parent()?.next())
         this.homescreen_sections['top_alltime'].enabled = false
         this.homescreen_sections['top_monthly'].enabled = false
         this.homescreen_sections['top_weekly'].enabled = false

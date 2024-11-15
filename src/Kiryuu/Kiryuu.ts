@@ -4,16 +4,22 @@ import {
     SourceInfo,
     SourceIntents
 } from '@paperback/types'
+import {
+    BasicAcceptedElems,
+    CheerioAPI
+} from 'cheerio'
+import { AnyNode } from 'domhandler'
+
 
 import {
     getExportVersion,
     MangaStream
 } from '../MangaStream'
 
-const DOMAIN = 'https://kiryuu.id'
+const DOMAIN = 'https://kiryuu.org'
 
 export const KiryuuInfo: SourceInfo = {
-    version: getExportVersion('0.0.0'),
+    version: getExportVersion('0.0.1'),
     name: 'Kiryuu',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -41,8 +47,8 @@ export class Kiryuu extends MangaStream {
         this.homescreen_sections['top_alltime'].enabled = false
         this.homescreen_sections['top_monthly'].enabled = false
         this.homescreen_sections['top_weekly'].enabled = false
-        this.homescreen_sections['popular_today'].selectorFunc = ($: CheerioStatic) => $('div.bsx', $('h2:contains(Hot Update)')?.parent()?.next())
-        this.homescreen_sections['latest_update'].selectorFunc = ($: CheerioStatic) => $('div.utao', $('h2:contains(Rilisan Terbaru)')?.parent()?.next())
+        this.homescreen_sections['popular_today'].selectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('div.bsx', $('h2:contains(Terpopuler Hari Ini)')?.parent()?.next())
+        this.homescreen_sections['latest_update'].selectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('div.utao', $('h2:contains(Rilisan Terbaru)')?.parent()?.next())
     }
     override dateMonths = {
         january: 'Januari',

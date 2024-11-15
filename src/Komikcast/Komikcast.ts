@@ -4,6 +4,12 @@ import {
     SourceInfo,
     SourceIntents
 } from '@paperback/types'
+import {
+    BasicAcceptedElems,
+    CheerioAPI
+} from 'cheerio'
+import { AnyNode } from 'domhandler'
+
 
 import {
     getExportVersion,
@@ -18,10 +24,10 @@ import {
 import { KomikcastParser } from './KomikcastParser'
 import { URLBuilder } from '../UrlBuilder'
 
-const DOMAIN = 'https://komikcast.vip'
+const DOMAIN = 'https://komikcast.cz'
 
 export const KomikcastInfo: SourceInfo = {
-    version: getExportVersion('0.0.2'),
+    version: getExportVersion('0.0.4'),
     name: 'Komikcast',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -49,13 +55,13 @@ export class Komikcast extends MangaStream {
     override parser = new KomikcastParser()
 
     override configureSections() {
-        this.homescreen_sections['popular_today'].selectorFunc = ($: CheerioStatic) => $('div.swiper-slide', $('span:contains(Hot Komik Update)')?.parent()?.next())
-        this.homescreen_sections['popular_today'].titleSelectorFunc = ($: CheerioStatic) => $('div.title').text().trim()
-        this.homescreen_sections['popular_today'].subtitleSelectorFunc = ($: CheerioStatic, element: CheerioElement) => $('div.chapter', element).text().trim()
+        this.homescreen_sections['popular_today'].selectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('div.swiper-slide', $('span:contains(Hot Komik Update)')?.parent()?.next())
+        this.homescreen_sections['popular_today'].titleSelectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('div.title').text().trim()
+        this.homescreen_sections['popular_today'].subtitleSelectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('div.chapter', element).text().trim()
         this.homescreen_sections['popular_today'].getViewMoreItemsFunc = (page: string) => `daftar-komik/page/${page}/?orderby=popular`
-        this.homescreen_sections['latest_update'].selectorFunc = ($: CheerioStatic) => $('div.utao', $('span:contains(Rilisan Terbaru)')?.parent()?.next())
-        this.homescreen_sections['latest_update'].titleSelectorFunc = ($: CheerioStatic) => $('h3').text().trim()
-        this.homescreen_sections['latest_update'].subtitleSelectorFunc = ($: CheerioStatic, element: CheerioElement) => $('div.chapter', element).text().trim()
+        this.homescreen_sections['latest_update'].selectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('div.utao', $('span:contains(Rilisan Terbaru)')?.parent()?.next())
+        this.homescreen_sections['latest_update'].titleSelectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('h3').text().trim()
+        this.homescreen_sections['latest_update'].subtitleSelectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('div.chapter', element).text().trim()
         this.homescreen_sections['latest_update'].getViewMoreItemsFunc = (page: string) => `daftar-komik/page/${page}/?sortby=update`
         this.homescreen_sections['new_titles'].enabled = false
         this.homescreen_sections['top_alltime'].enabled = false
@@ -65,38 +71,41 @@ export class Komikcast extends MangaStream {
     }
 
     override async getChapterDetails(mangaId: string, chapterId: string): Promise<ChapterDetails> {
-        // Request the manga page
         const request = App.createRequest({
-            url: url: await this.getUsePostIds() ? `${this.baseUrl}/?p=${mangaId}/` : `${this.baseUrl}/${this.directoryPath}/${mangaId}/`,
+            url: await this.getUsePostIds()
+                ? `${this.baseUrl}/?p=${mangaId}/`
+                : `${this.baseUrl}/${this.directoryPath}/${mangaId}/`,
             method: 'GET'
-        })
-
-        const response = await this.requestManager.schedule(request, 1)
-        this.checkResponseError(response)
-        const $ = this.cheerio.load(response.data as string)
-
-        const chapter = $('li', 'div.komik_info-chapters')
-        if (!chapter) {
-            throw new Error(`Unable to fetch a chapter for chapter numer: ${chapterId}`)
+        });
+    
+        const response = await this.requestManager.schedule(request, 1);
+        this.checkResponseError(response);
+    
+        const $: CheerioAPI = this.cheerio.load(response.data as string);
+        const chapterElement = $('li', 'div.komik_info-chapters').filter((_, el) => {
+            return $('a', el).attr('href')?.includes(chapterId);
+        });
+    
+        if (!chapterElement.length) {
+            throw new Error(`Unable to fetch chapter: ${chapterId}`);
         }
-
-        // Fetch the ID (URL) of the chapter
-        const id = $('a', chapter).attr('href') ?? ''
+    
+        const id = $('a', chapterElement).attr('href') ?? '';
         if (!id) {
-            throw new Error(`Unable to fetch id for chapter numer: ${chapterId}`)
+            throw new Error(`Unable to fetch id for chapter: ${chapterId}`);
         }
-        // Request the chapter page
+    
         const _request = App.createRequest({
             url: id,
             method: 'GET'
-        })
-
-        const _response = await this.requestManager.schedule(_request, 1)
-        this.checkResponseError(_response)
-        const _$ = this.cheerio.load(_response.data as string)
-
-        return this.parser.parseChapterDetails(_$, mangaId, chapterId)
-    }
+        });
+    
+        const _response = await this.requestManager.schedule(_request, 1);
+        this.checkResponseError(_response);
+    
+        const _$: CheerioAPI = this.cheerio.load(_response.data as string);
+        return this.parser.parseChapterDetails(_$, mangaId, chapterId);
+    }    
 
     override async getSearchTags(): Promise<TagSection[]> {
         const request = App.createRequest({
