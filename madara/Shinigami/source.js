@@ -643,13 +643,13 @@ var _Sources = (() => {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
       exports.HomeSectionType = void 0;
-      var HomeSectionType3;
-      (function(HomeSectionType4) {
-        HomeSectionType4["singleRowNormal"] = "singleRowNormal";
-        HomeSectionType4["singleRowLarge"] = "singleRowLarge";
-        HomeSectionType4["doubleRow"] = "doubleRow";
-        HomeSectionType4["featured"] = "featured";
-      })(HomeSectionType3 = exports.HomeSectionType || (exports.HomeSectionType = {}));
+      var HomeSectionType2;
+      (function(HomeSectionType3) {
+        HomeSectionType3["singleRowNormal"] = "singleRowNormal";
+        HomeSectionType3["singleRowLarge"] = "singleRowLarge";
+        HomeSectionType3["doubleRow"] = "doubleRow";
+        HomeSectionType3["featured"] = "featured";
+      })(HomeSectionType2 = exports.HomeSectionType || (exports.HomeSectionType = {}));
     }
   });
 
@@ -1617,6 +1617,9 @@ var _Sources = (() => {
     ShinigamiInfo: () => ShinigamiInfo
   });
   var import_types3 = __toESM(require_lib());
+
+  // src/Madara.ts
+  var import_types2 = __toESM(require_lib());
 
   // node_modules/cheerio/dist/browser/static.js
   var static_exports = {};
@@ -15326,9 +15329,6 @@ var _Sources = (() => {
   var parse5 = getParse((content, options, isDocument2, context) => options._useHtmlParser2 ? parseDocument(content, options) : parseWithParse5(content, options, isDocument2, context));
   var load = getLoad(parse5, (dom, options) => options._useHtmlParser2 ? esm_default(dom, options) : renderWithParse5(dom));
 
-  // src/Madara.ts
-  var import_types2 = __toESM(require_lib());
-
   // src/MadaraParser.ts
   var import_html_entities = __toESM(require_lib2());
 
@@ -16191,7 +16191,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
   // src/Shinigami/Shinigami.ts
   var DOMAIN = "https://shinigami07.com";
   var ShinigamiInfo = {
-    version: getExportVersion("0.0.7"),
+    version: getExportVersion("0.0.8"),
     name: "Shinigami",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",
@@ -16217,111 +16217,6 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
       this.useListParameter = false;
       this.bypassPage = `${DOMAIN}/?p`;
       this.parser = new ShinigamiParser();
-    }
-    async getHomePageSections(sectionCallback) {
-      const sections = [
-        {
-          request: App.createRequest({
-            url: `${this.baseUrl}/${this.directoryPath}/?m_orderby=latest`,
-            method: "GET"
-          }),
-          section: App.createHomeSection({
-            id: "0",
-            title: "Recently Updated",
-            type: import_types3.HomeSectionType.singleRowNormal,
-            containsMoreItems: true
-          })
-        },
-        {
-          request: App.createRequest({
-            url: `${this.baseUrl}/${this.directoryPath}/?m_orderby=trending`,
-            method: "GET"
-          }),
-          section: App.createHomeSection({
-            id: "1",
-            title: "Currently Trending",
-            type: import_types3.HomeSectionType.singleRowNormal,
-            containsMoreItems: true
-          })
-        },
-        {
-          request: App.createRequest({
-            url: `${this.baseUrl}/${this.directoryPath}/?m_orderby=views`,
-            method: "GET"
-          }),
-          section: App.createHomeSection({
-            id: "2",
-            title: "Most Popular",
-            type: import_types3.HomeSectionType.singleRowNormal,
-            containsMoreItems: true
-          })
-        },
-        {
-          request: App.createRequest({
-            url: `${this.baseUrl}/${this.directoryPath}/?m_orderby=new-manga`,
-            method: "GET"
-          }),
-          section: App.createHomeSection({
-            id: "3",
-            title: "New Manga",
-            type: import_types3.HomeSectionType.singleRowNormal,
-            containsMoreItems: true
-          })
-        }
-      ];
-      const promises = [];
-      for (const section of sections) {
-        sectionCallback(section.section);
-        promises.push(
-          this.requestManager.schedule(section.request, 1).then(async (response) => {
-            this.checkResponseError(response);
-            const $2 = load(response.data);
-            section.section.items = await this.parser.parseHomeSection($2, this);
-            sectionCallback(section.section);
-          })
-        );
-      }
-      await Promise.all(promises);
-    }
-    async getViewMoreItems(homepageSectionId, metadata) {
-      const page = metadata?.page ?? 1;
-      let param;
-      switch (homepageSectionId) {
-        case "0": {
-          param = "m_orderby=latest";
-          break;
-        }
-        case "1": {
-          param = "m_orderby=trending";
-          break;
-        }
-        case "2": {
-          param = "m_orderby=views";
-          break;
-        }
-        case "3": {
-          param = "m_orderby=new-manga";
-          break;
-        }
-        default:
-          throw new Error(`Invalid homeSectionId | ${homepageSectionId}`);
-      }
-      const request = App.createRequest({
-        url: `${this.baseUrl}/${this.directoryPath}/page/${page}/?${param}`,
-        method: "GET"
-      });
-      const response = await this.requestManager.schedule(request, 1);
-      this.checkResponseError(response);
-      const $2 = load(response.data);
-      const items = await this.parser.parseHomeSection($2, this);
-      let mData = { page: page + 1 };
-      if (!$2("a.last")) {
-        mData = void 0;
-      }
-      return App.createPagedResults({
-        results: items,
-        metadata: mData
-      });
     }
   };
   return __toCommonJS(Shinigami_exports);
