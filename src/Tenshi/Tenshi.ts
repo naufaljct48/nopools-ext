@@ -18,7 +18,7 @@ import {
 const DOMAIN = 'https://tenshi01.id'
 
 export const TenshiInfo: SourceInfo = {
-    version: getExportVersion('0.0.4'),
+    version: getExportVersion('0.0.5'),
     name: 'Tenshi',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -49,21 +49,7 @@ export class Tenshi extends MangaStream {
         this.homescreen_sections['top_monthly'].enabled = false
         this.homescreen_sections['top_weekly'].enabled = false
         this.homescreen_sections['popular_today'].selectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('div.bsx', $('h2:contains(Terpopuler Hari Ini)')?.parent()?.next())
-        this.homescreen_sections['latest_update'].selectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('div.bsx', $('h2:contains(Rilisan Terbaru)')?.parent()?.next())
+        this.homescreen_sections['latest_update'].selectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('div.utao', $('h2:contains(Rilisan Terbaru)')?.parent()?.next())
         this.homescreen_sections['latest_update'].subtitleSelectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('span.fivchap', element).first().text().trim()
-    }
-    override dateMonths = {
-        january: 'Januari',
-        february: 'Februari',
-        march: 'Maret',
-        april: 'April',
-        may: 'Mei',
-        june: 'Juni',
-        july: 'Juli',
-        august: 'Agustus',
-        september: 'September',
-        october: 'Oktober',
-        november: 'November',
-        december: 'Desember'
     }
 }

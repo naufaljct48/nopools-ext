@@ -23,7 +23,7 @@ export class MangaStreamParser {
 
     parseMangaDetails($: CheerioAPI, mangaId: string, source: any): SourceManga {
         const titles: string[] = []
-        titles.push(decodeHTMLEntity($('h1.entry-title').text().trim()))
+        titles.push(decodeHTMLEntity($('h1.entry-title').text().trim().replace(/Komik|Manhwa|Manga|Manhua|Bahasa Indonesia/g, '')))
 
         const altTitles = $(`span:contains(${source.manga_selector_AlternativeTitles}), b:contains(${source.manga_selector_AlternativeTitles})+span, .imptdt:contains(${source.manga_selector_AlternativeTitles}) i, h1.entry-title+span`).contents().remove().last().text().split(',') // Language dependant
         for (const title of altTitles) {

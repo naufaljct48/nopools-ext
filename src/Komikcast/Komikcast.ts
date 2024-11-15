@@ -2,14 +2,19 @@ import {
     BadgeColor,
     ContentRating,
     SourceInfo,
-    SourceIntents
+    SourceIntents,
+    ChapterDetails,
+    PagedResults,
+    PartialSourceManga,
+    SearchRequest,
+    Request,
+    TagSection
 } from '@paperback/types'
 import {
     BasicAcceptedElems,
     CheerioAPI
 } from 'cheerio'
 import { AnyNode } from 'domhandler'
-
 
 import {
     getExportVersion,
@@ -27,7 +32,7 @@ import { URLBuilder } from '../UrlBuilder'
 const DOMAIN = 'https://komikcast.cz'
 
 export const KomikcastInfo: SourceInfo = {
-    version: getExportVersion('0.0.4'),
+    version: getExportVersion('0.0.5'),
     name: 'Komikcast',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -56,18 +61,17 @@ export class Komikcast extends MangaStream {
 
     override configureSections() {
         this.homescreen_sections['popular_today'].selectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('div.swiper-slide', $('span:contains(Hot Komik Update)')?.parent()?.next())
-        this.homescreen_sections['popular_today'].titleSelectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('div.title').text().trim()
+        this.homescreen_sections['popular_today'].titleSelectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('div.title', element).text().trim()
         this.homescreen_sections['popular_today'].subtitleSelectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('div.chapter', element).text().trim()
         this.homescreen_sections['popular_today'].getViewMoreItemsFunc = (page: string) => `daftar-komik/page/${page}/?orderby=popular`
         this.homescreen_sections['latest_update'].selectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('div.utao', $('span:contains(Rilisan Terbaru)')?.parent()?.next())
-        this.homescreen_sections['latest_update'].titleSelectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('h3').text().trim()
+        this.homescreen_sections['latest_update'].titleSelectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('h3', element).text().trim()
         this.homescreen_sections['latest_update'].subtitleSelectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('div.chapter', element).text().trim()
         this.homescreen_sections['latest_update'].getViewMoreItemsFunc = (page: string) => `daftar-komik/page/${page}/?sortby=update`
         this.homescreen_sections['new_titles'].enabled = false
         this.homescreen_sections['top_alltime'].enabled = false
         this.homescreen_sections['top_monthly'].enabled = false
         this.homescreen_sections['top_weekly'].enabled = false
-
     }
 
     override async getChapterDetails(mangaId: string, chapterId: string): Promise<ChapterDetails> {
@@ -81,7 +85,7 @@ export class Komikcast extends MangaStream {
         const response = await this.requestManager.schedule(request, 1);
         this.checkResponseError(response);
     
-        const $: CheerioAPI = this.cheerio.load(response.data as string);
+        const $: CheerioAPI = cheerio.load(response.data as string);
         const chapterElement = $('li', 'div.komik_info-chapters').filter((_, el) => {
             return $('a', el).attr('href')?.includes(chapterId);
         });
@@ -103,20 +107,19 @@ export class Komikcast extends MangaStream {
         const _response = await this.requestManager.schedule(_request, 1);
         this.checkResponseError(_response);
     
-        const _$: CheerioAPI = this.cheerio.load(_response.data as string);
+        const _$: CheerioAPI = cheerio.load(_response.data as string);
         return this.parser.parseChapterDetails(_$, mangaId, chapterId);
     }    
 
     override async getSearchTags(): Promise<TagSection[]> {
         const request = App.createRequest({
             url: `${this.baseUrl}/`,
-            method: 'GET',
-            param: `${this.directoryPath}/`
+            method: 'GET'
         })
 
         const response = await this.requestManager.schedule(request, 1)
         this.checkResponseError(response)
-        const $ = this.cheerio.load(response.data as string)
+        const $ = cheerio.load(response.data as string)
 
         return this.parser.parseTags($)
     }
@@ -127,7 +130,7 @@ export class Komikcast extends MangaStream {
         const request = await this.constructSearchRequest(page, query)
         const response = await this.requestManager.schedule(request, 1)
         this.checkResponseError(response)
-        const $ = this.cheerio.load(response.data as string)
+        const $ = cheerio.load(response.data as string)
         const results = await this.parser.parseSearchResults($, this)
     
         const manga: PartialSourceManga[] = []
@@ -168,14 +171,9 @@ export class Komikcast extends MangaStream {
                 .addQueryParameter('order', getIncludedTagBySection('order', query?.includedTags))
         }
     
-        const requestObject: RequestObject = {
+        return App.createRequest({
             url: urlBuilder.buildUrl({ addTrailingSlash: true, includeUndefinedParameters: false }),
             method: 'GET'
-        }
-    
-        return createRequestObject(requestObject);
+        })
     }
-    
-    
-    
 }
