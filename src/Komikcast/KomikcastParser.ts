@@ -54,24 +54,31 @@ export class KomikcastParser extends MangaStreamParser {
         const chapters: Chapter[] = []
         
         for (const chapter of $('.komik_info-chapters-item').toArray()) {
-            const title = $('a.chapter-link-item', chapter).text().trim()
-            const chapterId = this.idCleaner($('a.chapter-link-item', chapter).attr('href') ?? '')
-            const date = $('.chapter-link-time', chapter).text().trim()
+            const $chapter = $(chapter)
+            const title = $('a.chapter-link-item', $chapter).text().trim()
+            const chapNum = Number(title.match(/Chapter\s+(\d+)/i)?.[1] ?? -1)
+            const date = $('.chapter-link-time', $chapter).text().trim()
+            const id = this.idCleaner($('a.chapter-link-item', $chapter).attr('href') ?? '')
             
-            if (!chapterId || !title) continue
+            if (!id) continue
         
             chapters.push(App.createChapter({
-                id: chapterId,
+                id: id,
                 mangaId: mangaId,
                 name: title,
-                langCode: '🇮🇩',
-                time: source.convertTime(date)  // Use the source's convertTime method
+                chapNum: chapNum,
+                time: source.convertTime(date),
+                langCode: LanguageCode.INDONESIAN
             }))
         }
     
-        return chapters
+        return chapters.map(chapter => {
+            if (typeof chapter.chapNum !== 'number') {
+                chapter.chapNum = -1
+            }
+            return chapter
+        })
     }
-
     override parseChapterDetails($: CheerioAPI, mangaId: string, chapterId: string): ChapterDetails {
         const pages: string[] = []
         
@@ -165,5 +172,45 @@ export class KomikcastParser extends MangaStreamParser {
         }
 
         return isLast;
+    }
+    override parseTags($: CheerioAPI): TagSection[] {
+        const arrayTags: Tag[] = []
+        const arrayTags2: Tag[] = []
+        const arrayTags3: Tag[] = []
+        const arrayTags4: Tag[] = []
+    
+        // Genre tags
+        for (const tag of $('.genre > li > a').toArray()) {
+            const label = $(tag).text().trim()
+            const id = $(tag).attr('href')?.split('/')[4] ?? ''
+            if (!id || !label) continue
+            arrayTags.push({ id: id, label: label })
+        }
+    
+        // Status tags
+        arrayTags2.push(
+            { id: 'ongoing', label: 'Ongoing' },
+            { id: 'completed', label: 'Completed' }
+        )
+    
+        // Type tags
+        arrayTags3.push(
+            { id: 'manga', label: 'Manga' },
+            { id: 'manhwa', label: 'Manhwa' },
+            { id: 'manhua', label: 'Manhua' }
+        )
+    
+        // Sort tags
+        arrayTags4.push(
+            { id: 'popular', label: 'Popular' },
+            { id: 'update', label: 'Latest Update' }
+        )
+    
+        return [
+            App.createTagSection({ id: '0', label: 'Genres', tags: arrayTags }),
+            App.createTagSection({ id: '1', label: 'Status', tags: arrayTags2 }),
+            App.createTagSection({ id: '2', label: 'Types', tags: arrayTags3 }),
+            App.createTagSection({ id: '3', label: 'Sort By', tags: arrayTags4 })
+        ]
     }
 }
