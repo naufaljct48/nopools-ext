@@ -33,7 +33,7 @@ import { URLBuilder } from '../UrlBuilder'
 const DOMAIN = 'https://komikcast02.com'
 
 export const KomikcastInfo: SourceInfo = {
-    version: getExportVersion('0.1.1'),
+    version: getExportVersion('0.1.2'),
     name: 'Komikcast',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -77,6 +77,7 @@ export class Komikcast extends MangaStream {
     }
 
     override async getChapterDetails(mangaId: string, chapterId: string): Promise<ChapterDetails> {
+        // First request to get chapter URL
         const request = App.createRequest({
             url: await this.getUsePostIds()
                 ? `${this.baseUrl}/?p=${mangaId}/`
@@ -88,19 +89,20 @@ export class Komikcast extends MangaStream {
         this.checkResponseError(response);
     
         const $: CheerioAPI = cheerio.load(response.data as string);
-        const chapterElement = $('li', 'div.komik_info-chapters').filter((_, el) => {
-            return $('a', el).attr('href')?.includes(chapterId);
+        const chapterElement = $('.komik_info-chapters-item').filter((_, el) => {
+            return $('a.chapter-link-item', el).attr('href')?.includes(chapterId);
         });
     
         if (!chapterElement.length) {
             throw new Error(`Unable to fetch chapter: ${chapterId}`);
         }
     
-        const id = $('a', chapterElement).attr('href') ?? '';
+        const id = $('a.chapter-link-item', chapterElement).attr('href') ?? '';
         if (!id) {
             throw new Error(`Unable to fetch id for chapter: ${chapterId}`);
         }
     
+        // Second request to get chapter images
         const _request = App.createRequest({
             url: id,
             method: 'GET'
