@@ -9,7 +9,6 @@ import {
     SearchRequest,
     Request,
     TagSection,
-    LanguageCode  // Add this import
 } from '@paperback/types'
 import {
     BasicAcceptedElems,
@@ -34,7 +33,7 @@ import { URLBuilder } from '../UrlBuilder'
 const DOMAIN = 'https://komikcast02.com'
 
 export const KomikcastInfo: SourceInfo = {
-    version: getExportVersion('0.1.0'),
+    version: getExportVersion('0.1.1'),
     name: 'Komikcast',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -56,7 +55,6 @@ export class Komikcast extends MangaStream {
     override directoryPath = 'komik'
     override usePostIds = false
     override parser = new KomikcastParser()
-    override language = LanguageCode.INDONESIAN  // Add this override
 
     override configureSections() {
         this.homescreen_sections['latest_update'].selectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('div.utao')

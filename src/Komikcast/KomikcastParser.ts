@@ -7,7 +7,6 @@ import {
     PartialSourceManga, 
     TagSection, 
     Tag,
-    LanguageCode  // Add this import
 } from '@paperback/types'
 import { CheerioAPI } from 'cheerio';
 
@@ -76,7 +75,6 @@ export class KomikcastParser extends MangaStreamParser {
                 name: title,
                 chapNum: chapNum,
                 time: source.convertTime(date),
-                langCode: LanguageCode.INDONESIAN
             }))
         }
     
