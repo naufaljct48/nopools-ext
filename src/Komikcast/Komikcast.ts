@@ -10,8 +10,11 @@ import {
     Request,
     TagSection,
 } from '@paperback/types'
-import cheerio from 'cheerio'  // Fix the cheerio import
-import { BasicAcceptedElems } from 'cheerio'
+import {
+    load as cheerioLoad,
+    CheerioAPI,
+    BasicAcceptedElems
+} from 'cheerio'
 import { AnyNode } from 'domhandler'
 import {
     getExportVersion,
@@ -29,7 +32,7 @@ import { URLBuilder } from '../UrlBuilder'
 const DOMAIN = 'https://komikcast02.com'
 
 export const KomikcastInfo: SourceInfo = {
-    version: getExportVersion('0.1.3'),
+    version: getExportVersion('0.1.4'),
     name: 'Komikcast',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -84,7 +87,7 @@ export class Komikcast extends MangaStream {
         const response = await this.requestManager.schedule(request, 1);
         this.checkResponseError(response);
     
-        const $: CheerioAPI = cheerio.load(response.data as string);
+        const $: CheerioAPI = cheerioLoad(response.data as string);
         const chapterElement = $('.komik_info-chapters-item').filter((_, el) => {
             return $('a.chapter-link-item', el).attr('href')?.includes(chapterId);
         });
@@ -130,7 +133,7 @@ export class Komikcast extends MangaStream {
         const request = await this.constructSearchRequest(page, query)
         const response = await this.requestManager.schedule(request, 1)
         this.checkResponseError(response)
-        const $ = cheerio.load(response.data as string)
+        const $ = cheerioLoad(response.data as string)
         const results = await this.parser.parseSearchResults($, this)
     
         const manga: PartialSourceManga[] = []
