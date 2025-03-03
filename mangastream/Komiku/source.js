@@ -15453,7 +15453,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
   // src/Komiku/Komiku.ts
   var DOMAIN = "https://komiku.one";
   var KomikuInfo = {
-    version: getExportVersion("0.0.4"),
+    version: getExportVersion("0.0.5"),
     name: "Komiku",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",

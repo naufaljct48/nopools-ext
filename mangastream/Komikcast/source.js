@@ -15518,6 +15518,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
           name: title,
           langCode: "\u{1F1EE}\u{1F1E9}",
           time: source.convertTime(date)
+          // Use the source's convertTime method
         }));
       }
       return chapters;
@@ -15588,7 +15589,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
   // src/Komikcast/Komikcast.ts
   var DOMAIN = "https://komikcast02.com";
   var KomikcastInfo = {
-    version: getExportVersion("0.0.7"),
+    version: getExportVersion("0.0.8"),
     name: "Komikcast",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",
@@ -15613,12 +15614,16 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
       this.parser = new KomikcastParser();
     }
     configureSections() {
-      this.homescreen_sections["latest_update"].selectorFunc = ($2, element) => $2("div.list-update_item");
-      this.homescreen_sections["latest_update"].titleSelectorFunc = ($2, element) => $2("h3.title", element).text().trim();
-      this.homescreen_sections["latest_update"].subtitleSelectorFunc = ($2, element) => $2("div.chapter", element).text().trim();
-      this.homescreen_sections["latest_update"].getViewMoreItemsFunc = (page) => `daftar-komik/page/${page}/?sortby=update`;
+      this.homescreen_sections["latest_update"].selectorFunc = ($2, element) => $2("div.utao");
+      this.homescreen_sections["latest_update"].titleSelectorFunc = ($2, element) => $2("div.luf h3", element).text().trim();
+      this.homescreen_sections["latest_update"].subtitleSelectorFunc = ($2, element) => $2("div.luf ul li:first-child a", element).text().trim();
+      this.homescreen_sections["latest_update"].getViewMoreItemsFunc = (page) => `komik/page/${page}/?sortby=update`;
+      this.homescreen_sections["popular_today"].enabled = true;
+      this.homescreen_sections["popular_today"].selectorFunc = ($2, element) => $2(".swiper-slide");
+      this.homescreen_sections["popular_today"].titleSelectorFunc = ($2, element) => $2("div.title", element).text().trim();
+      this.homescreen_sections["popular_today"].subtitleSelectorFunc = ($2, element) => $2("div.chapter", element).text().trim();
+      this.homescreen_sections["popular_today"].getViewMoreItemsFunc = (page) => `komik/page/${page}/?order=popular`;
       this.homescreen_sections["new_titles"].enabled = false;
-      this.homescreen_sections["popular_today"].enabled = false;
       this.homescreen_sections["top_alltime"].enabled = false;
       this.homescreen_sections["top_monthly"].enabled = false;
       this.homescreen_sections["top_weekly"].enabled = false;
@@ -15697,6 +15702,27 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
         url: urlBuilder.buildUrl({ addTrailingSlash: true, includeUndefinedParameters: false }),
         method: "GET"
       });
+    }
+    convertTime(time) {
+      if (time.includes("ago") || time.includes("yang lalu")) {
+        const number = Number(time.replace(/[^0-9]/g, ""));
+        const date = /* @__PURE__ */ new Date();
+        if (time.includes("minutes") || time.includes("menit")) {
+          date.setMinutes(date.getMinutes() - number);
+        } else if (time.includes("hours") || time.includes("jam")) {
+          date.setHours(date.getHours() - number);
+        } else if (time.includes("days") || time.includes("hari")) {
+          date.setDate(date.getDate() - number);
+        } else if (time.includes("weeks") || time.includes("minggu")) {
+          date.setDate(date.getDate() - number * 7);
+        } else if (time.includes("months") || time.includes("bulan")) {
+          date.setMonth(date.getMonth() - number);
+        } else if (time.includes("years") || time.includes("tahun")) {
+          date.setFullYear(date.getFullYear() - number);
+        }
+        return date;
+      }
+      return new Date(time);
     }
   };
   return __toCommonJS(Komikcast_exports);
