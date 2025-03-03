@@ -15560,33 +15560,55 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
     }
     parseTags($2) {
       const arrayTags = [];
-      const arrayTags2 = [];
-      const arrayTags3 = [];
-      const arrayTags4 = [];
-      for (const tag of $2(".genre > li > a").toArray()) {
-        const label = $2(tag).text().trim();
+      const arrayGenres = [];
+      for (const tag of $2("div.genre-item a").toArray()) {
         const id = $2(tag).attr("href")?.split("/")[4] ?? "";
+        const label = $2(tag).text().trim();
         if (!id || !label) continue;
-        arrayTags.push({ id, label });
+        arrayGenres.push({
+          id,
+          label
+        });
       }
-      arrayTags2.push(
-        { id: "ongoing", label: "Ongoing" },
-        { id: "completed", label: "Completed" }
-      );
-      arrayTags3.push(
-        { id: "manga", label: "Manga" },
-        { id: "manhwa", label: "Manhwa" },
-        { id: "manhua", label: "Manhua" }
-      );
-      arrayTags4.push(
-        { id: "popular", label: "Popular" },
-        { id: "update", label: "Latest Update" }
-      );
+      const arrayStatus = [
+        {
+          id: "ongoing",
+          label: "Ongoing"
+        },
+        {
+          id: "completed",
+          label: "Completed"
+        }
+      ];
+      const arrayTypes = [
+        {
+          id: "manga",
+          label: "Manga"
+        },
+        {
+          id: "manhwa",
+          label: "Manhwa"
+        },
+        {
+          id: "manhua",
+          label: "Manhua"
+        }
+      ];
+      const arrayOrder = [
+        {
+          id: "popular",
+          label: "Popular"
+        },
+        {
+          id: "latest",
+          label: "Latest"
+        }
+      ];
       return [
-        App.createTagSection({ id: "0", label: "Genres", tags: arrayTags }),
-        App.createTagSection({ id: "1", label: "Status", tags: arrayTags2 }),
-        App.createTagSection({ id: "2", label: "Types", tags: arrayTags3 }),
-        App.createTagSection({ id: "3", label: "Sort By", tags: arrayTags4 })
+        App.createTagSection({ id: "genres", label: "Genres", tags: arrayGenres }),
+        App.createTagSection({ id: "status", label: "Status", tags: arrayStatus }),
+        App.createTagSection({ id: "type", label: "Type", tags: arrayTypes }),
+        App.createTagSection({ id: "order", label: "Order by", tags: arrayOrder })
       ];
     }
   };
@@ -15594,7 +15616,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
   // src/Komikcast/Komikcast.ts
   var DOMAIN = "https://komikcast02.com";
   var KomikcastInfo = {
-    version: getExportVersion("0.1.5"),
+    version: getExportVersion("0.1.6"),
     name: "Komikcast",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",
