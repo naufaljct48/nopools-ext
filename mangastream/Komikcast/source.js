@@ -15508,20 +15508,27 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
     parseChapterList($2, mangaId, source) {
       const chapters = [];
       for (const chapter of $2(".komik_info-chapters-item").toArray()) {
-        const title = $2("a.chapter-link-item", chapter).text().trim();
-        const chapterId = this.idCleaner($2("a.chapter-link-item", chapter).attr("href") ?? "");
-        const date = $2(".chapter-link-time", chapter).text().trim();
-        if (!chapterId || !title) continue;
+        const $chapter = $2(chapter);
+        const title = $2("a.chapter-link-item", $chapter).text().trim();
+        const chapNum = Number(title.match(/Chapter\s+(\d+)/i)?.[1] ?? -1);
+        const date = $2(".chapter-link-time", $chapter).text().trim();
+        const id = this.idCleaner($2("a.chapter-link-item", $chapter).attr("href") ?? "");
+        if (!id) continue;
         chapters.push(App.createChapter({
-          id: chapterId,
+          id,
           mangaId,
           name: title,
-          langCode: "\u{1F1EE}\u{1F1E9}",
-          time: source.convertTime(date)
-          // Use the source's convertTime method
+          chapNum,
+          time: source.convertTime(date),
+          langCode: LanguageCode.INDONESIAN
         }));
       }
-      return chapters;
+      return chapters.map((chapter) => {
+        if (typeof chapter.chapNum !== "number") {
+          chapter.chapNum = -1;
+        }
+        return chapter;
+      });
     }
     parseChapterDetails($2, mangaId, chapterId) {
       const pages = [];
@@ -15583,6 +15590,37 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
         }));
       }
       return items;
+    }
+    parseTags($2) {
+      const arrayTags = [];
+      const arrayTags2 = [];
+      const arrayTags3 = [];
+      const arrayTags4 = [];
+      for (const tag of $2(".genre > li > a").toArray()) {
+        const label = $2(tag).text().trim();
+        const id = $2(tag).attr("href")?.split("/")[4] ?? "";
+        if (!id || !label) continue;
+        arrayTags.push({ id, label });
+      }
+      arrayTags2.push(
+        { id: "ongoing", label: "Ongoing" },
+        { id: "completed", label: "Completed" }
+      );
+      arrayTags3.push(
+        { id: "manga", label: "Manga" },
+        { id: "manhwa", label: "Manhwa" },
+        { id: "manhua", label: "Manhua" }
+      );
+      arrayTags4.push(
+        { id: "popular", label: "Popular" },
+        { id: "update", label: "Latest Update" }
+      );
+      return [
+        App.createTagSection({ id: "0", label: "Genres", tags: arrayTags }),
+        App.createTagSection({ id: "1", label: "Status", tags: arrayTags2 }),
+        App.createTagSection({ id: "2", label: "Types", tags: arrayTags3 }),
+        App.createTagSection({ id: "3", label: "Sort By", tags: arrayTags4 })
+      ];
     }
   };
 
