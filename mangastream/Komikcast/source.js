@@ -15559,45 +15559,42 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
       return results;
     }
     parseTags($2) {
-      const tagSections = [];
-      const genreTags = [];
-      for (const tag of $2("ul.komiklist_dropdown-menu.c4.genrez li").toArray()) {
-        const id = $2("input", tag).attr("value") ?? "";
-        const label = $2("label", tag).text().trim();
+      const arrayTags = [];
+      const arrayTags2 = [];
+      const arrayTags3 = [];
+      const arrayTags4 = [];
+      for (const tag of $2(".genre > li > a").toArray()) {
+        const label = $2(tag).text().trim();
+        const id = $2(tag).attr("href")?.split("/")[4] ?? "";
         if (!id || !label) continue;
-        genreTags.push(App.createTag({ id, label }));
+        arrayTags.push({ id, label });
       }
-      if (genreTags.length > 0) {
-        tagSections.push(App.createTagSection({ id: "genres", label: "Genres", tags: genreTags }));
-      }
-      const statusTags = [];
-      for (const tag of $2("ul.komiklist_dropdown-menu.status li").toArray()) {
-        const id = $2("input", tag).attr("value") ?? "";
-        const label = $2("label", tag).text().trim();
-        if (!label) continue;
-        statusTags.push(App.createTag({ id, label }));
-      }
-      if (statusTags.length > 0) {
-        tagSections.push(App.createTagSection({ id: "status", label: "Status", tags: statusTags }));
-      }
-      const typeTags = [];
-      for (const tag of $2("ul.komiklist_dropdown-menu.type li").toArray()) {
-        const id = $2("input", tag).attr("value") ?? "";
-        const label = $2("label", tag).text().trim();
-        if (!label) continue;
-        typeTags.push(App.createTag({ id, label }));
-      }
-      if (typeTags.length > 0) {
-        tagSections.push(App.createTagSection({ id: "type", label: "Type", tags: typeTags }));
-      }
-      return tagSections;
+      arrayTags2.push(
+        { id: "ongoing", label: "Ongoing" },
+        { id: "completed", label: "Completed" }
+      );
+      arrayTags3.push(
+        { id: "manga", label: "Manga" },
+        { id: "manhwa", label: "Manhwa" },
+        { id: "manhua", label: "Manhua" }
+      );
+      arrayTags4.push(
+        { id: "popular", label: "Popular" },
+        { id: "update", label: "Latest Update" }
+      );
+      return [
+        App.createTagSection({ id: "0", label: "Genres", tags: arrayTags }),
+        App.createTagSection({ id: "1", label: "Status", tags: arrayTags2 }),
+        App.createTagSection({ id: "2", label: "Types", tags: arrayTags3 }),
+        App.createTagSection({ id: "3", label: "Sort By", tags: arrayTags4 })
+      ];
     }
   };
 
   // src/Komikcast/Komikcast.ts
   var DOMAIN = "https://komikcast02.com";
   var KomikcastInfo = {
-    version: getExportVersion("0.1.8"),
+    version: getExportVersion("0.1.9"),
     name: "Komikcast",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",
@@ -15630,7 +15627,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
       this.homescreen_sections["popular_today"].selectorFunc = ($2, element) => $2(".swiper-slide");
       this.homescreen_sections["popular_today"].titleSelectorFunc = ($2, element) => $2("div.title", element).text().trim();
       this.homescreen_sections["popular_today"].subtitleSelectorFunc = ($2, element) => $2("div.chapter", element).text().trim();
-      this.homescreen_sections["popular_today"].getViewMoreItemsFunc = (page) => `komik/page/${page}/?order=popular`;
+      this.homescreen_sections["popular_today"].getViewMoreItemsFunc = (page) => `daftar-komik/page/${page}/?order=popular`;
       this.homescreen_sections["new_titles"].enabled = false;
       this.homescreen_sections["top_alltime"].enabled = false;
       this.homescreen_sections["top_monthly"].enabled = false;
