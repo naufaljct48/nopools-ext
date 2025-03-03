@@ -59,16 +59,16 @@ export class KomikcastParser extends MangaStreamParser {
             const date = $('.chapter-link-time', chapter).text().trim()
             
             if (!chapterId || !title) continue
-
+        
             chapters.push(App.createChapter({
                 id: chapterId,
                 mangaId: mangaId,
                 name: title,
                 langCode: '🇮🇩',
-                time: source.convertTime(date)
+                time: source.convertTime(date)  // Use the source's convertTime method
             }))
         }
-
+    
         return chapters
     }
 

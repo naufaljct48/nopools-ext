@@ -33,7 +33,7 @@ import { URLBuilder } from '../UrlBuilder'
 const DOMAIN = 'https://komikcast02.com'
 
 export const KomikcastInfo: SourceInfo = {
-    version: getExportVersion('0.0.7'),
+    version: getExportVersion('0.0.8'),
     name: 'Komikcast',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -57,14 +57,20 @@ export class Komikcast extends MangaStream {
     override parser = new KomikcastParser()
 
     override configureSections() {
-        this.homescreen_sections['latest_update'].selectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('div.list-update_item')
-        this.homescreen_sections['latest_update'].titleSelectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('h3.title', element).text().trim()
-        this.homescreen_sections['latest_update'].subtitleSelectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('div.chapter', element).text().trim()
-        this.homescreen_sections['latest_update'].getViewMoreItemsFunc = (page: string) => `daftar-komik/page/${page}/?sortby=update`
-
-        // Disable unused sections
+        this.homescreen_sections['latest_update'].selectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('div.utao')
+        this.homescreen_sections['latest_update'].titleSelectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('div.luf h3', element).text().trim()
+        this.homescreen_sections['latest_update'].subtitleSelectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('div.luf ul li:first-child a', element).text().trim()
+        this.homescreen_sections['latest_update'].getViewMoreItemsFunc = (page: string) => `komik/page/${page}/?sortby=update`
+    
+        // Enable and configure popular today section
+        this.homescreen_sections['popular_today'].enabled = true
+        this.homescreen_sections['popular_today'].selectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('.swiper-slide')
+        this.homescreen_sections['popular_today'].titleSelectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('div.title', element).text().trim()
+        this.homescreen_sections['popular_today'].subtitleSelectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('div.chapter', element).text().trim()
+        this.homescreen_sections['popular_today'].getViewMoreItemsFunc = (page: string) => `komik/page/${page}/?order=popular`
+    
+        // Disable other unused sections
         this.homescreen_sections['new_titles'].enabled = false
-        this.homescreen_sections['popular_today'].enabled = false
         this.homescreen_sections['top_alltime'].enabled = false
         this.homescreen_sections['top_monthly'].enabled = false
         this.homescreen_sections['top_weekly'].enabled = false
@@ -171,5 +177,29 @@ export class Komikcast extends MangaStream {
             url: urlBuilder.buildUrl({ addTrailingSlash: true, includeUndefinedParameters: false }),
             method: 'GET'
         })
+    }
+    convertTime(time: string): Date {
+        if (time.includes('ago') || time.includes('yang lalu')) {
+            const number = Number(time.replace(/[^0-9]/g, ''))
+            const date = new Date()
+            
+            if (time.includes('minutes') || time.includes('menit')) {
+                date.setMinutes(date.getMinutes() - number)
+            } else if (time.includes('hours') || time.includes('jam')) {
+                date.setHours(date.getHours() - number)
+            } else if (time.includes('days') || time.includes('hari')) {
+                date.setDate(date.getDate() - number)
+            } else if (time.includes('weeks') || time.includes('minggu')) {
+                date.setDate(date.getDate() - (number * 7))
+            } else if (time.includes('months') || time.includes('bulan')) {
+                date.setMonth(date.getMonth() - number)
+            } else if (time.includes('years') || time.includes('tahun')) {
+                date.setFullYear(date.getFullYear() - number)
+            }
+    
+            return date
+        }
+    
+        return new Date(time)
     }
 }
