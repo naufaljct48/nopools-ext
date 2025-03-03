@@ -15626,7 +15626,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
   // src/Komikcast/Komikcast.ts
   var DOMAIN = "https://komikcast02.com";
   var KomikcastInfo = {
-    version: getExportVersion("0.1.1"),
+    version: getExportVersion("0.1.2"),
     name: "Komikcast",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",
@@ -15673,13 +15673,13 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
       const response = await this.requestManager.schedule(request, 1);
       this.checkResponseError(response);
       const $2 = cheerio.load(response.data);
-      const chapterElement = $2("li", "div.komik_info-chapters").filter((_, el) => {
-        return $2("a", el).attr("href")?.includes(chapterId);
+      const chapterElement = $2(".komik_info-chapters-item").filter((_, el) => {
+        return $2("a.chapter-link-item", el).attr("href")?.includes(chapterId);
       });
       if (!chapterElement.length) {
         throw new Error(`Unable to fetch chapter: ${chapterId}`);
       }
-      const id = $2("a", chapterElement).attr("href") ?? "";
+      const id = $2("a.chapter-link-item", chapterElement).attr("href") ?? "";
       if (!id) {
         throw new Error(`Unable to fetch id for chapter: ${chapterId}`);
       }
