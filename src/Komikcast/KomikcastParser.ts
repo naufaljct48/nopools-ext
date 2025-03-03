@@ -109,36 +109,75 @@ export class KomikcastParser extends MangaStreamParser {
     }
     override async parseSearchResults($: CheerioAPI, source: any): Promise<PartialSourceManga[]> {
         const results: PartialSourceManga[] = [];
-    
-        for (const obj of $('div.list-update_item').toArray()) {
-            const title = $('h3.title', obj).text().trim()
-            const image = this.getImageSrc($('img', obj)) ?? ''
-            const subtitle = $('div.chapter', obj).text().trim()
-            const slug = this.idCleaner($('a', obj).attr('href') ?? '')
-            const path = ($('a', obj).attr('href') ?? '').replace(/\/$/, '').split('/').slice(-2).shift() ?? ''
-    
-            if (!slug || !path) continue
-    
-            results.push({
-                slug,
-                path,
-                image,
+
+        for (const obj of $('div.list-update_item', 'div.list-update_items-wrapper').toArray()) {
+            const slug: string = ($('a', obj).attr('href') ?? '').replace(/\/$/, '').split('/').pop() ?? '';
+            const path: string = ($('a', obj).attr('href') ?? '').replace(/\/$/, '').split('/').slice(-2).shift() ?? '';
+            if (!slug || !path) {
+                throw new Error(`Unable to parse slug (${slug}) or path (${path})!`);
+            }
+
+            const title: string = $('h3.title', obj).text().trim();
+            const image = this.getImageSrc($('img', obj)) ?? '';
+            const subtitle = $('div.chapter', obj).text().trim();
+
+            results.push(App.createPartialSourceManga({
+                mangaId: slug,
+                image: image || source.fallbackImage,
                 title: this.decodeHTMLEntity(title),
                 subtitle: this.decodeHTMLEntity(subtitle)
-            })
+            }));
         }
-    
-        return results
+
+        return results;
     }
+
+    override async parseViewMore($: CheerioAPI, source: any): Promise<PartialSourceManga[]> {
+        const items: PartialSourceManga[] = [];
+
+        for (const manga of $('div.list-update_item', 'div.list-update_items-wrapper').toArray()) {
+            const title = $('h3.title', manga).text().trim();
+            const image = this.getImageSrc($('img', manga)) ?? '';
+            const subtitle = $('div.chapter', manga).text().trim();
+
+            const slug: string = this.idCleaner($('a', manga).attr('href') ?? '');
+            const path: string = ($('a', manga).attr('href') ?? '').replace(/\/$/, '').split('/').slice(-2).shift() ?? '';
+            const postId = $('a', manga).attr('rel');
+            const mangaId: string = await source.getUsePostIds() ? (isNaN(Number(postId)) ? await source.slugToPostId(slug, path) : postId) : slug;
+
+            if (!mangaId || !title) {
+                console.log(`Failed to parse homepage sections for ${source.baseUrl}`);
+                continue;
+            }
+
+            items.push(App.createPartialSourceManga({
+                mangaId,
+                image: image,
+                title: this.decodeHTMLEntity(title),
+                subtitle: this.decodeHTMLEntity(subtitle)
+            }));
+        }
+
+        return items;
+    }
+
     override isLastPage = ($: CheerioAPI, id: string): boolean => {
         let isLast = true;
-    
-        const hasNext = Boolean($('a.next.page-numbers').length)
-        if (hasNext) {
-            isLast = false
+        if (id == 'view_more') {
+            const hasNext = Boolean($('a.next.page-numbers')[0]);
+            if (hasNext) {
+                isLast = false;
+            }
         }
-    
-        return isLast
+
+        if (id == 'search_request') {
+            const hasNext = Boolean($('a.next.page-numbers')[0]);
+            if (hasNext) {
+                isLast = false;
+            }
+        }
+
+        return isLast;
     }
     override parseTags($: CheerioAPI): TagSection[] {
         const arrayTags: Tag[] = []
