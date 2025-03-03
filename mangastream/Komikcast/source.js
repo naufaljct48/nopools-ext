@@ -927,6 +927,7 @@ var _Sources = (() => {
     getChildren: () => getChildren,
     getElementById: () => getElementById,
     getElements: () => getElements,
+    getElementsByClassName: () => getElementsByClassName,
     getElementsByTagName: () => getElementsByTagName,
     getElementsByTagType: () => getElementsByTagType,
     getFeed: () => getFeed,
@@ -2325,7 +2326,7 @@ var _Sources = (() => {
   }
   function find(test, nodes, recurse, limit) {
     const result = [];
-    const nodeStack = [nodes];
+    const nodeStack = [Array.isArray(nodes) ? nodes : [nodes]];
     const indexStack = [0];
     for (; ; ) {
       if (indexStack[0] >= nodeStack[0].length) {
@@ -2352,25 +2353,26 @@ var _Sources = (() => {
     return nodes.find(test);
   }
   function findOne(test, nodes, recurse = true) {
-    let elem = null;
-    for (let i = 0; i < nodes.length && !elem; i++) {
-      const node = nodes[i];
-      if (!isTag2(node)) {
-        continue;
-      } else if (test(node)) {
-        elem = node;
-      } else if (recurse && node.children.length > 0) {
-        elem = findOne(test, node.children, true);
+    const searchedNodes = Array.isArray(nodes) ? nodes : [nodes];
+    for (let i = 0; i < searchedNodes.length; i++) {
+      const node = searchedNodes[i];
+      if (isTag2(node) && test(node)) {
+        return node;
+      }
+      if (recurse && hasChildren(node) && node.children.length > 0) {
+        const found = findOne(test, node.children, true);
+        if (found)
+          return found;
       }
     }
-    return elem;
+    return null;
   }
   function existsOne(test, nodes) {
-    return nodes.some((checked) => isTag2(checked) && (test(checked) || existsOne(test, checked.children)));
+    return (Array.isArray(nodes) ? nodes : [nodes]).some((node) => isTag2(node) && test(node) || hasChildren(node) && existsOne(test, node.children));
   }
   function findAll(test, nodes) {
     const result = [];
-    const nodeStack = [nodes];
+    const nodeStack = [Array.isArray(nodes) ? nodes : [nodes]];
     const indexStack = [0];
     for (; ; ) {
       if (indexStack[0] >= nodeStack[0].length) {
@@ -2382,11 +2384,9 @@ var _Sources = (() => {
         continue;
       }
       const elem = nodeStack[0][indexStack[0]++];
-      if (!isTag2(elem))
-        continue;
-      if (test(elem))
+      if (isTag2(elem) && test(elem))
         result.push(elem);
-      if (elem.children.length > 0) {
+      if (hasChildren(elem) && elem.children.length > 0) {
         indexStack.unshift(0);
         nodeStack.unshift(elem.children);
       }
@@ -2447,6 +2447,9 @@ var _Sources = (() => {
   }
   function getElementsByTagName(tagName, nodes, recurse = true, limit = Infinity) {
     return filter(Checks["tag_name"](tagName), nodes, recurse, limit);
+  }
+  function getElementsByClassName(className, nodes, recurse = true, limit = Infinity) {
+    return filter(getAttribCheck("class", className), nodes, recurse, limit);
   }
   function getElementsByTagType(type, nodes, recurse = true, limit = Infinity) {
     return filter(Checks["tag_type"](type), nodes, recurse, limit);
@@ -15470,83 +15473,68 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
     }
     parseMangaDetails($2, mangaId, source) {
       const titles = [];
-      titles.push(this.decodeHTMLEntity($2("h1.komik_info-content-body-title").text().trim().replace(/Komik|Manhwa|Manga|Manhua|Bahasa Indonesia/g, "")));
-      const altTitles = $2(`span:contains(${source.manga_selector_AlternativeTitles}), b:contains(${source.manga_selector_AlternativeTitles})+span, .imptdt:contains(${source.manga_selector_AlternativeTitles}) i, h1.entry-title+span`).contents().remove().last().text().split(",");
-      for (const title of altTitles) {
-        if (title == "") {
-          continue;
-        }
-        titles.push(this.decodeHTMLEntity(title.trim()));
-      }
-      const author = $2(`.komik_info-content-info:contains(${source.manga_selector_author})`).contents().remove().last().text().trim();
-      const artist = $2(`span:contains(${source.manga_selector_artist}), .fmed b:contains(${source.manga_selector_artist})+span, td:contains(${source.manga_selector_artist})+td, .imptdt:contains(${source.manga_selector_artist}) i`).contents().remove().last().text().trim();
-      const image = this.getImageSrc($2("img", 'div[itemprop="image"]'));
-      const description = this.decodeHTMLEntity($2('div[itemprop="articleBody"]  p').text().trim());
+      const mainTitle = $2("h1.komik_info-content-body-title").text().trim().replace(/Bahasa Indonesia/g, "");
+      titles.push(this.decodeHTMLEntity(mainTitle));
+      const altTitle = $2(".komik_info-content-native").text().trim();
+      if (altTitle) titles.push(this.decodeHTMLEntity(altTitle));
+      const image = $2("div.komik_info-content-thumbnail img").attr("src");
+      const description = $2(".komik_info-description-sinopsis").text().trim();
       const arrayTags = [];
-      for (const tag of $2("a", "span.komik_info-content-genre").toArray()) {
+      for (const tag of $2("span.komik_info-content-genre a").toArray()) {
         const label = $2(tag).text().trim();
         const id = this.idCleaner($2(tag).attr("href") ?? "");
-        if (!id || !label) {
-          continue;
-        }
+        if (!id || !label) continue;
         arrayTags.push({ id, label });
       }
-      const rawStatus = $2(`.komik_info-content-info b:contains(${source.manga_selector_status})`).contents().remove().last().text().trim();
-      let status;
-      switch (rawStatus.toLowerCase()) {
-        case source.manga_StatusTypes.ONGOING.toLowerCase():
-          status = "Ongoing";
-          break;
-        case source.manga_StatusTypes.COMPLETED.toLowerCase():
-          status = "Completed";
-          break;
-        default:
-          status = "Ongoing";
-          break;
-      }
-      const tagSections = [
-        App.createTagSection({
-          id: "0",
-          label: "genres",
-          tags: arrayTags.map((x) => App.createTag(x))
-        })
-      ];
+      const author = $2('.komik_info-content-info:contains("Author:") b').next().text().trim();
+      const status = $2('.komik_info-content-info:contains("Status:") b').next().text().trim().toLowerCase();
       return App.createSourceManga({
         id: mangaId,
         mangaInfo: App.createMangaInfo({
           titles,
-          image,
-          status,
-          author: author == "" ? "Unknown" : author,
-          artist: artist == "" ? "Unknown" : artist,
-          tags: tagSections,
+          image: image ?? "",
+          status: status === "ongoing" ? "Ongoing" : "Completed",
+          author: author || "Unknown",
+          artist: author || "Unknown",
+          tags: [App.createTagSection({ id: "0", label: "genres", tags: arrayTags.map((x) => App.createTag(x)) })],
           desc: description
         })
       });
     }
     parseChapterList($2, mangaId, source) {
       const chapters = [];
-      let sortingIndex = 0;
-      let language = source.language;
-      if (mangaId.toUpperCase().endsWith("-RAW") && source.language == "\u{1F1EC}\u{1F1E7}") language = "\u{1F1EE}\u{1F1E9}";
-      for (const chapter of $2("li", "div.komik_info-chapters").toArray()) {
+      for (const chapter of $2(".komik_info-chapters-item").toArray()) {
         const title = $2("a.chapter-link-item", chapter).text().trim();
-        const date = convertDate($2("div.chapter-link-time", chapter).text().trim(), source);
         const chapterId = this.idCleaner($2("a.chapter-link-item", chapter).attr("href") ?? "");
-        if (!chapterId || !title) {
-          continue;
-        }
+        const date = $2(".chapter-link-time", chapter).text().trim();
+        if (!chapterId || !title) continue;
         chapters.push(App.createChapter({
           id: chapterId,
           mangaId,
           name: title,
-          langCode: language,
-          chapNum: sortingIndex,
-          time: date
+          langCode: "\u{1F1EE}\u{1F1E9}",
+          time: source.convertTime(date)
         }));
-        sortingIndex++;
       }
       return chapters;
+    }
+    parseChapterDetails($2, mangaId, chapterId) {
+      const pages = [];
+      for (const img of $2("img", ".main-reading-area").toArray()) {
+        const src = $2(img).attr("src") ?? $2(img).attr("data-src");
+        if (!src) continue;
+        pages.push(src);
+      }
+      const nextChapter = $2('div.nextprev a[rel="next"]').attr("href");
+      const prevChapter = $2('div.nextprev a[rel="prev"]').attr("href");
+      return App.createChapterDetails({
+        id: chapterId,
+        mangaId,
+        pages,
+        longStrip: false,
+        nextChapter: nextChapter ? this.idCleaner(nextChapter) : void 0,
+        prevChapter: prevChapter ? this.idCleaner(prevChapter) : void 0
+      });
     }
     async parseSearchResults($2, source) {
       const results = [];
@@ -15594,9 +15582,9 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
   };
 
   // src/Komikcast/Komikcast.ts
-  var DOMAIN = "https://komikcast.cz";
+  var DOMAIN = "https://komikcast02.com";
   var KomikcastInfo = {
-    version: getExportVersion("0.0.5"),
+    version: getExportVersion("0.0.6"),
     name: "Komikcast",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",
@@ -15621,15 +15609,12 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
       this.parser = new KomikcastParser();
     }
     configureSections() {
-      this.homescreen_sections["popular_today"].selectorFunc = ($2, element) => $2("div.swiper-slide", $2("span:contains(Hot Komik Update)")?.parent()?.next());
-      this.homescreen_sections["popular_today"].titleSelectorFunc = ($2, element) => $2("div.title", element).text().trim();
-      this.homescreen_sections["popular_today"].subtitleSelectorFunc = ($2, element) => $2("div.chapter", element).text().trim();
-      this.homescreen_sections["popular_today"].getViewMoreItemsFunc = (page) => `daftar-komik/page/${page}/?orderby=popular`;
-      this.homescreen_sections["latest_update"].selectorFunc = ($2, element) => $2("div.utao", $2("span:contains(Rilisan Terbaru)")?.parent()?.next());
-      this.homescreen_sections["latest_update"].titleSelectorFunc = ($2, element) => $2("h3", element).text().trim();
+      this.homescreen_sections["latest_update"].selectorFunc = ($2, element) => $2("div.list-update_item");
+      this.homescreen_sections["latest_update"].titleSelectorFunc = ($2, element) => $2("h3.title", element).text().trim();
       this.homescreen_sections["latest_update"].subtitleSelectorFunc = ($2, element) => $2("div.chapter", element).text().trim();
       this.homescreen_sections["latest_update"].getViewMoreItemsFunc = (page) => `daftar-komik/page/${page}/?sortby=update`;
       this.homescreen_sections["new_titles"].enabled = false;
+      this.homescreen_sections["popular_today"].enabled = false;
       this.homescreen_sections["top_alltime"].enabled = false;
       this.homescreen_sections["top_monthly"].enabled = false;
       this.homescreen_sections["top_weekly"].enabled = false;
