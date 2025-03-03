@@ -449,8 +449,8 @@ var _Sources = (() => {
       Object.defineProperty(exports, "__esModule", { value: true });
       exports.urlEncodeObject = exports.convertTime = exports.Source = void 0;
       var Source = class {
-        constructor(cheerio2) {
-          this.cheerio = cheerio2;
+        constructor(cheerio) {
+          this.cheerio = cheerio;
         }
         /**
          * @deprecated use {@link Source.getSearchResults getSearchResults} instead
@@ -5596,9 +5596,9 @@ var _Sources = (() => {
       const initialRoot = parse6(content, internalOpts, isDocument2, null);
       class LoadedCheerio extends Cheerio {
         _make(selector, context) {
-          const cheerio2 = initialize(selector, context);
-          cheerio2.prevObject = this;
-          return cheerio2;
+          const cheerio = initialize(selector, context);
+          cheerio.prevObject = this;
+          return cheerio;
         }
         _parse(content2, options2, isDocument3, context) {
           return parse6(content2, options2, isDocument3, context);
@@ -15594,7 +15594,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
   // src/Komikcast/Komikcast.ts
   var DOMAIN = "https://komikcast02.com";
   var KomikcastInfo = {
-    version: getExportVersion("0.1.4"),
+    version: getExportVersion("0.1.5"),
     name: "Komikcast",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",
@@ -15657,7 +15657,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
       });
       const _response = await this.requestManager.schedule(_request, 1);
       this.checkResponseError(_response);
-      const _$ = cheerio.load(_response.data);
+      const _$ = load(_response.data);
       return this.parser.parseChapterDetails(_$, mangaId, chapterId);
     }
     async getSearchTags() {
@@ -15667,7 +15667,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
       });
       const response = await this.requestManager.schedule(request, 1);
       this.checkResponseError(response);
-      const $2 = cheerio.load(response.data);
+      const $2 = load(response.data);
       return this.parser.parseTags($2);
     }
     async getSearchResults(query, metadata) {
