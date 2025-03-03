@@ -32,7 +32,7 @@ import { URLBuilder } from '../UrlBuilder'
 const DOMAIN = 'https://komikcast02.com'
 
 export const KomikcastInfo: SourceInfo = {
-    version: getExportVersion('0.1.4'),
+    version: getExportVersion('0.1.5'),
     name: 'Komikcast',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -110,7 +110,7 @@ export class Komikcast extends MangaStream {
         const _response = await this.requestManager.schedule(_request, 1);
         this.checkResponseError(_response);
     
-        const _$: CheerioAPI = cheerio.load(_response.data as string);
+        const _$: CheerioAPI = cheerioLoad(_response.data as string);  // Fix this line
         return this.parser.parseChapterDetails(_$, mangaId, chapterId);
     }    
 
@@ -119,11 +119,11 @@ export class Komikcast extends MangaStream {
             url: `${this.baseUrl}/`,
             method: 'GET'
         })
-
+    
         const response = await this.requestManager.schedule(request, 1)
         this.checkResponseError(response)
-        const $ = cheerio.load(response.data as string)
-
+        const $ = cheerioLoad(response.data as string)  // Fix this line
+    
         return this.parser.parseTags($)
     }
 
