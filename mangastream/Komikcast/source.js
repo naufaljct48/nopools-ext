@@ -15471,6 +15471,10 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
         return isLast;
       };
     }
+    // Add decodeHTMLEntity helper method
+    decodeHTMLEntity(str) {
+      return str.replace(/&#(\d+);/g, (match, dec) => String.fromCharCode(dec)).replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&apos;/g, "'");
+    }
     parseMangaDetails($2, mangaId, source) {
       const titles = [];
       const mainTitle = $2("h1.komik_info-content-body-title").text().trim().replace(/Bahasa Indonesia/g, "");
@@ -15584,7 +15588,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
   // src/Komikcast/Komikcast.ts
   var DOMAIN = "https://komikcast02.com";
   var KomikcastInfo = {
-    version: getExportVersion("0.0.6"),
+    version: getExportVersion("0.0.7"),
     name: "Komikcast",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",
