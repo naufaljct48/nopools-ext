@@ -11,10 +11,11 @@ Sources:
 - KomikIndo.Top (18+)
 - KomikTap (18+)
 - Komiku.com
-- Mangatale.co
+- AinzScans
 - Mangasusu (18+)
 - WestManga
 - Shinigami
+- PojokManga
 
 ## Current Repo
 
