@@ -142,42 +142,65 @@ export class KomikcastParser extends MangaStreamParser {
     }
     override parseTags($: CheerioAPI): TagSection[] {
         const arrayTags: Tag[] = []
-        const arrayTags2: Tag[] = []
-        const arrayTags3: Tag[] = []
-        const arrayTags4: Tag[] = []
+        const arrayGenres: Tag[] = []
     
-        // Genre tags
-        for (const tag of $('.genre > li > a').toArray()) {
-            const label = $(tag).text().trim()
+        // Parse genres
+        for (const tag of $('div.genre-item a').toArray()) {
             const id = $(tag).attr('href')?.split('/')[4] ?? ''
+            const label = $(tag).text().trim()
             if (!id || !label) continue
-            arrayTags.push({ id: id, label: label })
+            
+            arrayGenres.push({
+                id: id,
+                label: label
+            })
         }
     
-        // Status tags
-        arrayTags2.push(
-            { id: 'ongoing', label: 'Ongoing' },
-            { id: 'completed', label: 'Completed' }
-        )
+        // Parse status
+        const arrayStatus = [
+            {
+                id: 'ongoing',
+                label: 'Ongoing'
+            },
+            {
+                id: 'completed',
+                label: 'Completed'
+            }
+        ]
     
-        // Type tags
-        arrayTags3.push(
-            { id: 'manga', label: 'Manga' },
-            { id: 'manhwa', label: 'Manhwa' },
-            { id: 'manhua', label: 'Manhua' }
-        )
+        // Parse types
+        const arrayTypes = [
+            {
+                id: 'manga',
+                label: 'Manga'
+            },
+            {
+                id: 'manhwa',
+                label: 'Manhwa'
+            },
+            {
+                id: 'manhua', 
+                label: 'Manhua'
+            }
+        ]
     
-        // Sort tags
-        arrayTags4.push(
-            { id: 'popular', label: 'Popular' },
-            { id: 'update', label: 'Latest Update' }
-        )
+        // Parse order
+        const arrayOrder = [
+            {
+                id: 'popular',
+                label: 'Popular'
+            },
+            {
+                id: 'latest',
+                label: 'Latest'
+            }
+        ]
     
         return [
-            App.createTagSection({ id: '0', label: 'Genres', tags: arrayTags }),
-            App.createTagSection({ id: '1', label: 'Status', tags: arrayTags2 }),
-            App.createTagSection({ id: '2', label: 'Types', tags: arrayTags3 }),
-            App.createTagSection({ id: '3', label: 'Sort By', tags: arrayTags4 })
+            App.createTagSection({ id: 'genres', label: 'Genres', tags: arrayGenres }),
+            App.createTagSection({ id: 'status', label: 'Status', tags: arrayStatus }),
+            App.createTagSection({ id: 'type', label: 'Type', tags: arrayTypes }),
+            App.createTagSection({ id: 'order', label: 'Order by', tags: arrayOrder })
         ]
     }
 }
