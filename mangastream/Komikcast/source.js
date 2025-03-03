@@ -15456,9 +15456,17 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
       super(...arguments);
       this.isLastPage = ($2, id) => {
         let isLast = true;
-        const hasNext = Boolean($2("a.next.page-numbers").length);
-        if (hasNext) {
-          isLast = false;
+        if (id == "view_more") {
+          const hasNext = Boolean($2("a.next.page-numbers")[0]);
+          if (hasNext) {
+            isLast = false;
+          }
+        }
+        if (id == "search_request") {
+          const hasNext = Boolean($2("a.next.page-numbers")[0]);
+          if (hasNext) {
+            isLast = false;
+          }
         }
         return isLast;
       };
@@ -15541,22 +15549,46 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
     }
     async parseSearchResults($2, source) {
       const results = [];
-      for (const obj of $2("div.list-update_item").toArray()) {
+      for (const obj of $2("div.list-update_item", "div.list-update_items-wrapper").toArray()) {
+        const slug = ($2("a", obj).attr("href") ?? "").replace(/\/$/, "").split("/").pop() ?? "";
+        const path = ($2("a", obj).attr("href") ?? "").replace(/\/$/, "").split("/").slice(-2).shift() ?? "";
+        if (!slug || !path) {
+          throw new Error(`Unable to parse slug (${slug}) or path (${path})!`);
+        }
         const title = $2("h3.title", obj).text().trim();
         const image = this.getImageSrc($2("img", obj)) ?? "";
         const subtitle = $2("div.chapter", obj).text().trim();
-        const slug = this.idCleaner($2("a", obj).attr("href") ?? "");
-        const path = ($2("a", obj).attr("href") ?? "").replace(/\/$/, "").split("/").slice(-2).shift() ?? "";
-        if (!slug || !path) continue;
-        results.push({
-          slug,
-          path,
+        results.push(App.createPartialSourceManga({
+          mangaId: slug,
+          image: image || source.fallbackImage,
+          title: this.decodeHTMLEntity(title),
+          subtitle: this.decodeHTMLEntity(subtitle)
+        }));
+      }
+      return results;
+    }
+    async parseViewMore($2, source) {
+      const items = [];
+      for (const manga of $2("div.list-update_item", "div.list-update_items-wrapper").toArray()) {
+        const title = $2("h3.title", manga).text().trim();
+        const image = this.getImageSrc($2("img", manga)) ?? "";
+        const subtitle = $2("div.chapter", manga).text().trim();
+        const slug = this.idCleaner($2("a", manga).attr("href") ?? "");
+        const path = ($2("a", manga).attr("href") ?? "").replace(/\/$/, "").split("/").slice(-2).shift() ?? "";
+        const postId = $2("a", manga).attr("rel");
+        const mangaId = await source.getUsePostIds() ? isNaN(Number(postId)) ? await source.slugToPostId(slug, path) : postId : slug;
+        if (!mangaId || !title) {
+          console.log(`Failed to parse homepage sections for ${source.baseUrl}`);
+          continue;
+        }
+        items.push(App.createPartialSourceManga({
+          mangaId,
           image,
           title: this.decodeHTMLEntity(title),
           subtitle: this.decodeHTMLEntity(subtitle)
-        });
+        }));
       }
-      return results;
+      return items;
     }
     parseTags($2) {
       const arrayTags = [];
@@ -15594,7 +15626,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
   // src/Komikcast/Komikcast.ts
   var DOMAIN = "https://komikcast02.com";
   var KomikcastInfo = {
-    version: getExportVersion("0.1.9"),
+    version: getExportVersion("0.2.0"),
     name: "Komikcast",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",
