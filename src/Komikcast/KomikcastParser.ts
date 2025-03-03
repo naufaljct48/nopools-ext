@@ -4,102 +4,86 @@ import { ChapterDetails, SourceManga, Chapter, PartialSourceManga, TagSection, T
 import { CheerioAPI } from 'cheerio';
 
 export class KomikcastParser extends MangaStreamParser {
-
     override parseMangaDetails($: CheerioAPI, mangaId: string, source: any): SourceManga {
-        const titles: string[] = [];
-        titles.push(this.decodeHTMLEntity($('h1.komik_info-content-body-title').text().trim().replace(/Komik|Manhwa|Manga|Manhua|Bahasa Indonesia/g, '')));
+        const titles: string[] = []
+        const mainTitle = $('h1.komik_info-content-body-title').text().trim().replace(/Bahasa Indonesia/g, '')
+        titles.push(this.decodeHTMLEntity(mainTitle))
 
-        const altTitles = $(`span:contains(${source.manga_selector_AlternativeTitles}), b:contains(${source.manga_selector_AlternativeTitles})+span, .imptdt:contains(${source.manga_selector_AlternativeTitles}) i, h1.entry-title+span`).contents().remove().last().text().split(','); // Language dependant
-        for (const title of altTitles) {
-            if (title == '') {
-                continue;
-            }
-            titles.push(this.decodeHTMLEntity(title.trim()));
+        const altTitle = $('.komik_info-content-native').text().trim()
+        if (altTitle) titles.push(this.decodeHTMLEntity(altTitle))
+
+        const image = $('div.komik_info-content-thumbnail img').attr('src')
+        const description = $('.komik_info-description-sinopsis').text().trim()
+
+        const arrayTags: Tag[] = []
+        for (const tag of $('span.komik_info-content-genre a').toArray()) {
+            const label = $(tag).text().trim()
+            const id = this.idCleaner($(tag).attr('href') ?? '')
+            if (!id || !label) continue
+            arrayTags.push({ id, label })
         }
 
-        const author = $(`.komik_info-content-info:contains(${source.manga_selector_author})`).contents().remove().last().text().trim(); // Language dependant
-        const artist = $(`span:contains(${source.manga_selector_artist}), .fmed b:contains(${source.manga_selector_artist})+span, td:contains(${source.manga_selector_artist})+td, .imptdt:contains(${source.manga_selector_artist}) i`).contents().remove().last().text().trim(); // Language dependant
-        const image = this.getImageSrc($('img', 'div[itemprop="image"]'));
-        const description = this.decodeHTMLEntity($('div[itemprop="articleBody"]  p').text().trim());
-
-        const arrayTags: Tag[] = [];
-        for (const tag of $('a', 'span.komik_info-content-genre').toArray()) {
-            const label = $(tag).text().trim();
-            const id = this.idCleaner($(tag).attr('href') ?? '');
-            if (!id || !label) {
-                continue;
-            }
-            arrayTags.push({ id, label });
-        }
-
-        const rawStatus = $(`.komik_info-content-info b:contains(${source.manga_selector_status})`).contents().remove().last().text().trim();
-        let status;
-        switch (rawStatus.toLowerCase()) {
-            case source.manga_StatusTypes.ONGOING.toLowerCase():
-                status = 'Ongoing';
-                break;
-            case source.manga_StatusTypes.COMPLETED.toLowerCase():
-                status = 'Completed';
-                break;
-            default:
-                status = 'Ongoing';
-                break;
-        }
-
-        const tagSections: TagSection[] = [
-            App.createTagSection({
-                id: '0',
-                label: 'genres',
-                tags: arrayTags.map((x) => App.createTag(x))
-            })
-        ];
+        const author = $('.komik_info-content-info:contains("Author:") b').next().text().trim()
+        const status = $('.komik_info-content-info:contains("Status:") b').next().text().trim().toLowerCase()
 
         return App.createSourceManga({
             id: mangaId,
             mangaInfo: App.createMangaInfo({
                 titles,
-                image: image,
-                status,
-                author: author == '' ? 'Unknown' : author,
-                artist: artist == '' ? 'Unknown' : artist,
-                tags: tagSections,
+                image: image ?? '',
+                status: status === 'ongoing' ? 'Ongoing' : 'Completed',
+                author: author || 'Unknown',
+                artist: author || 'Unknown',
+                tags: [App.createTagSection({ id: '0', label: 'genres', tags: arrayTags.map(x => App.createTag(x)) })],
                 desc: description
             })
-        });
+        })
     }
 
     override parseChapterList($: CheerioAPI, mangaId: string, source: any): Chapter[] {
-        const chapters: Chapter[] = [];
-        let sortingIndex = 0;
-        let language = source.language;
-
-        // Usually for Manhwa sites
-        if (mangaId.toUpperCase().endsWith('-RAW') && source.language == '🇬🇧') language = '🇮🇩';
-
-        for (const chapter of $('li', 'div.komik_info-chapters').toArray()) {
-            const title = $('a.chapter-link-item', chapter).text().trim();
-            const date = convertDate($('div.chapter-link-time', chapter).text().trim(), source);
-            const chapterId = this.idCleaner($('a.chapter-link-item', chapter).attr('href') ?? '');
-
-            if (!chapterId || !title) {
-                continue;
-            }
+        const chapters: Chapter[] = []
+        
+        for (const chapter of $('.komik_info-chapters-item').toArray()) {
+            const title = $('a.chapter-link-item', chapter).text().trim()
+            const chapterId = this.idCleaner($('a.chapter-link-item', chapter).attr('href') ?? '')
+            const date = $('.chapter-link-time', chapter).text().trim()
+            
+            if (!chapterId || !title) continue
 
             chapters.push(App.createChapter({
                 id: chapterId,
                 mangaId: mangaId,
                 name: title,
-                langCode: language,
-                chapNum: sortingIndex,
-                time: date
-            }));
-
-            sortingIndex++;
+                langCode: '🇮🇩',
+                time: source.convertTime(date)
+            }))
         }
 
-        return chapters;
+        return chapters
     }
 
+    override parseChapterDetails($: CheerioAPI, mangaId: string, chapterId: string): ChapterDetails {
+        const pages: string[] = []
+        
+        for (const img of $('img', '.main-reading-area').toArray()) {
+            const src = $(img).attr('src') ?? $(img).attr('data-src')
+            if (!src) continue
+            pages.push(src)
+        }
+    
+        // Get next/previous chapter links
+        const nextChapter = $('div.nextprev a[rel="next"]').attr('href')
+        const prevChapter = $('div.nextprev a[rel="prev"]').attr('href')
+    
+        return App.createChapterDetails({
+            id: chapterId,
+            mangaId: mangaId,
+            pages: pages,
+            longStrip: false,
+            nextChapter: nextChapter ? this.idCleaner(nextChapter) : undefined,
+            prevChapter: prevChapter ? this.idCleaner(prevChapter) : undefined
+        })
+    }
     override async parseSearchResults($: CheerioAPI, source: any): Promise<PartialSourceManga[]> {
         const results: PartialSourceManga[] = [];
 

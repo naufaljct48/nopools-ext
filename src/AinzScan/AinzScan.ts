@@ -15,15 +15,15 @@ import {
     MangaStream
 } from '../MangaStream'
 
-const DOMAIN = 'https://comic21.me'
+const DOMAIN = 'https://ainzscans.net'
 
-export const NonbiriInfo: SourceInfo = {
-    version: getExportVersion('0.0.4'),
-    name: 'Nonbiri',
+export const AinzScanInfo: SourceInfo = {
+    version: getExportVersion('0.0.1'),
+    name: 'AinzScans',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
     authorWebsite: 'http://github.com/NaufalJCT48',
-    icon: 'icon.png',
+    icon: 'icon.jpg',
     contentRating: ContentRating.EVERYONE,
     websiteBaseURL: DOMAIN,
     intents: SourceIntents.MANGA_CHAPTERS | SourceIntents.HOMEPAGE_SECTIONS | SourceIntents.CLOUDFLARE_BYPASS_REQUIRED | SourceIntents.SETTINGS_UI,
@@ -35,9 +35,13 @@ export const NonbiriInfo: SourceInfo = {
     ]
 }
 
-export class Nonbiri extends MangaStream {
+export class AinzScan extends MangaStream {
 
     baseUrl: string = DOMAIN
+
+    override directoryPath = 'series'
+
+    override manga_tag_selector_box = 'div.seriestugenre'
 
     override configureSections(): void {
         this.homescreen_sections['new_titles'].enabled = false

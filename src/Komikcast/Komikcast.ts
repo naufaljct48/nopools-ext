@@ -29,10 +29,10 @@ import {
 import { KomikcastParser } from './KomikcastParser'
 import { URLBuilder } from '../UrlBuilder'
 
-const DOMAIN = 'https://komikcast.cz'
+const DOMAIN = 'https://komikcast02.com'
 
 export const KomikcastInfo: SourceInfo = {
-    version: getExportVersion('0.0.5'),
+    version: getExportVersion('0.0.6'),
     name: 'Komikcast',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -50,25 +50,20 @@ export const KomikcastInfo: SourceInfo = {
 }
 
 export class Komikcast extends MangaStream {
-
     baseUrl: string = DOMAIN
-
     override directoryPath = 'komik'
-
     override usePostIds = false
-
     override parser = new KomikcastParser()
 
     override configureSections() {
-        this.homescreen_sections['popular_today'].selectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('div.swiper-slide', $('span:contains(Hot Komik Update)')?.parent()?.next())
-        this.homescreen_sections['popular_today'].titleSelectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('div.title', element).text().trim()
-        this.homescreen_sections['popular_today'].subtitleSelectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('div.chapter', element).text().trim()
-        this.homescreen_sections['popular_today'].getViewMoreItemsFunc = (page: string) => `daftar-komik/page/${page}/?orderby=popular`
-        this.homescreen_sections['latest_update'].selectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('div.utao', $('span:contains(Rilisan Terbaru)')?.parent()?.next())
-        this.homescreen_sections['latest_update'].titleSelectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('h3', element).text().trim()
+        this.homescreen_sections['latest_update'].selectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('div.list-update_item')
+        this.homescreen_sections['latest_update'].titleSelectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('h3.title', element).text().trim()
         this.homescreen_sections['latest_update'].subtitleSelectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('div.chapter', element).text().trim()
         this.homescreen_sections['latest_update'].getViewMoreItemsFunc = (page: string) => `daftar-komik/page/${page}/?sortby=update`
+
+        // Disable unused sections
         this.homescreen_sections['new_titles'].enabled = false
+        this.homescreen_sections['popular_today'].enabled = false
         this.homescreen_sections['top_alltime'].enabled = false
         this.homescreen_sections['top_monthly'].enabled = false
         this.homescreen_sections['top_weekly'].enabled = false
