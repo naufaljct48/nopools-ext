@@ -141,66 +141,47 @@ export class KomikcastParser extends MangaStreamParser {
         return isLast
     }
     override parseTags($: CheerioAPI): TagSection[] {
-        const arrayTags: Tag[] = []
-        const arrayGenres: Tag[] = []
-    
+        const tagSections: TagSection[] = []
+        
         // Parse genres
-        for (const tag of $('div.genre-item a').toArray()) {
-            const id = $(tag).attr('href')?.split('/')[4] ?? ''
-            const label = $(tag).text().trim()
+        const genreTags: Tag[] = []
+        for (const tag of $('ul.komiklist_dropdown-menu.c4.genrez li').toArray()) {
+            const id = $('input', tag).attr('value') ?? ''
+            const label = $('label', tag).text().trim()
             if (!id || !label) continue
             
-            arrayGenres.push({
-                id: id,
-                label: label
-            })
+            genreTags.push(App.createTag({ id, label }))
+        }
+        if (genreTags.length > 0) {
+            tagSections.push(App.createTagSection({ id: 'genres', label: 'Genres', tags: genreTags }))
         }
     
         // Parse status
-        const arrayStatus = [
-            {
-                id: 'ongoing',
-                label: 'Ongoing'
-            },
-            {
-                id: 'completed',
-                label: 'Completed'
-            }
-        ]
+        const statusTags: Tag[] = []
+        for (const tag of $('ul.komiklist_dropdown-menu.status li').toArray()) {
+            const id = $('input', tag).attr('value') ?? ''
+            const label = $('label', tag).text().trim()
+            if (!label) continue // Allow empty id for "All" option
+            
+            statusTags.push(App.createTag({ id, label }))
+        }
+        if (statusTags.length > 0) {
+            tagSections.push(App.createTagSection({ id: 'status', label: 'Status', tags: statusTags }))
+        }
     
         // Parse types
-        const arrayTypes = [
-            {
-                id: 'manga',
-                label: 'Manga'
-            },
-            {
-                id: 'manhwa',
-                label: 'Manhwa'
-            },
-            {
-                id: 'manhua', 
-                label: 'Manhua'
-            }
-        ]
+        const typeTags: Tag[] = []
+        for (const tag of $('ul.komiklist_dropdown-menu.type li').toArray()) {
+            const id = $('input', tag).attr('value') ?? ''
+            const label = $('label', tag).text().trim()
+            if (!label) continue // Allow empty id for "All" option
+            
+            typeTags.push(App.createTag({ id, label }))
+        }
+        if (typeTags.length > 0) {
+            tagSections.push(App.createTagSection({ id: 'type', label: 'Type', tags: typeTags }))
+        }
     
-        // Parse order
-        const arrayOrder = [
-            {
-                id: 'popular',
-                label: 'Popular'
-            },
-            {
-                id: 'latest',
-                label: 'Latest'
-            }
-        ]
-    
-        return [
-            App.createTagSection({ id: 'genres', label: 'Genres', tags: arrayGenres }),
-            App.createTagSection({ id: 'status', label: 'Status', tags: arrayStatus }),
-            App.createTagSection({ id: 'type', label: 'Type', tags: arrayTypes }),
-            App.createTagSection({ id: 'order', label: 'Order by', tags: arrayOrder })
-        ]
+        return tagSections
     }
 }
