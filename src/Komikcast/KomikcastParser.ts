@@ -4,6 +4,16 @@ import { ChapterDetails, SourceManga, Chapter, PartialSourceManga, TagSection, T
 import { CheerioAPI } from 'cheerio';
 
 export class KomikcastParser extends MangaStreamParser {
+    // Add decodeHTMLEntity helper method
+    private decodeHTMLEntity(str: string): string {
+        return str.replace(/&#(\d+);/g, (match, dec) => String.fromCharCode(dec))
+            .replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&quot;/g, '"')
+            .replace(/&apos;/g, "'")
+    }
+
     override parseMangaDetails($: CheerioAPI, mangaId: string, source: any): SourceManga {
         const titles: string[] = []
         const mainTitle = $('h1.komik_info-content-body-title').text().trim().replace(/Bahasa Indonesia/g, '')
