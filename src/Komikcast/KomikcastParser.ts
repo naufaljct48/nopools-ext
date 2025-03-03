@@ -141,47 +141,43 @@ export class KomikcastParser extends MangaStreamParser {
         return isLast
     }
     override parseTags($: CheerioAPI): TagSection[] {
-        const tagSections: TagSection[] = []
-        
-        // Parse genres
-        const genreTags: Tag[] = []
-        for (const tag of $('ul.komiklist_dropdown-menu.c4.genrez li').toArray()) {
-            const id = $('input', tag).attr('value') ?? ''
-            const label = $('label', tag).text().trim()
+        const arrayTags: Tag[] = []
+        const arrayTags2: Tag[] = []
+        const arrayTags3: Tag[] = []
+        const arrayTags4: Tag[] = []
+    
+        // Genre tags
+        for (const tag of $('.genre > li > a').toArray()) {
+            const label = $(tag).text().trim()
+            const id = $(tag).attr('href')?.split('/')[4] ?? ''
             if (!id || !label) continue
-            
-            genreTags.push(App.createTag({ id, label }))
-        }
-        if (genreTags.length > 0) {
-            tagSections.push(App.createTagSection({ id: 'genres', label: 'Genres', tags: genreTags }))
+            arrayTags.push({ id: id, label: label })
         }
     
-        // Parse status
-        const statusTags: Tag[] = []
-        for (const tag of $('ul.komiklist_dropdown-menu.status li').toArray()) {
-            const id = $('input', tag).attr('value') ?? ''
-            const label = $('label', tag).text().trim()
-            if (!label) continue // Allow empty id for "All" option
-            
-            statusTags.push(App.createTag({ id, label }))
-        }
-        if (statusTags.length > 0) {
-            tagSections.push(App.createTagSection({ id: 'status', label: 'Status', tags: statusTags }))
-        }
+        // Status tags
+        arrayTags2.push(
+            { id: 'ongoing', label: 'Ongoing' },
+            { id: 'completed', label: 'Completed' }
+        )
     
-        // Parse types
-        const typeTags: Tag[] = []
-        for (const tag of $('ul.komiklist_dropdown-menu.type li').toArray()) {
-            const id = $('input', tag).attr('value') ?? ''
-            const label = $('label', tag).text().trim()
-            if (!label) continue // Allow empty id for "All" option
-            
-            typeTags.push(App.createTag({ id, label }))
-        }
-        if (typeTags.length > 0) {
-            tagSections.push(App.createTagSection({ id: 'type', label: 'Type', tags: typeTags }))
-        }
+        // Type tags
+        arrayTags3.push(
+            { id: 'manga', label: 'Manga' },
+            { id: 'manhwa', label: 'Manhwa' },
+            { id: 'manhua', label: 'Manhua' }
+        )
     
-        return tagSections
+        // Sort tags
+        arrayTags4.push(
+            { id: 'popular', label: 'Popular' },
+            { id: 'update', label: 'Latest Update' }
+        )
+    
+        return [
+            App.createTagSection({ id: '0', label: 'Genres', tags: arrayTags }),
+            App.createTagSection({ id: '1', label: 'Status', tags: arrayTags2 }),
+            App.createTagSection({ id: '2', label: 'Types', tags: arrayTags3 }),
+            App.createTagSection({ id: '3', label: 'Sort By', tags: arrayTags4 })
+        ]
     }
 }

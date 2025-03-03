@@ -32,7 +32,7 @@ import { URLBuilder } from '../UrlBuilder'
 const DOMAIN = 'https://komikcast02.com'
 
 export const KomikcastInfo: SourceInfo = {
-    version: getExportVersion('0.1.8'),
+    version: getExportVersion('0.1.9'),
     name: 'Komikcast',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -66,7 +66,7 @@ export class Komikcast extends MangaStream {
         this.homescreen_sections['popular_today'].selectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('.swiper-slide')
         this.homescreen_sections['popular_today'].titleSelectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('div.title', element).text().trim()
         this.homescreen_sections['popular_today'].subtitleSelectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('div.chapter', element).text().trim()
-        this.homescreen_sections['popular_today'].getViewMoreItemsFunc = (page: string) => `komik/page/${page}/?order=popular`
+        this.homescreen_sections['popular_today'].getViewMoreItemsFunc = (page: string) => `daftar-komik/page/${page}/?order=popular`
     
         // Disable other unused sections
         this.homescreen_sections['new_titles'].enabled = false
