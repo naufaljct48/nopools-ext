@@ -1,6 +1,14 @@
 import { convertDate } from '../LanguageUtils';
 import { MangaStreamParser } from '../MangaStreamParser';
-import { ChapterDetails, SourceManga, Chapter, PartialSourceManga, TagSection, Tag } from '@paperback/types';
+import { 
+    ChapterDetails, 
+    SourceManga, 
+    Chapter, 
+    PartialSourceManga, 
+    TagSection, 
+    Tag,
+    LanguageCode  // Add this import
+} from '@paperback/types'
 import { CheerioAPI } from 'cheerio';
 
 export class KomikcastParser extends MangaStreamParser {
