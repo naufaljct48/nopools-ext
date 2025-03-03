@@ -10,13 +10,9 @@ import {
     Request,
     TagSection,
 } from '@paperback/types'
-import {
-    BasicAcceptedElems,
-    CheerioAPI,
-    load as cheerioLoad // Add this import
-} from 'cheerio'
+import cheerio from 'cheerio'  // Fix the cheerio import
+import { BasicAcceptedElems } from 'cheerio'
 import { AnyNode } from 'domhandler'
-
 import {
     getExportVersion,
     MangaStream
@@ -33,7 +29,7 @@ import { URLBuilder } from '../UrlBuilder'
 const DOMAIN = 'https://komikcast02.com'
 
 export const KomikcastInfo: SourceInfo = {
-    version: getExportVersion('0.1.2'),
+    version: getExportVersion('0.1.3'),
     name: 'Komikcast',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
