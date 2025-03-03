@@ -892,7 +892,7 @@ var _Sources = (() => {
     Komikcast: () => Komikcast,
     KomikcastInfo: () => KomikcastInfo
   });
-  var import_types4 = __toESM(require_lib());
+  var import_types5 = __toESM(require_lib());
 
   // src/MangaStream.ts
   var import_types3 = __toESM(require_lib());
@@ -15451,6 +15451,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
   };
 
   // src/Komikcast/KomikcastParser.ts
+  var import_types4 = __toESM(require_lib());
   var KomikcastParser = class extends MangaStreamParser {
     constructor() {
       super(...arguments);
@@ -15520,7 +15521,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
           name: title,
           chapNum,
           time: source.convertTime(date),
-          langCode: LanguageCode.INDONESIAN
+          langCode: import_types4.LanguageCode.INDONESIAN
         }));
       }
       return chapters.map((chapter) => {
@@ -15627,19 +15628,19 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
   // src/Komikcast/Komikcast.ts
   var DOMAIN = "https://komikcast02.com";
   var KomikcastInfo = {
-    version: getExportVersion("0.0.9"),
+    version: getExportVersion("0.1.0"),
     name: "Komikcast",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",
     authorWebsite: "http://github.com/NaufalJCT48",
     icon: "icon.png",
-    contentRating: import_types4.ContentRating.MATURE,
+    contentRating: import_types5.ContentRating.MATURE,
     websiteBaseURL: DOMAIN,
-    intents: import_types4.SourceIntents.MANGA_CHAPTERS | import_types4.SourceIntents.HOMEPAGE_SECTIONS | import_types4.SourceIntents.CLOUDFLARE_BYPASS_REQUIRED | import_types4.SourceIntents.SETTINGS_UI,
+    intents: import_types5.SourceIntents.MANGA_CHAPTERS | import_types5.SourceIntents.HOMEPAGE_SECTIONS | import_types5.SourceIntents.CLOUDFLARE_BYPASS_REQUIRED | import_types5.SourceIntents.SETTINGS_UI,
     sourceTags: [
       {
         text: "Indonesia",
-        type: import_types4.BadgeColor.GREY
+        type: import_types5.BadgeColor.GREY
       }
     ]
   };
@@ -15650,7 +15651,9 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
       this.directoryPath = "komik";
       this.usePostIds = false;
       this.parser = new KomikcastParser();
+      this.language = import_types5.LanguageCode.INDONESIAN;
     }
+    // Add this override
     configureSections() {
       this.homescreen_sections["latest_update"].selectorFunc = ($2, element) => $2("div.utao");
       this.homescreen_sections["latest_update"].titleSelectorFunc = ($2, element) => $2("div.luf h3", element).text().trim();
