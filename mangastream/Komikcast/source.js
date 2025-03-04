@@ -15550,30 +15550,19 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
     async parseSearchResults($2, source) {
       const results = [];
       for (const obj of $2("div.list-update_item", "div.list-update_items-wrapper").toArray()) {
-        const $link = $2("a", obj);
-        const href = $link.attr("href") ?? "";
-        const slug = this.idCleaner(href);
-        const path = href.replace(/\/$/, "").split("/").slice(-2).shift() ?? "";
-        if (!slug || !path) {
-          console.log(`Skipping item due to invalid slug (${slug}) or path (${path})`);
-          continue;
-        }
         const title = $2("h3.title", obj).text().trim();
         const image = this.getImageSrc($2("img", obj)) ?? "";
         const subtitle = $2("div.chapter", obj).text().trim();
-        const tags = [];
-        $2(".genre-item", obj).each((_, el) => {
-          const tag = $2(el).text().trim();
-          if (tag) tags.push(tag);
-        });
-        results.push(App.createPartialSourceManga({
-          mangaId: slug,
+        const slug = this.idCleaner($2("a", obj).attr("href") ?? "");
+        const path = ($2("a", obj).attr("href") ?? "").replace(/\/$/, "").split("/").slice(-2).shift() ?? "";
+        if (!slug || !path) continue;
+        results.push({
+          slug,
           path,
-          image: image || source.fallbackImage,
+          image,
           title: this.decodeHTMLEntity(title),
-          subtitle: this.decodeHTMLEntity(subtitle),
-          tags
-        }));
+          subtitle: this.decodeHTMLEntity(subtitle)
+        });
       }
       return results;
     }
@@ -15636,7 +15625,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
   // src/Komikcast/Komikcast.ts
   var DOMAIN = "https://komikcast02.com";
   var KomikcastInfo = {
-    version: getExportVersion("0.2.2"),
+    version: getExportVersion("0.2.3"),
     name: "Komikcast",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",
@@ -15722,20 +15711,14 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
       const manga = [];
       for (const result of results) {
         let mangaId = result.slug;
-        if (!mangaId) {
-          throw new Error("Invalid mangaId from parser");
-        }
         if (await this.getUsePostIds()) {
           mangaId = await this.slugToPostId(result.slug, result.path);
         }
         manga.push(App.createPartialSourceManga({
           mangaId,
-          image: result.image ?? "",
-          title: result.title ?? "Untitled",
-          subtitle: result.subtitle ?? "",
-          tags: result.tags?.map(
-            (tag) => App.createTag({ id: tag, label: tag })
-          ) ?? []
+          image: result.image,
+          title: result.title,
+          subtitle: result.subtitle
         }));
       }
       metadata = !this.parser.isLastPage($2, "view_more") ? { page: page + 1 } : void 0;
