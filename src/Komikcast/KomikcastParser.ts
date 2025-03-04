@@ -179,44 +179,53 @@ export class KomikcastParser extends MangaStreamParser {
 
         return isLast;
     }
-    override parseTags($: CheerioAPI): TagSection[] {
-        const arrayTags: Tag[] = []
-        const arrayTags2: Tag[] = []
-        const arrayTags3: Tag[] = []
-        const arrayTags4: Tag[] = []
+    parseTags($: CheerioAPI): TagSection[] {
+        const tagSections: TagSection[] = []
     
-        // Genre tags
-        for (const tag of $('.genre > li > a').toArray()) {
-            const label = $(tag).text().trim()
-            const id = $(tag).attr('href')?.split('/')[4] ?? ''
-            if (!id || !label) continue
-            arrayTags.push({ id: id, label: label })
-        }
+        // Parse genres
+        const genreTags: Tag[] = []
+        $('ul.komiklist_dropdown-menu.c4.genrez li').each((_, element) => {
+            const value = $('input', element).attr('value')?.trim()
+            const label = $('label', element).text().trim()
+            if (value && label) {
+                genreTags.push(App.createTag({ id: value, label }))
+            }
+        })
+        tagSections.push(App.createTagSection({ id: '0', label: 'Genres', tags: genreTags }))
     
-        // Status tags
-        arrayTags2.push(
-            { id: 'ongoing', label: 'Ongoing' },
-            { id: 'completed', label: 'Completed' }
-        )
+        // Parse status
+        const statusTags: Tag[] = []
+        $('ul.komiklist_dropdown-menu.status li').each((_, element) => {
+            const value = $('input', element).attr('value')?.trim()
+            const label = $('label', element).text().trim()
+            if (value && label && value !== '') {  // Skip "All" option
+                statusTags.push(App.createTag({ id: value.toLowerCase(), label }))
+            }
+        })
+        tagSections.push(App.createTagSection({ id: '1', label: 'Status', tags: statusTags }))
     
-        // Type tags
-        arrayTags3.push(
-            { id: 'manga', label: 'Manga' },
-            { id: 'manhwa', label: 'Manhwa' },
-            { id: 'manhua', label: 'Manhua' }
-        )
+        // Parse type
+        const typeTags: Tag[] = []
+        $('ul.komiklist_dropdown-menu.type li').each((_, element) => {
+            const value = $('input', element).attr('value')?.trim()
+            const label = $('label', element).text().trim()
+            if (value && label && value !== '') {  // Skip "All" option
+                typeTags.push(App.createTag({ id: value.toLowerCase(), label }))
+            }
+        })
+        tagSections.push(App.createTagSection({ id: '2', label: 'Type', tags: typeTags }))
     
-        // Sort tags
-        arrayTags4.push(
-            { id: 'popular', label: 'Popular' },
-            { id: 'update', label: 'Latest Update' }
-        )
+        // Parse sort/order
+        const orderTags: Tag[] = []
+        $('ul.komiklist_dropdown-menu.sort_by li').each((_, element) => {
+            const value = $('input', element).attr('value')?.trim()
+            const label = $('label', element).text().trim()
+            if (value && label) {
+                orderTags.push(App.createTag({ id: value.toLowerCase(), label }))
+            }
+        })
+        tagSections.push(App.createTagSection({ id: '3', label: 'Sort By', tags: orderTags }))
     
-        return [
-            App.createTagSection({ id: '0', label: 'Genres', tags: arrayTags }),
-            App.createTagSection({ id: '1', label: 'Status', tags: arrayTags2 }),
-            App.createTagSection({ id: '2', label: 'Types', tags: arrayTags3 }),
-            App.createTagSection({ id: '3', label: 'Sort By', tags: arrayTags4 })
-        ]
+        return tagSections
     }
 }

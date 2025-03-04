@@ -32,7 +32,7 @@ import { URLBuilder } from '../UrlBuilder'
 const DOMAIN = 'https://komikcast02.com'
 
 export const KomikcastInfo: SourceInfo = {
-    version: getExportVersion('0.2.3'),
+    version: getExportVersion('0.2.4'),
     name: 'Komikcast',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -116,13 +116,13 @@ export class Komikcast extends MangaStream {
 
     override async getSearchTags(): Promise<TagSection[]> {
         const request = App.createRequest({
-            url: `${this.baseUrl}/`,
+            url: `${this.baseUrl}/daftar-komik/`,  // Updated URL
             method: 'GET'
         })
     
         const response = await this.requestManager.schedule(request, 1)
         this.checkResponseError(response)
-        const $ = cheerioLoad(response.data as string)  // Fix this line
+        const $ = cheerioLoad(response.data as string)
     
         return this.parser.parseTags($)
     }
