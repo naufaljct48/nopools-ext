@@ -32,7 +32,7 @@ import { URLBuilder } from '../UrlBuilder'
 const DOMAIN = 'https://komikcast02.com'
 
 export const KomikcastInfo: SourceInfo = {
-    version: getExportVersion('0.2.0'),
+    version: getExportVersion('0.2.1'),
     name: 'Komikcast',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -139,15 +139,21 @@ export class Komikcast extends MangaStream {
         const manga: PartialSourceManga[] = []
         for (const result of results) {
             let mangaId: string = result.slug
+            if (!mangaId) {
+                throw new Error('Invalid mangaId from parser')
+            }
             if (await this.getUsePostIds()) {
                 mangaId = await this.slugToPostId(result.slug, result.path)
             }
     
             manga.push(App.createPartialSourceManga({
                 mangaId,
-                image: result.image,
-                title: result.title,
-                subtitle: result.subtitle
+                image: result.image ?? '',
+                title: result.title ?? 'Untitled',
+                subtitle: result.subtitle ?? '',
+                tags: result.tags?.map((tag: string) => 
+                    App.createTag({ id: tag, label: tag })
+                ) ?? []
             }))
         }
     

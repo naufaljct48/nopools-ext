@@ -109,47 +109,48 @@ export class KomikcastParser extends MangaStreamParser {
     }
     override async parseSearchResults($: CheerioAPI, source: any): Promise<PartialSourceManga[]> {
         const results: PartialSourceManga[] = [];
-
+    
         for (const obj of $('div.list-update_item', 'div.list-update_items-wrapper').toArray()) {
-            const slug: string = ($('a', obj).attr('href') ?? '').replace(/\/$/, '').split('/').pop() ?? '';
-            const path: string = ($('a', obj).attr('href') ?? '').replace(/\/$/, '').split('/').slice(-2).shift() ?? '';
+            const slug = this.idCleaner($('a', obj).attr('href') ?? '')
+            const path = ($('a', obj).attr('href') ?? '').replace(/\/$/, '').split('/').slice(-2).shift() ?? ''
             if (!slug || !path) {
                 throw new Error(`Unable to parse slug (${slug}) or path (${path})!`);
             }
-
+    
             const title: string = $('h3.title', obj).text().trim();
             const image = this.getImageSrc($('img', obj)) ?? '';
             const subtitle = $('div.chapter', obj).text().trim();
 
             results.push(App.createPartialSourceManga({
                 mangaId: slug,
+                path,
                 image: image || source.fallbackImage,
                 title: this.decodeHTMLEntity(title),
-                subtitle: this.decodeHTMLEntity(subtitle)
+                subtitle: this.decodeHTMLEntity(subtitle),
             }));
         }
-
+    
         return results;
     }
 
     override async parseViewMore($: CheerioAPI, source: any): Promise<PartialSourceManga[]> {
         const items: PartialSourceManga[] = [];
-
+    
         for (const manga of $('div.list-update_item', 'div.list-update_items-wrapper').toArray()) {
             const title = $('h3.title', manga).text().trim();
             const image = this.getImageSrc($('img', manga)) ?? '';
             const subtitle = $('div.chapter', manga).text().trim();
-
+    
             const slug: string = this.idCleaner($('a', manga).attr('href') ?? '');
             const path: string = ($('a', manga).attr('href') ?? '').replace(/\/$/, '').split('/').slice(-2).shift() ?? '';
             const postId = $('a', manga).attr('rel');
             const mangaId: string = await source.getUsePostIds() ? (isNaN(Number(postId)) ? await source.slugToPostId(slug, path) : postId) : slug;
-
+    
             if (!mangaId || !title) {
                 console.log(`Failed to parse homepage sections for ${source.baseUrl}`);
                 continue;
             }
-
+    
             items.push(App.createPartialSourceManga({
                 mangaId,
                 image: image,
@@ -157,7 +158,7 @@ export class KomikcastParser extends MangaStreamParser {
                 subtitle: this.decodeHTMLEntity(subtitle)
             }));
         }
-
+    
         return items;
     }
 
