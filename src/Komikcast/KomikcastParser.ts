@@ -107,44 +107,29 @@ export class KomikcastParser extends MangaStreamParser {
             prevChapter: prevChapter ? this.idCleaner(prevChapter) : undefined
         })
     }
+
     override async parseSearchResults($: CheerioAPI, source: any): Promise<PartialSourceManga[]> {
         const results: PartialSourceManga[] = [];
     
         for (const obj of $('div.list-update_item', 'div.list-update_items-wrapper').toArray()) {
-            const $link = $('a', obj);
-            const href = $link.attr('href') ?? '';
-            
-            // Extract slug and path from href
-            const slug = this.idCleaner(href);
-            const path = href.replace(/\/$/, '').split('/').slice(-2).shift() ?? '';
-            
-            if (!slug || !path) {
-                console.log(`Skipping item due to invalid slug (${slug}) or path (${path})`);
-                continue; // Skip instead of throwing error
-            }
+            const title = $('h3.title', obj).text().trim()
+            const image = this.getImageSrc($('img', obj)) ?? ''
+            const subtitle = $('div.chapter', obj).text().trim()
+            const slug = this.idCleaner($('a', obj).attr('href') ?? '')
+            const path = ($('a', obj).attr('href') ?? '').replace(/\/$/, '').split('/').slice(-2).shift() ?? ''
     
-            const title: string = $('h3.title', obj).text().trim();
-            const image = this.getImageSrc($('img', obj)) ?? '';
-            const subtitle = $('div.chapter', obj).text().trim();
+            if (!slug || !path) continue
     
-            // Extract tags
-            const tags: string[] = [];
-            $('.genre-item', obj).each((_, el) => {
-                const tag = $(el).text().trim();
-                if (tag) tags.push(tag);
-            });
-    
-            results.push(App.createPartialSourceManga({
-                mangaId: slug,
+            results.push({
+                slug,
                 path,
-                image: image || source.fallbackImage,
+                image,
                 title: this.decodeHTMLEntity(title),
-                subtitle: this.decodeHTMLEntity(subtitle),
-                tags: tags
-            }));
+                subtitle: this.decodeHTMLEntity(subtitle)
+            })
         }
     
-        return results;
+        return results
     }
 
     override async parseViewMore($: CheerioAPI, source: any): Promise<PartialSourceManga[]> {
