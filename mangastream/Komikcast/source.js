@@ -15550,7 +15550,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
     async parseSearchResults($2, source) {
       const results = [];
       for (const obj of $2("div.list-update_item", "div.list-update_items-wrapper").toArray()) {
-        const slug = ($2("a", obj).attr("href") ?? "").replace(/\/$/, "").split("/").pop() ?? "";
+        const slug = this.idCleaner($2("a", obj).attr("href") ?? "");
         const path = ($2("a", obj).attr("href") ?? "").replace(/\/$/, "").split("/").slice(-2).shift() ?? "";
         if (!slug || !path) {
           throw new Error(`Unable to parse slug (${slug}) or path (${path})!`);
@@ -15560,6 +15560,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
         const subtitle = $2("div.chapter", obj).text().trim();
         results.push(App.createPartialSourceManga({
           mangaId: slug,
+          path,
           image: image || source.fallbackImage,
           title: this.decodeHTMLEntity(title),
           subtitle: this.decodeHTMLEntity(subtitle)
@@ -15626,7 +15627,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
   // src/Komikcast/Komikcast.ts
   var DOMAIN = "https://komikcast02.com";
   var KomikcastInfo = {
-    version: getExportVersion("0.2.0"),
+    version: getExportVersion("0.2.1"),
     name: "Komikcast",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",
@@ -15712,14 +15713,20 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
       const manga = [];
       for (const result of results) {
         let mangaId = result.slug;
+        if (!mangaId) {
+          throw new Error("Invalid mangaId from parser");
+        }
         if (await this.getUsePostIds()) {
           mangaId = await this.slugToPostId(result.slug, result.path);
         }
         manga.push(App.createPartialSourceManga({
           mangaId,
-          image: result.image,
-          title: result.title,
-          subtitle: result.subtitle
+          image: result.image ?? "",
+          title: result.title ?? "Untitled",
+          subtitle: result.subtitle ?? "",
+          tags: result.tags?.map(
+            (tag) => App.createTag({ id: tag, label: tag })
+          ) ?? []
         }));
       }
       metadata = !this.parser.isLastPage($2, "view_more") ? { page: page + 1 } : void 0;
