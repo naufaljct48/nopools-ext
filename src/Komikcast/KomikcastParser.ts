@@ -111,22 +111,36 @@ export class KomikcastParser extends MangaStreamParser {
         const results: PartialSourceManga[] = [];
     
         for (const obj of $('div.list-update_item', 'div.list-update_items-wrapper').toArray()) {
-            const slug = this.idCleaner($('a', obj).attr('href') ?? '')
-            const path = ($('a', obj).attr('href') ?? '').replace(/\/$/, '').split('/').slice(-2).shift() ?? ''
+            const $link = $('a', obj);
+            const href = $link.attr('href') ?? '';
+            
+            // Extract slug and path from href
+            const slug = this.idCleaner(href);
+            const path = href.replace(/\/$/, '').split('/').slice(-2).shift() ?? '';
+            
             if (!slug || !path) {
-                throw new Error(`Unable to parse slug (${slug}) or path (${path})!`);
+                console.log(`Skipping item due to invalid slug (${slug}) or path (${path})`);
+                continue; // Skip instead of throwing error
             }
     
             const title: string = $('h3.title', obj).text().trim();
             const image = this.getImageSrc($('img', obj)) ?? '';
             const subtitle = $('div.chapter', obj).text().trim();
-
+    
+            // Extract tags
+            const tags: string[] = [];
+            $('.genre-item', obj).each((_, el) => {
+                const tag = $(el).text().trim();
+                if (tag) tags.push(tag);
+            });
+    
             results.push(App.createPartialSourceManga({
                 mangaId: slug,
                 path,
                 image: image || source.fallbackImage,
                 title: this.decodeHTMLEntity(title),
                 subtitle: this.decodeHTMLEntity(subtitle),
+                tags: tags
             }));
         }
     
