@@ -15550,20 +15550,29 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
     async parseSearchResults($2, source) {
       const results = [];
       for (const obj of $2("div.list-update_item", "div.list-update_items-wrapper").toArray()) {
-        const slug = this.idCleaner($2("a", obj).attr("href") ?? "");
-        const path = ($2("a", obj).attr("href") ?? "").replace(/\/$/, "").split("/").slice(-2).shift() ?? "";
+        const $link = $2("a", obj);
+        const href = $link.attr("href") ?? "";
+        const slug = this.idCleaner(href);
+        const path = href.replace(/\/$/, "").split("/").slice(-2).shift() ?? "";
         if (!slug || !path) {
-          throw new Error(`Unable to parse slug (${slug}) or path (${path})!`);
+          console.log(`Skipping item due to invalid slug (${slug}) or path (${path})`);
+          continue;
         }
         const title = $2("h3.title", obj).text().trim();
         const image = this.getImageSrc($2("img", obj)) ?? "";
         const subtitle = $2("div.chapter", obj).text().trim();
+        const tags = [];
+        $2(".genre-item", obj).each((_, el) => {
+          const tag = $2(el).text().trim();
+          if (tag) tags.push(tag);
+        });
         results.push(App.createPartialSourceManga({
           mangaId: slug,
           path,
           image: image || source.fallbackImage,
           title: this.decodeHTMLEntity(title),
-          subtitle: this.decodeHTMLEntity(subtitle)
+          subtitle: this.decodeHTMLEntity(subtitle),
+          tags
         }));
       }
       return results;
@@ -15627,7 +15636,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
   // src/Komikcast/Komikcast.ts
   var DOMAIN = "https://komikcast02.com";
   var KomikcastInfo = {
-    version: getExportVersion("0.2.1"),
+    version: getExportVersion("0.2.2"),
     name: "Komikcast",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",
