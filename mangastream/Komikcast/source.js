@@ -15510,12 +15510,22 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
       for (const chapter of $2(".komik_info-chapters-item").toArray()) {
         const $chapter = $2(chapter);
         const title = $2("a.chapter-link-item", $chapter).text().trim();
-        const chapNum = Number(title.match(/Chapter\s+(\d+)/i)?.[1] ?? -1);
+        let chapNum = -1;
+        const chapMatch = title.match(/Chapter\s+(\d+)(?:\.(\d+))?/i);
+        if (chapMatch) {
+          if (chapMatch[2]) {
+            chapNum = Number(`${chapMatch[1]}.${chapMatch[2]}`);
+          } else {
+            chapNum = Number(chapMatch[1]);
+          }
+        }
         const date = $2(".chapter-link-time", $chapter).text().trim();
         const id = this.idCleaner($2("a.chapter-link-item", $chapter).attr("href") ?? "");
         if (!id) continue;
         chapters.push(App.createChapter({
           id,
+          langCode: "\u{1F1EE}\u{1F1E9}",
+          // Set Indonesian language code
           mangaId,
           name: title,
           chapNum,
@@ -15634,7 +15644,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
   // src/Komikcast/Komikcast.ts
   var DOMAIN = "https://komikcast02.com";
   var KomikcastInfo = {
-    version: getExportVersion("0.2.4"),
+    version: getExportVersion("0.2.5"),
     name: "Komikcast",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",
