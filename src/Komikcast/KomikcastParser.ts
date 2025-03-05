@@ -63,28 +63,37 @@ export class KomikcastParser extends MangaStreamParser {
         for (const chapter of $('.komik_info-chapters-item').toArray()) {
             const $chapter = $(chapter)
             const title = $('a.chapter-link-item', $chapter).text().trim()
-            const chapNum = Number(title.match(/Chapter\s+(\d+)/i)?.[1] ?? -1)
-            const date = $('.chapter-link-time', $chapter).text().trim()
-            const id = this.idCleaner($('a.chapter-link-item', $chapter).attr('href') ?? '')
             
-            if (!id) continue
-        
-            chapters.push(App.createChapter({
-                id: id,
-                mangaId: mangaId,
-                name: title,
-                chapNum: chapNum,
-                time: source.convertTime(date),
-            }))
-        }
-    
-        return chapters.map(chapter => {
-            if (typeof chapter.chapNum !== 'number') {
-                chapter.chapNum = -1
+            let chapNum = -1
+            const chapMatch = title.match(/Chapter\s+(\d+)(?:\.(\d+))?/i)
+            if (chapMatch) {
+                if (chapMatch[2]) {
+                    chapNum = Number(`${chapMatch[1]}.${chapMatch[2]}`)
+                } else {
+                    chapNum = Number(chapMatch[1])
+                }
             }
-            return chapter
-        })
+        const date = $('.chapter-link-time', $chapter).text().trim()
+        const id = this.idCleaner($('a.chapter-link-item', $chapter).attr('href') ?? '')
+        
+        if (!id) continue
+    
+        chapters.push(App.createChapter({
+            id: id,
+            langCode: '🇮🇩', // Set Indonesian language code
+            mangaId: mangaId,
+            name: title,
+            chapNum: chapNum,
+            time: source.convertTime(date),
+        }))
     }
+    return chapters.map(chapter => {
+        if (typeof chapter.chapNum !== 'number') {
+            chapter.chapNum = -1
+        }
+        return chapter
+    })
+}
     override parseChapterDetails($: CheerioAPI, mangaId: string, chapterId: string): ChapterDetails {
         const pages: string[] = []
         
