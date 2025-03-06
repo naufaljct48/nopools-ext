@@ -20,7 +20,7 @@ import { KomikuIdParser } from './KomikuIdParser'
 const DOMAIN = 'https://komiku.id'
 
 export const KomikuIdInfo: SourceInfo = {
-    version: getExportVersion('0.0.1'),
+    version: getExportVersion('0.0.2'),
     name: 'Komiku.id',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -69,6 +69,45 @@ export class KomikuId extends Source {
         this.homescreen_sections['new_titles'].enabled = false
         this.homescreen_sections['top_monthly'].enabled = false
         this.homescreen_sections['top_weekly'].enabled = false
+    }
+
+    override async getChapterDetails(mangaId: string, chapterId: string): Promise<ChapterDetails> {
+        const request = App.createRequest({
+            url: `${this.baseUrl}/${chapterId}/`,
+            method: 'GET'
+        })
+    
+        const response = await this.requestManager.schedule(request, 1)
+        this.checkResponseError(response)
+        const $ = cheerioLoad(response.data as string)
+        
+        return this.parser.parseChapterDetails($, mangaId, chapterId)
+    }
+    
+    override async constructSearchRequest(page: number, query: SearchRequest): Promise<Request> {
+        if (query?.title) {
+            return App.createRequest({
+                url: `${this.baseUrl}/?post_type=manga&s=${encodeURIComponent(query.title)}`,
+                method: 'GET'
+            })
+        }
+    
+        const params = new URLSearchParams({
+            orderby: getIncludedTagBySection('Order by', query?.includedTags) ?? 'modified',
+            category_name: getIncludedTagBySection('Types', query?.includedTags) ?? '',
+            genre: getIncludedTagBySection('Genres', query?.includedTags) ?? '',
+            genre2: '',
+            status: getIncludedTagBySection('Status', query?.includedTags) ?? ''
+        })
+    
+        const url = page === 1 
+            ? `${this.baseUrl}/pustaka/?${params.toString()}`
+            : `https://api.komiku.id/manga/page/${page}/?${params.toString()}`
+    
+        return App.createRequest({
+            url: url,
+            method: 'GET'
+        })
     }
 
     override async getSearchTags(): Promise<TagSection[]> {
