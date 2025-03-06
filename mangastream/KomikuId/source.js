@@ -14557,7 +14557,7 @@ var _Sources = (() => {
   // src/KomikuId/KomikuId.ts
   var DOMAIN = "https://komiku.id";
   var KomikuIdInfo = {
-    version: getExportVersion("0.0.1"),
+    version: getExportVersion("0.0.2"),
     name: "Komiku.id",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",
@@ -14600,6 +14600,36 @@ var _Sources = (() => {
       this.homescreen_sections["new_titles"].enabled = false;
       this.homescreen_sections["top_monthly"].enabled = false;
       this.homescreen_sections["top_weekly"].enabled = false;
+    }
+    async getChapterDetails(mangaId, chapterId) {
+      const request = App.createRequest({
+        url: `${this.baseUrl}/${chapterId}/`,
+        method: "GET"
+      });
+      const response = await this.requestManager.schedule(request, 1);
+      this.checkResponseError(response);
+      const $2 = load(response.data);
+      return this.parser.parseChapterDetails($2, mangaId, chapterId);
+    }
+    async constructSearchRequest(page, query) {
+      if (query?.title) {
+        return App.createRequest({
+          url: `${this.baseUrl}/?post_type=manga&s=${encodeURIComponent(query.title)}`,
+          method: "GET"
+        });
+      }
+      const params = new URLSearchParams({
+        orderby: getIncludedTagBySection("Order by", query?.includedTags) ?? "modified",
+        category_name: getIncludedTagBySection("Types", query?.includedTags) ?? "",
+        genre: getIncludedTagBySection("Genres", query?.includedTags) ?? "",
+        genre2: "",
+        status: getIncludedTagBySection("Status", query?.includedTags) ?? ""
+      });
+      const url = page === 1 ? `${this.baseUrl}/pustaka/?${params.toString()}` : `https://api.komiku.id/manga/page/${page}/?${params.toString()}`;
+      return App.createRequest({
+        url,
+        method: "GET"
+      });
     }
     async getSearchTags() {
       const request = App.createRequest({
