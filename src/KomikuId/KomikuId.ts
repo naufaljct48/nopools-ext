@@ -14,13 +14,14 @@ import {
     load as cheerioLoad,
     CheerioAPI,
 } from 'cheerio'
+import { MangaStream } from '../MangaStream'
 import { getExportVersion } from '../MangaStream'
 import { KomikuIdParser } from './KomikuIdParser'
 
 const DOMAIN = 'https://komiku.id'
 
 export const KomikuIdInfo: SourceInfo = {
-    version: getExportVersion('0.0.2'),
+    version: getExportVersion('0.0.3'),
     name: 'Komiku.id',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -37,9 +38,11 @@ export const KomikuIdInfo: SourceInfo = {
     ]
 }
 
-export class KomikuId extends Source {
+export class KomikuId extends MangaStream {
     baseUrl: string = DOMAIN
-    parser = new KomikuIdParser()
+    override directoryPath = 'manga'
+    override usePostIds = false
+    override parser = new KomikuIdParser()
 
     override configureSections(): void {
         // Configure latest updates section

@@ -1,12 +1,8 @@
-import { 
-    Tag,
-    TagSection,
-    Chapter,
-    ChapterDetails
-} from '@paperback/types'
+import { MangaStreamParser } from '../MangaStreamParser'
+import { ChapterDetails, Tag, TagSection, SourceManga } from '@paperback/types'
 import { CheerioAPI } from 'cheerio'
 
-export class KomikuIdParser extends Parser {
+export class KomikuIdParser extends MangaStreamParser {
     override parseTags($: CheerioAPI): TagSection[] {
         const sections: TagSection[] = []
 
