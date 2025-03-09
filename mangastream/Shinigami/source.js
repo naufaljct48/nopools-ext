@@ -14472,7 +14472,7 @@ var _Sources = (() => {
   var CDN_DOMAIN = "https://storage.shngm.id";
   var API_BASE_PATH = "v1";
   var ShinigamiInfo = {
-    version: getExportVersion("0.0.7"),
+    version: getExportVersion("0.0.8"),
     name: "Shinigami",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",
@@ -14519,7 +14519,7 @@ var _Sources = (() => {
         App.createHomeSection({
           id: "popular",
           title: "Popular",
-          type: import_types4.HomeSectionType.singleRowNormal,
+          type: import_types4.HomeSectionType.featured,
           containsMoreItems: true
         }),
         App.createHomeSection({
@@ -14531,10 +14531,12 @@ var _Sources = (() => {
       ];
       try {
         const promises = sections.map(async (section) => {
+          const sortParam = section.id === "popular" ? "view_count" : "updated_at";
+          const orderParam = "desc";
           const request = App.createRequest({
             url: `${API_DOMAIN}/${API_BASE_PATH}/manga/list`,
             method: "GET",
-            param: `?page=1&page_size=30&sort=${section.id === "popular" ? "popularity" : "latest"}`
+            param: `?page=1&page_size=30&sort=${sortParam}&order=${orderParam}`
           });
           const response = await this.requestManager.schedule(request, 1);
           const result = JSON.parse(response.data);
@@ -14543,7 +14545,7 @@ var _Sources = (() => {
               mangaId: item.manga_id ?? "",
               image: item.cover_image_url ?? item.cover_portrait_url ?? "",
               title: item.title ?? "",
-              subtitle: item.alternative_title ?? ""
+              subtitle: `Views: ${item.view_count?.toLocaleString() ?? 0}`
             }));
           }
           return section;
