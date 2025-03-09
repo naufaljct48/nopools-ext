@@ -15,7 +15,7 @@ import {
     HomeSectionType
 } from '@paperback/types'
 
-import { getExportVersion } from '../MangaStream'
+import { MangaStream } from '../MangaStream'
 import { 
     ShinigamiBrowseResponse,
     ShinigamiMangaDetailResponse,
@@ -29,7 +29,7 @@ const CDN_DOMAIN = 'https://storage.shngm.id'
 const API_BASE_PATH = 'v1'
 
 export const ShinigamiInfo: SourceInfo = {
-    version: getExportVersion('0.0.8'),
+    version: getExportVersion('0.0.9'),
     name: 'Shinigami',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -46,20 +46,28 @@ export const ShinigamiInfo: SourceInfo = {
     ]
 }
 
-export class Shinigami {
+export class Shinigami extends MangaStream {
+    baseUrl = DOMAIN
+    language = '🇮🇩'
+    
     constructor() {
+        super()
         this.requestManager = App.createRequestManager({
             requestsPerSecond: 5,
             requestTimeout: 15000,
             interceptor: {
                 interceptRequest: async (request: Request): Promise<Request> => {
+                    const isImageRequest = request.url.includes(CDN_DOMAIN) || request.url.includes('resize')
+
                     request.headers = {
                         ...(request.headers ?? {}),
-                        'Accept': 'application/json',
                         'DNT': '1',
                         'Origin': DOMAIN,
                         'Sec-GPC': '1',
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                        'Accept': isImageRequest 
+                            ? 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
+                            : 'application/json'
                     }
                     return request
                 },
@@ -73,7 +81,7 @@ export class Shinigami {
         })
     }
 
-    async getHomePageSections(): Promise<HomeSection[]> {
+    override async getHomePageSections(): Promise<HomeSection[]> {
         const sections: HomeSection[] = [
             App.createHomeSection({
                 id: 'popular',
@@ -123,7 +131,7 @@ export class Shinigami {
         }
     }
 
-    async getMangaDetails(mangaId: string): Promise<SourceManga> {
+    override async getMangaDetails(mangaId: string): Promise<SourceManga> {
         const request = App.createRequest({
             url: `${API_DOMAIN}/${API_BASE_PATH}/manga/detail/${mangaId}`,
             method: 'GET'
@@ -157,7 +165,7 @@ export class Shinigami {
         })
     }
 
-    async getChapters(mangaId: string): Promise<Chapter[]> {
+    override async getChapters(mangaId: string): Promise<Chapter[]> {
         const request = App.createRequest({
             url: `${API_DOMAIN}/${API_BASE_PATH}/chapter/${mangaId}/list?page_size=5000`,
             method: 'GET'
@@ -178,7 +186,7 @@ export class Shinigami {
         })
     }
 
-    async getChapterDetails(mangaId: string, chapterId: string): Promise<ChapterDetails> {
+    override async getChapterDetails(mangaId: string, chapterId: string): Promise<ChapterDetails> {
         const request = App.createRequest({
             url: `${API_DOMAIN}/${API_BASE_PATH}/chapter/detail/${chapterId}`,
             method: 'GET'
@@ -202,7 +210,7 @@ export class Shinigami {
         })
     }
 
-    async getSearchResults(query: string, metadata: any): Promise<PartialSourceManga[]> {
+    override async getSearchResults(query: string, metadata: any): Promise<PartialSourceManga[]> {
         const page = metadata?.page ?? 1
         const request = App.createRequest({
             url: `${API_DOMAIN}/${API_BASE_PATH}/manga/list`,
@@ -214,36 +222,39 @@ export class Shinigami {
         const result = JSON.parse(response.data as string) as ShinigamiBrowseResponse
 
         const manga = result.data.map(item => App.createPartialSourceManga({
-            mangaId: item.mangaId,
-            image: item.thumbnail,
-            title: item.title,
+            mangaId: item.manga_id ?? '',
+            image: item.cover_image_url ?? item.cover_portrait_url ?? '',
+            title: item.title ?? ''
         }))
 
-        metadata = result.meta.page < result.meta.totalPage ? { page: page + 1 } : undefined
+        metadata = result.meta.page < result.meta.total_page ? { page: page + 1 } : undefined
         return App.createPagedResults({
             results: manga,
             metadata
         })
     }
 
-    async getViewMoreItems(homepageSectionId: string, metadata: any): Promise<PartialSourceManga[]> {
+    override async getViewMoreItems(homepageSectionId: string, metadata: any): Promise<PartialSourceManga[]> {
         const page = metadata?.page ?? 1
+        const sortParam = homepageSectionId === 'popular' ? 'view_count' : 'updated_at'
+        const orderParam = 'desc'
+
         const request = App.createRequest({
             url: `${API_DOMAIN}/${API_BASE_PATH}/manga/list`,
             method: 'GET',
-            param: `?page=${page}&page_size=30&sort=${homepageSectionId === 'popular' ? 'popularity' : 'latest'}`
+            param: `?page=${page}&page_size=30&sort=${sortParam}&order=${orderParam}`
         })
 
         const response = await this.requestManager.schedule(request, 1)
         const result = JSON.parse(response.data as string) as ShinigamiBrowseResponse
 
         const manga = result.data.map(item => App.createPartialSourceManga({
-            mangaId: item.mangaId,
-            image: item.thumbnail,
-            title: item.title,
+            mangaId: item.manga_id ?? '',
+            image: item.cover_image_url ?? item.cover_portrait_url ?? '',
+            title: item.title ?? ''
         }))
 
-        metadata = result.meta.page < result.meta.totalPage ? { page: page + 1 } : undefined
+        metadata = result.meta.page < result.meta.total_page ? { page: page + 1 } : undefined
         return App.createPagedResults({
             results: manga,
             metadata
