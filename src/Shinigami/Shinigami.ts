@@ -29,7 +29,7 @@ const CDN_DOMAIN = 'https://storage.shngm.id'
 const API_BASE_PATH = 'v1'
 
 export const ShinigamiInfo: SourceInfo = {
-    version: getExportVersion('0.0.7'),
+    version: getExportVersion('0.0.8'),
     name: 'Shinigami',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -73,12 +73,12 @@ export class Shinigami {
         })
     }
 
-        async getHomePageSections(): Promise<HomeSection[]> {
+    async getHomePageSections(): Promise<HomeSection[]> {
         const sections: HomeSection[] = [
             App.createHomeSection({
                 id: 'popular',
                 title: 'Popular',
-                type: HomeSectionType.singleRowNormal,
+                type: HomeSectionType.featured,
                 containsMoreItems: true
             }),
             App.createHomeSection({
@@ -91,10 +91,13 @@ export class Shinigami {
 
         try {
             const promises = sections.map(async (section) => {
+                const sortParam = section.id === 'popular' ? 'view_count' : 'updated_at'
+                const orderParam = 'desc'
+
                 const request = App.createRequest({
                     url: `${API_DOMAIN}/${API_BASE_PATH}/manga/list`,
                     method: 'GET',
-                    param: `?page=1&page_size=30&sort=${section.id === 'popular' ? 'popularity' : 'latest'}`
+                    param: `?page=1&page_size=30&sort=${sortParam}&order=${orderParam}`
                 })
 
                 const response = await this.requestManager.schedule(request, 1)
@@ -105,7 +108,7 @@ export class Shinigami {
                         mangaId: item.manga_id ?? '',
                         image: item.cover_image_url ?? item.cover_portrait_url ?? '',
                         title: item.title ?? '',
-                        subtitle: item.alternative_title ?? ''
+                        subtitle: `Views: ${item.view_count?.toLocaleString() ?? 0}`
                     }))
                 }
 
