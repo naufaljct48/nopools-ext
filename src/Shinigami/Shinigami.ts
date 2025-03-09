@@ -2,18 +2,34 @@ import {
     BadgeColor,
     ContentRating,
     SourceInfo,
-    SourceIntents
+    SourceIntents,
+    Request,
+    Response,
+    Tag,
+    TagSection,
+    PartialSourceManga,
+    SourceManga,
+    Chapter,
+    ChapterDetails,
+    HomeSection,
+    HomeSectionType,
+    PagedResults
 } from '@paperback/types'
-import { MangaStream } from '../MangaStream'
-import { ShinigamiParser } from './ShinigamiParser'
-import { getExportVersion } from '../MangaStream'
+
+import {
+    ShinigamiBrowseResponse,
+    ShinigamiMangaDetailResponse,
+    ShinigamiChapterListResponse,
+    ShinigamiPageListResponse
+} from './ShinigamiInterfaces'
 
 const DOMAIN = 'https://app.shinigami.asia'
 const API_DOMAIN = 'https://api.shngm.io'
+const CDN_DOMAIN = 'https://storage.shngm.id'
 const API_BASE_PATH = 'v1'
 
 export const ShinigamiInfo: SourceInfo = {
-    version: getExportVersion('0.0.2'),
+    version: '0.0.3',
     name: 'Shinigami',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -21,7 +37,7 @@ export const ShinigamiInfo: SourceInfo = {
     icon: 'icon.png',
     contentRating: ContentRating.MATURE,
     websiteBaseURL: DOMAIN,
-    intents: SourceIntents.MANGA_CHAPTERS | SourceIntents.HOMEPAGE_SECTIONS | SourceIntents.CLOUDFLARE_BYPASS_REQUIRED,
+    intents: SourceIntents.MANGA_CHAPTERS | SourceIntents.HOMEPAGE_SECTIONS,
     sourceTags: [
         {
             text: "Indonesia",
@@ -30,48 +46,189 @@ export const ShinigamiInfo: SourceInfo = {
     ]
 }
 
-export class Shinigami extends MangaStream {
-    baseUrl = DOMAIN
-    parser = new ShinigamiParser()
-
-    override async getRequest(url: string, method: string = 'GET', param?: string) {
-        const request = App.createRequest({
-            url: url + (param ?? ''),
-            method,
-            headers: {
-                'Accept': 'application/json',
-                'DNT': '1',
-                'Origin': DOMAIN,
-                'Sec-GPC': '1'
+export class Shinigami {
+    constructor() {
+        this.requestManager = App.createRequestManager({
+            requestsPerSecond: 4,
+            requestTimeout: 20000,
+            interceptor: {
+                interceptRequest: async (request: Request): Promise<Request> => {
+                    request.headers = {
+                        ...(request.headers ?? {}),
+                        'Accept': 'application/json',
+                        'DNT': '1',
+                        'Origin': DOMAIN,
+                        'Sec-GPC': '1'
+                    }
+                    return request
+                }
             }
         })
-        
-        const response = await this.requestManager.schedule(request, 1)
-        const $ = this.cheerio.load(response.data as string)
-        return $
     }
 
-    override configureSections(): void {
-        this.homescreen_sections.popular_today.section = App.createHomeSection({
-            id: 'popular',
-            title: 'Popular',
-            containsMoreItems: true
-        })
-        this.homescreen_sections.popular_today.getViewMoreItemsFunc = (page: string) => 
-            `${API_DOMAIN}/${API_BASE_PATH}/manga/list?page=${page}&page_size=30&sort=popularity`
+    requestManager: any
 
-        this.homescreen_sections.latest_update.section = App.createHomeSection({
-            id: 'latest',
-            title: 'Latest Updates',
-            containsMoreItems: true
-        })
-        this.homescreen_sections.latest_update.getViewMoreItemsFunc = (page: string) => 
-            `${API_DOMAIN}/${API_BASE_PATH}/manga/list?page=${page}&page_size=30&sort=latest`
+    async getHomePageSections(): Promise<HomeSection[]> {
+        const sections = [
+            {
+                id: 'popular',
+                title: 'Popular',
+                view_more: true,
+            },
+            {
+                id: 'latest',
+                title: 'Latest Updates',
+                view_more: true,
+            }
+        ]
 
-        // Disable unused sections
-        this.homescreen_sections.new_titles.enabled = false
-        this.homescreen_sections.top_alltime.enabled = false
-        this.homescreen_sections.top_monthly.enabled = false
-        this.homescreen_sections.top_weekly.enabled = false
+        const promises = sections.map(async (section) => {
+            const request = App.createRequest({
+                url: `${API_DOMAIN}/${API_BASE_PATH}/manga/list`,
+                method: 'GET',
+                param: `?page=1&page_size=30&sort=${section.id === 'popular' ? 'popularity' : 'latest'}`
+            })
+
+            const response = await this.requestManager.schedule(request, 1)
+            const result = JSON.parse(response.data as string) as ShinigamiBrowseResponse
+
+            return App.createHomeSection({
+                id: section.id,
+                title: section.title,
+                type: HomeSectionType.singleRowNormal,
+                view_more: section.view_more,
+                items: result.data.map(item => App.createPartialSourceManga({
+                    mangaId: item.mangaId.toString(),
+                    image: item.thumbnail,
+                    title: item.title,
+                }))
+            })
+        })
+
+        return Promise.all(promises)
+    }
+
+    async getMangaDetails(mangaId: string): Promise<SourceManga> {
+        const request = App.createRequest({
+            url: `${API_DOMAIN}/${API_BASE_PATH}/manga/detail/${mangaId}`,
+            method: 'GET'
+        })
+
+        const response = await this.requestManager.schedule(request, 1)
+        const result = JSON.parse(response.data as string) as ShinigamiMangaDetailResponse
+        const data = result.data
+
+        const tags: Tag[] = []
+        if (data.taxonomy.Genre) {
+            data.taxonomy.Genre.forEach(genre => {
+                tags.push(App.createTag({ id: genre.name, label: genre.name }))
+            })
+        }
+
+        return App.createSourceManga({
+            id: mangaId,
+            mangaInfo: App.createMangaInfo({
+                titles: [data.title ?? ''],
+                image: data.thumbnail ?? '',
+                status: data.status === 1 ? 'Ongoing' : 'Completed',
+                author: data.taxonomy.Author?.map(x => x.name).join(', ') ?? 'Unknown',
+                artist: data.taxonomy.Artist?.map(x => x.name).join(', ') ?? 'Unknown',
+                tags: [App.createTagSection({ id: '0', label: 'genres', tags: tags })],
+                desc: data.description ?? ''
+            })
+        })
+    }
+
+    async getChapters(mangaId: string): Promise<Chapter[]> {
+        const request = App.createRequest({
+            url: `${API_DOMAIN}/${API_BASE_PATH}/chapter/${mangaId}/list?page_size=5000`,
+            method: 'GET'
+        })
+
+        const response = await this.requestManager.schedule(request, 1)
+        const result = JSON.parse(response.data as string) as ShinigamiChapterListResponse
+
+        return result.chapterList.map(chapter => {
+            return App.createChapter({
+                id: chapter.chapterId,
+                mangaId: mangaId,
+                name: `Chapter ${chapter.name.toString().replace('.0', '')} ${chapter.title}`,
+                langCode: '🇮🇩',
+                chapNum: Number(chapter.name),
+                time: new Date(chapter.date).getTime()
+            })
+        })
+    }
+
+    async getChapterDetails(mangaId: string, chapterId: string): Promise<ChapterDetails> {
+        const request = App.createRequest({
+            url: `${API_DOMAIN}/${API_BASE_PATH}/chapter/detail/${chapterId}`,
+            method: 'GET'
+        })
+
+        const response = await this.requestManager.schedule(request, 1)
+        const result = JSON.parse(response.data as string) as ShinigamiPageListResponse
+
+        const pages = result.pageList.chapterPage.pages
+            .filter(page => !page.startsWith('999-'))
+            .map(page => {
+                const originalUrl = `${CDN_DOMAIN}${result.pageList.chapterPage.path}${page}`
+                return `https://resize${originalUrl}`
+            })
+
+        return App.createChapterDetails({
+            id: chapterId,
+            mangaId: mangaId,
+            pages: pages,
+            longStrip: false
+        })
+    }
+
+    async getViewMoreItems(homepageSectionId: string, metadata: any): Promise<PagedResults> {
+        const page = metadata?.page ?? 1
+        const request = App.createRequest({
+            url: `${API_DOMAIN}/${API_BASE_PATH}/manga/list`,
+            method: 'GET',
+            param: `?page=${page}&page_size=30&sort=${homepageSectionId === 'popular' ? 'popularity' : 'latest'}`
+        })
+
+        const response = await this.requestManager.schedule(request, 1)
+        const result = JSON.parse(response.data as string) as ShinigamiBrowseResponse
+
+        const manga = result.data.map(item => App.createPartialSourceManga({
+            mangaId: item.mangaId.toString(),
+            image: item.thumbnail,
+            title: item.title,
+        }))
+
+        metadata = result.meta.page < result.meta.totalPage ? { page: page + 1 } : undefined
+        return App.createPagedResults({
+            results: manga,
+            metadata
+        })
+    }
+
+    async getSearchResults(query: string, metadata: any): Promise<PagedResults> {
+        const page = metadata?.page ?? 1
+        const request = App.createRequest({
+            url: `${API_DOMAIN}/${API_BASE_PATH}/manga/list`,
+            method: 'GET',
+            param: `?page=${page}&page_size=30${query ? `&q=${encodeURIComponent(query)}` : ''}`
+        })
+
+        const response = await this.requestManager.schedule(request, 1)
+        const result = JSON.parse(response.data as string) as ShinigamiBrowseResponse
+
+        const manga = result.data.map(item => App.createPartialSourceManga({
+            mangaId: item.mangaId.toString(),
+            image: item.thumbnail,
+            title: item.title,
+        }))
+
+        metadata = result.meta.page < result.meta.totalPage ? { page: page + 1 } : undefined
+        return App.createPagedResults({
+            results: manga,
+            metadata
+        })
     }
 }
