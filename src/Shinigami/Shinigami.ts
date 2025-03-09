@@ -29,7 +29,7 @@ const CDN_DOMAIN = 'https://storage.shngm.id'
 const API_BASE_PATH = 'v1'
 
 export const ShinigamiInfo: SourceInfo = {
-    version: getExportVersion('0.0.4'),
+    version: getExportVersion('0.0.5'),
     name: 'Shinigami',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -67,7 +67,7 @@ export class Shinigami {
         })
     }
 
-    async getHomePageSections(): Promise<HomeSection[]> {
+        async getHomePageSections(): Promise<HomeSection[]> {
         const sections: HomeSection[] = [
             App.createHomeSection({
                 id: 'popular',
@@ -94,8 +94,8 @@ export class Shinigami {
             const result = JSON.parse(response.data as string) as ShinigamiBrowseResponse
 
             section.items = result.data.map(item => App.createPartialSourceManga({
-                mangaId: item.mangaId.toString(),
-                image: item.thumbnail,
+                mangaId: item.manga_id,
+                image: item.cover_image_url ?? item.cover_portrait_url ?? '',
                 title: item.title,
             }))
 

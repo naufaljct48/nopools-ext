@@ -10,8 +10,20 @@ export interface ShinigamiBrowseData {
 }
 
 export interface ShinigamiBrowseResponse {
-    data: ShinigamiBrowseData[]
-    meta: ShinigamiMeta
+    retcode: number
+    message: string
+    meta: {
+        page: number
+        page_size: number
+        total_page: number
+        total_record: number
+    }
+    data: {
+        manga_id: string
+        title: string
+        cover_image_url: string
+        cover_portrait_url: string
+    }[]
 }
 
 export interface ShinigamiTaxonomy {
