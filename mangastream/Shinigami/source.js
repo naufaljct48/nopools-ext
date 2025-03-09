@@ -14472,7 +14472,7 @@ var _Sources = (() => {
   var CDN_DOMAIN = "https://storage.shngm.id";
   var API_BASE_PATH = "v1";
   var ShinigamiInfo = {
-    version: getExportVersion("0.0.5"),
+    version: getExportVersion("0.0.6"),
     name: "Shinigami",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",
@@ -14504,6 +14504,12 @@ var _Sources = (() => {
               "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
             };
             return request;
+          },
+          interceptResponse: async (response) => {
+            if (response.status === 404) {
+              throw new Error(`The requested page ${response.request.url} was not found!`);
+            }
+            return response;
           }
         }
       });
