@@ -14472,7 +14472,7 @@ var _Sources = (() => {
   var CDN_DOMAIN = "https://storage.shngm.id";
   var API_BASE_PATH = "v1";
   var ShinigamiInfo = {
-    version: getExportVersion("0.0.4"),
+    version: getExportVersion("0.0.5"),
     name: "Shinigami",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",
@@ -14532,8 +14532,8 @@ var _Sources = (() => {
         const response = await this.requestManager.schedule(request, 1);
         const result = JSON.parse(response.data);
         section.items = result.data.map((item) => App.createPartialSourceManga({
-          mangaId: item.mangaId.toString(),
-          image: item.thumbnail,
+          mangaId: item.manga_id,
+          image: item.cover_image_url ?? item.cover_portrait_url ?? "",
           title: item.title
         }));
         return section;
