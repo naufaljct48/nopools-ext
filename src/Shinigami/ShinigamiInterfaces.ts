@@ -21,8 +21,14 @@ export interface ShinigamiBrowseResponse {
     data: {
         manga_id: string
         title: string
+        alternative_title?: string
         cover_image_url: string
         cover_portrait_url: string
+        description?: string
+        status?: number
+        bookmark_count?: number
+        view_count?: number
+        user_rate?: number
     }[]
 }
 
