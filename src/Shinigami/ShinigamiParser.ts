@@ -45,12 +45,19 @@ export const parseChapterList = (data: any, mangaId: string) => {
     }))
 }
 
-export const parseChapterDetails = (data: any, mangaId: string, chapterId: string) => {
-    const chapter = data.data.chapter
+export const parseChapterDetails = (data: any, mangaId: string, chapterId: string): ChapterDetails => {
+    const chapterData = data.data
+    const chapter = chapterData.chapter
+    
+    const pages = chapter.data.map((page: string) => 
+        `${chapterData.base_url}${chapter.path}${page}`
+    )
+
     return App.createChapterDetails({
         id: chapterId,
         mangaId: mangaId,
-        pages: chapter.data.map((page: string) => `${CDN_URL}${chapter.path}${page}`)
+        pages: pages,
+        longStrip: false
     })
 }
 
