@@ -20,7 +20,7 @@ const CDN_URL = 'https://storage.shngm.id'
 const BASE_URL = 'https://app.shinigami.asia'
 
 export const ShinigamiInfo: SourceInfo = {
-    version: '1.1.1',
+    version: '1.1.2',
     name: 'Shinigami',
     icon: 'icon.png',
     author: 'NaufalJCT48',
@@ -154,5 +154,85 @@ export class Shinigami extends Source {
             section.section.items = parseMangaList(data)
             sectionCallback(section.section)
         }
+    }
+
+    async getSearchTags(): Promise<TagSection[]> {
+        const requests = [
+            {
+                request: createRequestObject({
+                    url: `${API_URL}/v1/genre/list`,
+                    method: 'GET'
+                }),
+                section: 'genres'
+            },
+            {
+                request: createRequestObject({
+                    url: `${API_URL}/v1/format/list`,
+                    method: 'GET'
+                }),
+                section: 'formats'
+            }
+        ]
+    
+        const tags: TagSection[] = []
+    
+        for (const req of requests) {
+            const response = await this.requestManager.schedule(req.request, 1)
+            const data = JSON.parse(response.data)
+    
+            if (data.retcode !== 0) continue
+    
+            tags.push(App.createTagSection({
+                id: req.section,
+                label: req.section.charAt(0).toUpperCase() + req.section.slice(1),
+                tags: data.data.map((item: any) => App.createTag({
+                    id: item.slug,
+                    label: item.name
+                }))
+            }))
+        }
+    
+        return tags
+    }
+
+    async getSearchResults(query: SearchRequest): Promise<PagedResults> {
+        const param = new URLSearchParams()
+        param.set('page', '1')
+        param.set('page_size', '24')
+        param.set('genre_include_mode', 'or')
+        param.set('genre_exclude_mode', 'or')
+        param.set('sort', 'popularity')
+        param.set('sort_order', 'desc')
+    
+        if (query.title) {
+            param.set('q', encodeURIComponent(query.title))
+        }
+    
+        if (query.includedTags?.length) {
+            const genres = query.includedTags.filter(tag => tag.id.includes('genres:')).map(tag => tag.id.split(':')[1])
+            const formats = query.includedTags.filter(tag => tag.id.includes('formats:')).map(tag => tag.id.split(':')[1])
+            
+            if (genres.length) param.set('genre', genres.join(','))
+            if (formats.length) param.set('format', formats.join(','))
+        }
+    
+        const request = createRequestObject({
+            url: `${API_URL}/v1/manga/list`,
+            param: `?${param.toString()}`,
+            method: 'GET'
+        })
+    
+        const response = await this.requestManager.schedule(request, 1)
+        const data = JSON.parse(response.data)
+    
+        if (data.retcode !== 0) {
+            return App.createPagedResults({
+                results: []
+            })
+        }
+    
+        return App.createPagedResults({
+            results: parseMangaList(data)
+        })
     }
 }
