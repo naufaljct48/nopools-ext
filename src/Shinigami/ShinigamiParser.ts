@@ -42,7 +42,7 @@ export const parseChapterList = (data: any, mangaId: string) => {
         chapNum: chapter.chapter_number,
         name: `Chapter ${chapter.chapter_number}`,
         time: new Date(chapter.release_date),
-        langCode: 'id'
+        langCode: '🇮🇩'
     }))
 }
 

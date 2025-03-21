@@ -62,7 +62,7 @@ export class KomikcastParser extends MangaStreamParser {
         
         for (const chapter of $('.komik_info-chapters-item').toArray()) {
             const $chapter = $(chapter)
-            const title = $('a.chapter-link-item', $chapter).text().trim()
+            const title = $('a.chapter-link-item', $chapter).text().trim().replace(/\s+/g, ' ')
             
             let chapNum = -1
             const chapMatch = title.match(/Chapter\s+(\d+)(?:\.(\d+))?/i)
@@ -123,7 +123,7 @@ export class KomikcastParser extends MangaStreamParser {
         for (const obj of $('div.list-update_item', 'div.list-update_items-wrapper').toArray()) {
             const title = $('h3.title', obj).text().trim()
             const image = this.getImageSrc($('img', obj)) ?? ''
-            const subtitle = $('div.chapter', obj).text().trim()
+            const subtitle = $('div.chapter', obj).text().trim().replace(/\s+/g, ' ')
             const slug = this.idCleaner($('a', obj).attr('href') ?? '')
             const path = ($('a', obj).attr('href') ?? '').replace(/\/$/, '').split('/').slice(-2).shift() ?? ''
     
