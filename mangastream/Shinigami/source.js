@@ -819,7 +819,7 @@ var _Sources = (() => {
   var API_URL = "https://api.shngm.io";
   var BASE_URL2 = "https://app.shinigami.asia";
   var ShinigamiInfo = {
-    version: "1.0.3",
+    version: "1.0.4",
     name: "Shinigami",
     icon: "icon.png",
     author: "NaufalJCT48",
