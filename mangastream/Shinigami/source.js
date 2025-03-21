@@ -802,7 +802,7 @@ var _Sources = (() => {
     const chapterData = data.data;
     const chapter = chapterData.chapter;
     const pages = chapter.data.map(
-      (page) => `${chapterData.base_url_low}${chapter.path}${page}`
+      (page) => `${chapterData.base_url}${chapter.path}${page}`
     );
     return App.createChapterDetails({
       id: chapterId,
@@ -824,7 +824,7 @@ var _Sources = (() => {
   var API_URL = "https://api.shngm.io";
   var BASE_URL2 = "https://app.shinigami.asia";
   var ShinigamiInfo = {
-    version: "1.1.0",
+    version: "1.1.1",
     name: "Shinigami",
     icon: "icon.png",
     author: "NaufalJCT48",
