@@ -637,13 +637,13 @@ var _Sources = (() => {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
       exports.HomeSectionType = void 0;
-      var HomeSectionType;
-      (function(HomeSectionType2) {
-        HomeSectionType2["singleRowNormal"] = "singleRowNormal";
-        HomeSectionType2["singleRowLarge"] = "singleRowLarge";
-        HomeSectionType2["doubleRow"] = "doubleRow";
-        HomeSectionType2["featured"] = "featured";
-      })(HomeSectionType = exports.HomeSectionType || (exports.HomeSectionType = {}));
+      var HomeSectionType2;
+      (function(HomeSectionType3) {
+        HomeSectionType3["singleRowNormal"] = "singleRowNormal";
+        HomeSectionType3["singleRowLarge"] = "singleRowLarge";
+        HomeSectionType3["doubleRow"] = "doubleRow";
+        HomeSectionType3["featured"] = "featured";
+      })(HomeSectionType2 = exports.HomeSectionType || (exports.HomeSectionType = {}));
     }
   });
 
@@ -728,18 +728,105 @@ var _Sources = (() => {
     ShinigamiInfo: () => ShinigamiInfo
   });
   var import_types = __toESM(require_lib());
-  var API_URL = "https://api.shngm.io";
-  var CDN_URL = "https://storage.shngm.id";
+
+  // src/Shinigami/ShinigamiHelper.ts
   var BASE_URL = "https://app.shinigami.asia";
+  var createRequestObject = (requestObj) => {
+    return App.createRequest({
+      ...requestObj,
+      headers: {
+        ...requestObj.headers ?? {},
+        "Accept": "application/json",
+        "Origin": BASE_URL,
+        "DNT": "1",
+        "Sec-GPC": "1"
+      }
+    });
+  };
+  var parseStatus = (status) => {
+    switch (status) {
+      case 1:
+        return "Ongoing";
+      case 2:
+        return "Completed";
+      default:
+        return "Unknown";
+    }
+  };
+  var getTaxonomyNames = (taxonomy, key) => {
+    return taxonomy[key]?.map((item) => item.name).join(", ") ?? "";
+  };
+  var parseTaxonomyTags = (taxonomy, key) => {
+    return (taxonomy[key] ?? []).map((item) => App.createTag({
+      id: item.id.toString(),
+      label: item.name
+    }));
+  };
+
+  // src/Shinigami/ShinigamiParser.ts
+  var parseMangaDetails = (data, mangaId) => {
+    const mangaInfo = data.data;
+    const taxonomy = mangaInfo.taxonomy;
+    const titles = [mangaInfo.title, mangaInfo.alternative_title].filter(Boolean);
+    const tags = parseTaxonomyTags(taxonomy, "Genre");
+    return App.createSourceManga({
+      id: mangaId,
+      mangaInfo: App.createMangaInfo({
+        titles,
+        image: mangaInfo.cover_portrait_url || mangaInfo.cover_image_url,
+        status: parseStatus(mangaInfo.status),
+        author: getTaxonomyNames(taxonomy, "Author"),
+        artist: getTaxonomyNames(taxonomy, "Artist"),
+        desc: mangaInfo.description,
+        tags: [
+          App.createTagSection({
+            id: "genres",
+            label: "Genres",
+            tags
+          })
+        ]
+      })
+    });
+  };
+  var parseChapterList = (data, mangaId) => {
+    return data.data.map((chapter) => App.createChapter({
+      id: chapter.chapter_id,
+      mangaId,
+      chapNum: chapter.chapter_number,
+      name: `Chapter ${chapter.chapter_number}`,
+      time: new Date(chapter.release_date),
+      langCode: "id"
+    }));
+  };
+  var parseChapterDetails = (data, mangaId, chapterId) => {
+    const chapter = data.data.chapter;
+    return App.createChapterDetails({
+      id: chapterId,
+      mangaId,
+      pages: chapter.data.map((page) => `${CDN_URL}${chapter.path}${page}`)
+    });
+  };
+  var parseMangaList = (data) => {
+    return data.data.map((item) => App.createPartialSourceManga({
+      id: item.manga_id.toString(),
+      image: item.cover_image_url ?? "",
+      title: item.title ?? "",
+      subtitle: `Latest: Chapter ${item.latest_chapter?.chapter_number ?? "N/A"}`
+    }));
+  };
+
+  // src/Shinigami/Shinigami.ts
+  var API_URL = "https://api.shngm.io";
+  var BASE_URL2 = "https://app.shinigami.asia";
   var ShinigamiInfo = {
-    version: "1.0.2",
+    version: "1.0.3",
     name: "Shinigami",
     icon: "icon.png",
     author: "NaufalJCT48",
     authorWebsite: "https://github.com/naufaljct48",
     description: "Extension that pulls manga from Shinigami",
     contentRating: import_types.ContentRating.EVERYONE,
-    websiteBaseURL: BASE_URL,
+    websiteBaseURL: BASE_URL2,
     sourceTags: [
       {
         text: "Indonesian",
@@ -753,136 +840,67 @@ var _Sources = (() => {
       super(...arguments);
       this.requestManager = App.createRequestManager({
         requestsPerSecond: 4,
-        requestTimeout: 15e3,
-        interceptor: {
-          interceptRequest: async (request) => {
-            return request;
-          },
-          interceptResponse: async (response) => {
-            return response;
-          }
-        }
+        requestTimeout: 15e3
       });
     }
     async getMangaDetails(mangaId) {
       const request = createRequestObject({
         url: `${API_URL}/v1/manga/detail/${mangaId}`,
-        method: "GET",
-        headers: this.constructHeaders()
+        method: "GET"
       });
       const response = await this.requestManager.schedule(request, 1);
       const data = JSON.parse(response.data);
       if (data.retcode !== 0) {
         throw new Error("Failed to get manga details");
       }
-      const mangaInfo = data.data;
-      const taxonomy = mangaInfo.taxonomy;
-      return createManga({
-        id: mangaInfo.manga_id,
-        titles: [mangaInfo.title, mangaInfo.alternative_title].filter(Boolean),
-        image: mangaInfo.cover_portrait_url || mangaInfo.cover_image_url,
-        status: this.parseStatus(mangaInfo.status),
-        author: this.getTaxonomyNames(taxonomy, "Author"),
-        artist: this.getTaxonomyNames(taxonomy, "Artist"),
-        desc: mangaInfo.description,
-        tags: [
-          createTagSection({
-            id: "genres",
-            label: "Genres",
-            tags: this.parseTaxonomyTags(taxonomy, "Genre")
-          })
-        ]
-      });
+      return parseMangaDetails(data, mangaId);
     }
     async getChapters(mangaId) {
       const request = createRequestObject({
         url: `${API_URL}/v1/chapter/${mangaId}/list`,
         param: "?page=1&page_size=3000&sort_by=chapter_number&sort_order=desc",
-        method: "GET",
-        headers: this.constructHeaders()
+        method: "GET"
       });
       const response = await this.requestManager.schedule(request, 1);
       const data = JSON.parse(response.data);
       if (data.retcode !== 0) return [];
-      return data.data.map((chapter) => {
-        return createChapter({
-          id: chapter.chapter_id,
-          mangaId,
-          chapNum: chapter.chapter_number,
-          name: `Chapter ${chapter.chapter_number}`,
-          time: new Date(chapter.release_date),
-          langCode: "id"
-        });
-      });
+      return parseChapterList(data, mangaId);
     }
     async getChapterDetails(mangaId, chapterId) {
       const request = createRequestObject({
         url: `${API_URL}/v1/chapter/detail/${chapterId}`,
-        method: "GET",
-        headers: this.constructHeaders()
+        method: "GET"
       });
       const response = await this.requestManager.schedule(request, 1);
       const data = JSON.parse(response.data);
       if (data.retcode !== 0) {
         throw new Error("Failed to get chapter details");
       }
-      const chapter = data.data.chapter;
-      return createChapterDetails({
-        id: chapterId,
-        mangaId,
-        pages: chapter.data.map((page) => `${CDN_URL}${chapter.path}${page}`)
-      });
-    }
-    constructHeaders() {
-      return {
-        "Accept": "application/json",
-        "Origin": BASE_URL,
-        "DNT": "1",
-        "Sec-GPC": "1"
-      };
-    }
-    getTaxonomyNames(taxonomy, key) {
-      return taxonomy[key]?.map((item) => item.name).join(", ") ?? "";
-    }
-    parseTaxonomyTags(taxonomy, key) {
-      return (taxonomy[key] ?? []).map((item) => createTag({
-        id: item.id.toString(),
-        label: item.name
-      }));
-    }
-    parseStatus(status) {
-      switch (status) {
-        case 1:
-          return "Ongoing";
-        case 2:
-          return "Completed";
-        default:
-          return "Unknown";
-      }
+      return parseChapterDetails(data, mangaId, chapterId);
     }
     async getHomePageSections(sectionCallback) {
       const sections = [
         {
           request: createRequestObject({
             url: `${API_URL}/v1/manga/list?type=project&page=1&page_size=30&is_featured=true`,
-            method: "GET",
-            headers: this.constructHeaders()
+            method: "GET"
           }),
-          section: createHomeSection({
+          section: App.createHomeSection({
             id: "latest",
             title: "Latest Updates",
+            type: import_types.HomeSectionType.singleRowNormal,
             view_more: true
           })
         },
         {
           request: createRequestObject({
             url: `${API_URL}/v1/manga/list?format=manhwa&page=1&page_size=10&is_recommended=true`,
-            method: "GET",
-            headers: this.constructHeaders()
+            method: "GET"
           }),
-          section: createHomeSection({
+          section: App.createHomeSection({
             id: "featured",
             title: "Featured Series",
+            type: import_types.HomeSectionType.featured,
             view_more: true
           })
         }
@@ -892,120 +910,11 @@ var _Sources = (() => {
         const response = await this.requestManager.schedule(section.request, 1);
         const data = JSON.parse(response.data);
         if (data.retcode !== 0) continue;
-        section.section.items = data.data.map((item) => ({
-          id: item.manga_id.toString(),
-          image: item.cover_image_url ?? "",
-          title: item.title ?? "",
-          subtitle: `Latest: Chapter ${item.latest_chapter?.chapter_number ?? "N/A"}`
-        }));
+        section.section.items = parseMangaList(data);
         sectionCallback(section.section);
       }
     }
-    async getViewMoreItems(homepageSectionId, metadata) {
-      const page = metadata?.page ?? 1;
-      let param = "";
-      switch (homepageSectionId) {
-        case "latest":
-          param = "sort=latest&sort_order=desc";
-          break;
-        case "featured":
-          param = "is_featured=true";
-          break;
-        default:
-          throw new Error(`Invalid homepage section ID: ${homepageSectionId}`);
-      }
-      const request = createRequestObject({
-        url: `${API_URL}/v1/manga/list?type=project&page=${page}&page_size=30&is_update=true&${param}`,
-        method: "GET",
-        headers: this.constructHeaders()
-      });
-      const response = await this.requestManager.schedule(request, 1);
-      const data = JSON.parse(response.data);
-      if (data.retcode !== 0) {
-        return createPagedResults({
-          results: [],
-          metadata: { page: page + 1 }
-        });
-      }
-      const meta = data.meta;
-      const manga = data.data.map((item) => ({
-        id: item.manga_id.toString(),
-        image: item.cover_image_url ?? "",
-        title: item.title ?? "",
-        subtitle: `Latest: Chapter ${item.latest_chapter?.chapter_number ?? "N/A"}`
-      }));
-      return createPagedResults({
-        results: manga,
-        metadata: {
-          page: page + 1,
-          hasNextPage: meta.page < meta.total_page
-        }
-      });
-    }
-    async getSearchResults(query, metadata) {
-      const page = metadata?.page ?? 1;
-      let url = `${API_URL}/v1/manga/list?type=project&page=${page}&page_size=30&is_update=true&sort=latest&sort_order=desc`;
-      if (query.title) {
-        url += `&q=${encodeURIComponent(query.title)}`;
-      }
-      const request = createRequestObject({
-        url,
-        method: "GET",
-        headers: this.constructHeaders()
-      });
-      const response = await this.requestManager.schedule(request, 1);
-      const data = JSON.parse(response.data);
-      if (data.retcode !== 0) {
-        return createPagedResults({
-          results: [],
-          metadata: { page: page + 1 }
-        });
-      }
-      const meta = data.meta;
-      const manga = data.data.map((item) => ({
-        id: item.manga_id.toString(),
-        image: item.cover_image_url ?? "",
-        title: item.title ?? "",
-        subtitle: `Latest: Chapter ${item.latest_chapter?.chapter_number ?? "N/A"}`
-      }));
-      return createPagedResults({
-        results: manga,
-        metadata: {
-          page: page + 1,
-          hasNextPage: meta.page < meta.total_page
-        }
-      });
-    }
   };
-  function createRequestObject(requestObj) {
-    return App.createRequest({
-      ...requestObj,
-      headers: {
-        ...requestObj.headers ?? {}
-      }
-    });
-  }
-  function createManga(mangaObj) {
-    return App.createSourceManga(mangaObj);
-  }
-  function createChapter(chapterObj) {
-    return App.createChapter(chapterObj);
-  }
-  function createChapterDetails(detailsObj) {
-    return App.createChapterDetails(detailsObj);
-  }
-  function createTagSection(tagSectionObj) {
-    return App.createTagSection(tagSectionObj);
-  }
-  function createTag(tagObj) {
-    return App.createTag(tagObj);
-  }
-  function createHomeSection(section) {
-    return App.createHomeSection(section);
-  }
-  function createPagedResults(results) {
-    return App.createPagedResults(results);
-  }
   return __toCommonJS(Shinigami_exports);
 })();
 this.Sources = _Sources; if (typeof exports === 'object' && typeof module !== 'undefined') {module.exports.Sources = this.Sources;}
