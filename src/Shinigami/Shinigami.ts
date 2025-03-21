@@ -20,7 +20,7 @@ const CDN_URL = 'https://storage.shngm.id'
 const BASE_URL = 'https://app.shinigami.asia'
 
 export const ShinigamiInfo: SourceInfo = {
-    version: '1.0.9',
+    version: '1.1.0',
     name: 'Shinigami',
     icon: 'icon.png',
     author: 'NaufalJCT48',
@@ -40,7 +40,33 @@ export const ShinigamiInfo: SourceInfo = {
 export class Shinigami extends Source {
     requestManager = App.createRequestManager({
         requestsPerSecond: 4,
-        requestTimeout: 15000
+        requestTimeout: 15000,
+        interceptor: {
+            interceptRequest: async (request: Request): Promise<Request> => {
+                // Add headers for image requests
+                if (request.url.includes('storage.shngm.id')) {
+                    request.headers = {
+                        'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+                        'DNT': '1',
+                        'Referer': BASE_URL + '/',
+                        'Sec-Fetch-Dest': 'empty',
+                        'Sec-GPC': '1'
+                    }
+                } else {
+                    // For API requests
+                    request.headers = {
+                        'Accept': 'application/json',
+                        'Origin': BASE_URL,
+                        'DNT': '1',
+                        'Sec-GPC': '1'
+                    }
+                }
+                return request
+            },
+            interceptResponse: async (response: Response): Promise<Response> => {
+                return response
+            }
+        }
     })
 
     async getMangaDetails(mangaId: string): Promise<Manga> {

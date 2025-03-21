@@ -50,20 +50,9 @@ export const parseChapterDetails = (data: any, mangaId: string, chapterId: strin
     const chapterData = data.data
     const chapter = chapterData.chapter
     
-    const pages = chapter.data.map((page: string) => {
-        const imageUrl = `${chapterData.base_url}${chapter.path}${page}`
-        return {
-            url: imageUrl,
-            headers: {
-                'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
-                'DNT': '1',
-                'Referer': BASE_URL + '/',
-                'Sec-Fetch-Dest': 'empty',
-                'Sec-GPC': '1',
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
-            }
-        }
-    })
+    const pages = chapter.data.map((page: string) => 
+        `${chapterData.base_url_low}${chapter.path}${page}`
+    )
 
     return App.createChapterDetails({
         id: chapterId,
