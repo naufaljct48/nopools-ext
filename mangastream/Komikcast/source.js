@@ -15509,7 +15509,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
       const chapters = [];
       for (const chapter of $2(".komik_info-chapters-item").toArray()) {
         const $chapter = $2(chapter);
-        const title = $2("a.chapter-link-item", $chapter).text().trim();
+        const title = $2("a.chapter-link-item", $chapter).text().trim().replace(/\s+/g, " ");
         let chapNum = -1;
         const chapMatch = title.match(/Chapter\s+(\d+)(?:\.(\d+))?/i);
         if (chapMatch) {
@@ -15562,7 +15562,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
       for (const obj of $2("div.list-update_item", "div.list-update_items-wrapper").toArray()) {
         const title = $2("h3.title", obj).text().trim();
         const image = this.getImageSrc($2("img", obj)) ?? "";
-        const subtitle = $2("div.chapter", obj).text().trim();
+        const subtitle = $2("div.chapter", obj).text().trim().replace(/\s+/g, " ");
         const slug = this.idCleaner($2("a", obj).attr("href") ?? "");
         const path = ($2("a", obj).attr("href") ?? "").replace(/\/$/, "").split("/").slice(-2).shift() ?? "";
         if (!slug || !path) continue;
@@ -15644,7 +15644,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
   // src/Komikcast/Komikcast.ts
   var DOMAIN = "https://komikcast02.com";
   var KomikcastInfo = {
-    version: getExportVersion("0.2.6"),
+    version: getExportVersion("0.2.7"),
     name: "Komikcast",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",

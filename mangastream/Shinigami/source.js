@@ -795,7 +795,7 @@ var _Sources = (() => {
       chapNum: chapter.chapter_number,
       name: `Chapter ${chapter.chapter_number}`,
       time: new Date(chapter.release_date),
-      langCode: "id"
+      langCode: "\u{1F1EE}\u{1F1E9}"
     }));
   };
   var parseChapterDetails = (data, mangaId, chapterId) => {
@@ -824,7 +824,7 @@ var _Sources = (() => {
   var API_URL = "https://api.shngm.io";
   var BASE_URL2 = "https://app.shinigami.asia";
   var ShinigamiInfo = {
-    version: "1.1.5",
+    version: "1.1.6",
     name: "Shinigami",
     icon: "icon.png",
     author: "NaufalJCT48",
