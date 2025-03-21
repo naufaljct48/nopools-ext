@@ -753,15 +753,6 @@ var _Sources = (() => {
         return "Unknown";
     }
   };
-  var getTaxonomyNames = (taxonomy, key) => {
-    return taxonomy[key]?.map((item) => item.name).join(", ") ?? "";
-  };
-  var parseTaxonomyTags = (taxonomy, key) => {
-    return (taxonomy[key] ?? []).map((item) => App.createTag({
-      id: item.id.toString(),
-      label: item.name
-    }));
-  };
 
   // src/Shinigami/ShinigamiParser.ts
   var CDN_URL = "https://storage.shngm.id";
@@ -769,21 +760,24 @@ var _Sources = (() => {
     const mangaInfo = data.data;
     const taxonomy = mangaInfo.taxonomy;
     const titles = [mangaInfo.title, mangaInfo.alternative_title].filter(Boolean);
-    const tags = parseTaxonomyTags(taxonomy, "Genre");
+    const genreTags = (taxonomy.Genre ?? []).map((item) => App.createTag({
+      id: item.slug,
+      label: item.name
+    }));
     return App.createSourceManga({
       id: mangaId,
       mangaInfo: App.createMangaInfo({
         titles,
         image: mangaInfo.cover_portrait_url || mangaInfo.cover_image_url,
         status: parseStatus(mangaInfo.status),
-        author: getTaxonomyNames(taxonomy, "Author"),
-        artist: getTaxonomyNames(taxonomy, "Artist"),
+        author: (taxonomy.Author ?? []).map((item) => item.name).join(", ") || "Unknown",
+        artist: (taxonomy.Artist ?? []).map((item) => item.name).join(", ") || "Unknown",
         desc: mangaInfo.description,
         tags: [
           App.createTagSection({
             id: "genres",
             label: "Genres",
-            tags
+            tags: genreTags
           })
         ]
       })
@@ -820,7 +814,7 @@ var _Sources = (() => {
   var API_URL = "https://api.shngm.io";
   var BASE_URL2 = "https://app.shinigami.asia";
   var ShinigamiInfo = {
-    version: "1.0.5",
+    version: "1.0.6",
     name: "Shinigami",
     icon: "icon.png",
     author: "NaufalJCT48",
