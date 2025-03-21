@@ -824,7 +824,7 @@ var _Sources = (() => {
   var API_URL = "https://api.shngm.io";
   var BASE_URL2 = "https://app.shinigami.asia";
   var ShinigamiInfo = {
-    version: "1.1.7",
+    version: "1.1.8",
     name: "Shinigami",
     icon: "icon.png",
     author: "NaufalJCT48",
@@ -1008,6 +1008,36 @@ var _Sources = (() => {
       }
       return App.createPagedResults({
         results: parseMangaList(data)
+      });
+    }
+    async getViewMoreItems(homepageSectionId, metadata) {
+      const page = metadata?.page ?? 1;
+      let param = "";
+      switch (homepageSectionId) {
+        case "latest":
+          param = `?type=project&page=${page}&page_size=30&is_featured=true`;
+          break;
+        case "featured":
+          param = `?format=manhwa&page=${page}&page_size=30&is_recommended=true`;
+          break;
+        default:
+          throw new Error(`Invalid homepage section id: ${homepageSectionId}`);
+      }
+      const request = createRequestObject({
+        url: `${API_URL}/v1/manga/list${param}`,
+        method: "GET"
+      });
+      const response = await this.requestManager.schedule(request, 1);
+      const data = JSON.parse(response.data);
+      if (data.retcode !== 0) {
+        return App.createPagedResults({
+          results: []
+        });
+      }
+      const hasNextPage = data.data.length === (homepageSectionId === "latest" ? 30 : 30);
+      return App.createPagedResults({
+        results: parseMangaList(data),
+        metadata: hasNextPage ? { page: page + 1 } : void 0
       });
     }
   };
