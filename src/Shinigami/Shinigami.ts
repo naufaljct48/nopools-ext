@@ -20,7 +20,7 @@ const CDN_URL = 'https://storage.shngm.id'
 const BASE_URL = 'https://app.shinigami.asia'
 
 export const ShinigamiInfo: SourceInfo = {
-    version: '1.1.2',
+    version: '1.1.3',
     name: 'Shinigami',
     icon: 'icon.png',
     author: 'NaufalJCT48',
@@ -196,29 +196,30 @@ export class Shinigami extends Source {
     }
 
     async getSearchResults(query: SearchRequest): Promise<PagedResults> {
-        const param = new URLSearchParams()
-        param.set('page', '1')
-        param.set('page_size', '24')
-        param.set('genre_include_mode', 'or')
-        param.set('genre_exclude_mode', 'or')
-        param.set('sort', 'popularity')
-        param.set('sort_order', 'desc')
+        const params = [
+            'page=1',
+            'page_size=24',
+            'genre_include_mode=or',
+            'genre_exclude_mode=or',
+            'sort=popularity',
+            'sort_order=desc'
+        ]
     
         if (query.title) {
-            param.set('q', encodeURIComponent(query.title))
+            params.push(`q=${encodeURIComponent(query.title)}`)
         }
     
         if (query.includedTags?.length) {
-            const genres = query.includedTags.filter(tag => tag.id.includes('genres:')).map(tag => tag.id.split(':')[1])
-            const formats = query.includedTags.filter(tag => tag.id.includes('formats:')).map(tag => tag.id.split(':')[1])
+            const genres = query.includedTags.filter(tag => tag.id === 'genres').map(tag => tag.label)
+            const formats = query.includedTags.filter(tag => tag.id === 'formats').map(tag => tag.label)
             
-            if (genres.length) param.set('genre', genres.join(','))
-            if (formats.length) param.set('format', formats.join(','))
+            if (genres.length) params.push(`genre=${genres.join(',')}`)
+            if (formats.length) params.push(`format=${formats.join(',')}`)
         }
     
         const request = createRequestObject({
             url: `${API_URL}/v1/manga/list`,
-            param: `?${param.toString()}`,
+            param: `?${params.join('&')}`,
             method: 'GET'
         })
     
