@@ -755,7 +755,6 @@ var _Sources = (() => {
   };
 
   // src/Shinigami/ShinigamiParser.ts
-  var CDN_URL = "https://storage.shngm.id";
   var parseMangaDetails = (data, mangaId) => {
     const mangaInfo = data.data;
     const taxonomy = mangaInfo.taxonomy;
@@ -794,11 +793,16 @@ var _Sources = (() => {
     }));
   };
   var parseChapterDetails = (data, mangaId, chapterId) => {
-    const chapter = data.data.chapter;
+    const chapterData = data.data;
+    const chapter = chapterData.chapter;
+    const pages = chapter.data.map(
+      (page) => `${chapterData.base_url}${chapter.path}${page}`
+    );
     return App.createChapterDetails({
       id: chapterId,
       mangaId,
-      pages: chapter.data.map((page) => `${CDN_URL}${chapter.path}${page}`)
+      pages,
+      longStrip: false
     });
   };
   var parseMangaList = (data) => {
@@ -814,7 +818,7 @@ var _Sources = (() => {
   var API_URL = "https://api.shngm.io";
   var BASE_URL2 = "https://app.shinigami.asia";
   var ShinigamiInfo = {
-    version: "1.0.6",
+    version: "1.0.7",
     name: "Shinigami",
     icon: "icon.png",
     author: "NaufalJCT48",
