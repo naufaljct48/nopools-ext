@@ -816,7 +816,7 @@ var _Sources = (() => {
       mangaId: String(item.manga_id),
       image: item.cover_image_url ?? "",
       title: item.title ?? "",
-      subtitle: `Latest: Chapter ${item.latest_chapter_number ?? "N/A"}`
+      subtitle: `Ch. ${item.latest_chapter_number ?? "N/A"}`
     }));
   };
 
@@ -824,7 +824,7 @@ var _Sources = (() => {
   var API_URL = "https://api.shngm.io";
   var BASE_URL2 = "https://app.shinigami.asia";
   var ShinigamiInfo = {
-    version: "1.1.3",
+    version: "1.1.4",
     name: "Shinigami",
     icon: "icon.png",
     author: "NaufalJCT48",
