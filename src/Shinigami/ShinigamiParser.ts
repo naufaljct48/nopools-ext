@@ -51,7 +51,7 @@ export const parseChapterDetails = (data: any, mangaId: string, chapterId: strin
     const chapter = chapterData.chapter
     
     const pages = chapter.data.map((page: string) => 
-        `${chapterData.base_url_low}${chapter.path}${page}`
+        `${chapterData.base_url}${chapter.path}${page}`
     )
 
     return App.createChapterDetails({
