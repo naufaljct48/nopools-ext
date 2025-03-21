@@ -2,6 +2,7 @@ import { PartialSourceManga, MangaInfo, TagSection, Tag } from '@paperback/types
 import { getTaxonomyNames, parseTaxonomyTags, parseStatus } from './ShinigamiHelper'
 
 const CDN_URL = 'https://storage.shngm.id'
+const BASE_URL = 'https://app.shinigami.asia'
 
 export const parseMangaDetails = (data: any, mangaId: string) => {
     const mangaInfo = data.data
