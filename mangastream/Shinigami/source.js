@@ -732,7 +732,7 @@ var _Sources = (() => {
   var CDN_URL = "https://storage.shngm.id";
   var BASE_URL = "https://app.shinigami.asia";
   var ShinigamiInfo = {
-    version: "1.0.1",
+    version: "1.0.2",
     name: "Shinigami",
     icon: "icon.png",
     author: "NaufalJCT48",
@@ -892,10 +892,10 @@ var _Sources = (() => {
         const response = await this.requestManager.schedule(section.request, 1);
         const data = JSON.parse(response.data);
         if (data.retcode !== 0) continue;
-        section.section.items = data.data.map((item) => createManga({
-          id: item.manga_id,
-          titles: [item.title],
-          image: item.cover_image_url,
+        section.section.items = data.data.map((item) => ({
+          id: item.manga_id.toString(),
+          image: item.cover_image_url ?? "",
+          title: item.title ?? "",
           subtitle: `Latest: Chapter ${item.latest_chapter?.chapter_number ?? "N/A"}`
         }));
         sectionCallback(section.section);
@@ -928,10 +928,10 @@ var _Sources = (() => {
         });
       }
       const meta = data.meta;
-      const manga = data.data.map((item) => createManga({
-        id: item.manga_id,
-        titles: [item.title],
-        image: item.cover_image_url,
+      const manga = data.data.map((item) => ({
+        id: item.manga_id.toString(),
+        image: item.cover_image_url ?? "",
+        title: item.title ?? "",
         subtitle: `Latest: Chapter ${item.latest_chapter?.chapter_number ?? "N/A"}`
       }));
       return createPagedResults({
@@ -962,10 +962,10 @@ var _Sources = (() => {
         });
       }
       const meta = data.meta;
-      const manga = data.data.map((item) => createManga({
-        id: item.manga_id,
-        titles: [item.title],
-        image: item.cover_image_url,
+      const manga = data.data.map((item) => ({
+        id: item.manga_id.toString(),
+        image: item.cover_image_url ?? "",
+        title: item.title ?? "",
         subtitle: `Latest: Chapter ${item.latest_chapter?.chapter_number ?? "N/A"}`
       }));
       return createPagedResults({
