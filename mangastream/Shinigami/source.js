@@ -730,11 +730,11 @@ var _Sources = (() => {
   var import_types = __toESM(require_lib());
 
   // src/Shinigami/ShinigamiHelper.ts
-  var BASE_URL2 = "https://app.shinigami.asia";
+  var BASE_URL = "https://app.shinigami.asia";
   var createRequestObject = (requestObj) => {
     const headers = {
       "Accept": "application/json",
-      "Origin": BASE_URL2,
+      "Origin": BASE_URL,
       "DNT": "1",
       "Sec-GPC": "1",
       "Accept-Encoding": "gzip, deflate, br",
@@ -761,6 +761,7 @@ var _Sources = (() => {
   };
 
   // src/Shinigami/ShinigamiParser.ts
+  var BASE_URL2 = "https://app.shinigami.asia";
   var parseMangaDetails = (data, mangaId) => {
     const mangaInfo = data.data;
     const taxonomy = mangaInfo.taxonomy;
@@ -808,7 +809,7 @@ var _Sources = (() => {
         headers: {
           "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
           "DNT": "1",
-          "Referer": BASE_URL + "/",
+          "Referer": BASE_URL2 + "/",
           "Sec-Fetch-Dest": "empty",
           "Sec-GPC": "1",
           "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
@@ -835,7 +836,7 @@ var _Sources = (() => {
   var API_URL = "https://api.shngm.io";
   var BASE_URL3 = "https://app.shinigami.asia";
   var ShinigamiInfo = {
-    version: "1.0.8",
+    version: "1.0.9",
     name: "Shinigami",
     icon: "icon.png",
     author: "NaufalJCT48",
