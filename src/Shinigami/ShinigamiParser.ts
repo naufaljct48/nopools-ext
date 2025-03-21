@@ -49,7 +49,7 @@ export const parseChapterDetails = (data: any, mangaId: string, chapterId: strin
 
 export const parseMangaList = (data: any): PartialSourceManga[] => {
     return data.data.map((item: any) => App.createPartialSourceManga({
-        id: item.manga_id.toString(),
+        id: String(item.manga_id),
         image: item.cover_image_url ?? '',
         title: item.title ?? '',
         subtitle: `Latest: Chapter ${item.latest_chapter?.chapter_number ?? 'N/A'}`
