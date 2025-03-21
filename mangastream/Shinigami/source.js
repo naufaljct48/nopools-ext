@@ -824,7 +824,7 @@ var _Sources = (() => {
   var API_URL = "https://api.shngm.io";
   var BASE_URL2 = "https://app.shinigami.asia";
   var ShinigamiInfo = {
-    version: "1.1.6",
+    version: "1.1.7",
     name: "Shinigami",
     icon: "icon.png",
     author: "NaufalJCT48",
@@ -838,7 +838,7 @@ var _Sources = (() => {
         type: import_types.BadgeColor.GREY
       }
     ],
-    intents: import_types.SourceIntents.MANGA_CHAPTERS | import_types.SourceIntents.HOMEPAGE_SECTIONS
+    intents: import_types.SourceIntents.MANGA_CHAPTERS | import_types.SourceIntents.HOMEPAGE_SECTIONS | import_types.SourceIntents.CLOUDFLARE_BYPASS_REQUIRED | import_types.SourceIntents.SETTINGS_UI
   };
   var Shinigami = class extends import_types.Source {
     constructor() {

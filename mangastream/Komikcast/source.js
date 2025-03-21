@@ -15644,7 +15644,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
   // src/Komikcast/Komikcast.ts
   var DOMAIN = "https://komikcast02.com";
   var KomikcastInfo = {
-    version: getExportVersion("0.2.7"),
+    version: getExportVersion("0.2.8"),
     name: "Komikcast",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",
@@ -15671,12 +15671,12 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
     configureSections() {
       this.homescreen_sections["latest_update"].selectorFunc = ($2, element) => $2("div.utao");
       this.homescreen_sections["latest_update"].titleSelectorFunc = ($2, element) => $2("div.luf h3", element).text().trim();
-      this.homescreen_sections["latest_update"].subtitleSelectorFunc = ($2, element) => $2("div.luf ul li:first-child a", element).text().trim();
+      this.homescreen_sections["latest_update"].subtitleSelectorFunc = ($2, element) => $2("div.luf ul li:first-child a", element).text().trim().replace(/\s+/g, " ");
       this.homescreen_sections["latest_update"].getViewMoreItemsFunc = (page) => `daftar-komik/page/${page}/?sortby=update`;
       this.homescreen_sections["popular_today"].enabled = true;
       this.homescreen_sections["popular_today"].selectorFunc = ($2, element) => $2(".swiper-slide");
       this.homescreen_sections["popular_today"].titleSelectorFunc = ($2, element) => $2("div.title", element).text().trim();
-      this.homescreen_sections["popular_today"].subtitleSelectorFunc = ($2, element) => $2("div.chapter", element).text().trim();
+      this.homescreen_sections["popular_today"].subtitleSelectorFunc = ($2, element) => $2("div.chapter", element).text().trim().replace(/\s+/g, " ");
       this.homescreen_sections["popular_today"].getViewMoreItemsFunc = (page) => `daftar-komik/page/${page}/?order=popular`;
       this.homescreen_sections["new_titles"].enabled = false;
       this.homescreen_sections["top_alltime"].enabled = false;
