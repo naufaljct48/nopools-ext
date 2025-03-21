@@ -808,7 +808,7 @@ var _Sources = (() => {
   };
   var parseMangaList = (data) => {
     return data.data.map((item) => App.createPartialSourceManga({
-      id: item.manga_id.toString(),
+      id: String(item.manga_id),
       image: item.cover_image_url ?? "",
       title: item.title ?? "",
       subtitle: `Latest: Chapter ${item.latest_chapter?.chapter_number ?? "N/A"}`
