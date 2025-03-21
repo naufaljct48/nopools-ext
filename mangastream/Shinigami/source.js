@@ -761,7 +761,6 @@ var _Sources = (() => {
   };
 
   // src/Shinigami/ShinigamiParser.ts
-  var BASE_URL2 = "https://app.shinigami.asia";
   var parseMangaDetails = (data, mangaId) => {
     const mangaInfo = data.data;
     const taxonomy = mangaInfo.taxonomy;
@@ -802,20 +801,9 @@ var _Sources = (() => {
   var parseChapterDetails = (data, mangaId, chapterId) => {
     const chapterData = data.data;
     const chapter = chapterData.chapter;
-    const pages = chapter.data.map((page) => {
-      const imageUrl = `${chapterData.base_url}${chapter.path}${page}`;
-      return {
-        url: imageUrl,
-        headers: {
-          "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
-          "DNT": "1",
-          "Referer": BASE_URL2 + "/",
-          "Sec-Fetch-Dest": "empty",
-          "Sec-GPC": "1",
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
-        }
-      };
-    });
+    const pages = chapter.data.map(
+      (page) => `${chapterData.base_url_low}${chapter.path}${page}`
+    );
     return App.createChapterDetails({
       id: chapterId,
       mangaId,
@@ -834,16 +822,16 @@ var _Sources = (() => {
 
   // src/Shinigami/Shinigami.ts
   var API_URL = "https://api.shngm.io";
-  var BASE_URL3 = "https://app.shinigami.asia";
+  var BASE_URL2 = "https://app.shinigami.asia";
   var ShinigamiInfo = {
-    version: "1.0.9",
+    version: "1.1.0",
     name: "Shinigami",
     icon: "icon.png",
     author: "NaufalJCT48",
     authorWebsite: "https://github.com/naufaljct48",
     description: "Extension that pulls manga from Shinigami",
     contentRating: import_types.ContentRating.EVERYONE,
-    websiteBaseURL: BASE_URL3,
+    websiteBaseURL: BASE_URL2,
     sourceTags: [
       {
         text: "Indonesian",
@@ -857,7 +845,31 @@ var _Sources = (() => {
       super(...arguments);
       this.requestManager = App.createRequestManager({
         requestsPerSecond: 4,
-        requestTimeout: 15e3
+        requestTimeout: 15e3,
+        interceptor: {
+          interceptRequest: async (request) => {
+            if (request.url.includes("storage.shngm.id")) {
+              request.headers = {
+                "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+                "DNT": "1",
+                "Referer": BASE_URL2 + "/",
+                "Sec-Fetch-Dest": "empty",
+                "Sec-GPC": "1"
+              };
+            } else {
+              request.headers = {
+                "Accept": "application/json",
+                "Origin": BASE_URL2,
+                "DNT": "1",
+                "Sec-GPC": "1"
+              };
+            }
+            return request;
+          },
+          interceptResponse: async (response) => {
+            return response;
+          }
+        }
       });
     }
     async getMangaDetails(mangaId) {
