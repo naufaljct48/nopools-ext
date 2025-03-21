@@ -732,10 +732,10 @@ var _Sources = (() => {
   var CDN_URL = "https://storage.shngm.id";
   var BASE_URL = "https://app.shinigami.asia";
   var ShinigamiInfo = {
-    version: "1.0.0",
+    version: "1.0.1",
     name: "Shinigami",
     icon: "icon.png",
-    author: "Your Name",
+    author: "NaufalJCT48",
     authorWebsite: "https://github.com/naufaljct48",
     description: "Extension that pulls manga from Shinigami",
     contentRating: import_types.ContentRating.EVERYONE,
@@ -749,6 +749,21 @@ var _Sources = (() => {
     intents: import_types.SourceIntents.MANGA_CHAPTERS | import_types.SourceIntents.HOMEPAGE_SECTIONS
   };
   var Shinigami = class extends import_types.Source {
+    constructor() {
+      super(...arguments);
+      this.requestManager = App.createRequestManager({
+        requestsPerSecond: 4,
+        requestTimeout: 15e3,
+        interceptor: {
+          interceptRequest: async (request) => {
+            return request;
+          },
+          interceptResponse: async (response) => {
+            return response;
+          }
+        }
+      });
+    }
     async getMangaDetails(mangaId) {
       const request = createRequestObject({
         url: `${API_URL}/v1/manga/detail/${mangaId}`,
@@ -849,7 +864,7 @@ var _Sources = (() => {
       const sections = [
         {
           request: createRequestObject({
-            url: `${API_URL}/v1/manga/list?format=manhwa&page=1&page_size=10&is_recommended=true`,
+            url: `${API_URL}/v1/manga/list?type=project&page=1&page_size=30&is_featured=true`,
             method: "GET",
             headers: this.constructHeaders()
           }),
@@ -861,13 +876,13 @@ var _Sources = (() => {
         },
         {
           request: createRequestObject({
-            url: `${API_URL}/v1/manga/list?type=project&page=1&page_size=30&is_update=true&sort=popular&sort_order=desc`,
+            url: `${API_URL}/v1/manga/list?format=manhwa&page=1&page_size=10&is_recommended=true`,
             method: "GET",
             headers: this.constructHeaders()
           }),
           section: createHomeSection({
-            id: "popular",
-            title: "Popular Series",
+            id: "featured",
+            title: "Featured Series",
             view_more: true
           })
         }
@@ -893,8 +908,8 @@ var _Sources = (() => {
         case "latest":
           param = "sort=latest&sort_order=desc";
           break;
-        case "popular":
-          param = "sort=popular&sort_order=desc";
+        case "featured":
+          param = "is_featured=true";
           break;
         default:
           throw new Error(`Invalid homepage section ID: ${homepageSectionId}`);
