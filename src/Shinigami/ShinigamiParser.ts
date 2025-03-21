@@ -67,6 +67,6 @@ export const parseMangaList = (data: any): PartialSourceManga[] => {
         mangaId: String(item.manga_id),
         image: item.cover_image_url ?? '',
         title: item.title ?? '',
-        subtitle: `Latest: Chapter ${item.latest_chapter_number ?? 'N/A'}`
+        subtitle: `Ch. ${item.latest_chapter_number ?? 'N/A'}`
     }))
 }
