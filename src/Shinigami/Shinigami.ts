@@ -20,7 +20,7 @@ const CDN_URL = 'https://storage.shngm.id'
 const BASE_URL = 'https://app.shinigami.asia'
 
 export const ShinigamiInfo: SourceInfo = {
-    version: '1.0.1',
+    version: '1.0.2',
     name: 'Shinigami',
     icon: 'icon.png',
     author: 'NaufalJCT48',
@@ -196,10 +196,10 @@ export class Shinigami extends Source {
 
             if (data.retcode !== 0) continue
 
-            section.section.items = data.data.map((item: any) => createManga({
-                id: item.manga_id,
-                titles: [item.title],
-                image: item.cover_image_url,
+            section.section.items = data.data.map((item: any) => ({
+                id: item.manga_id.toString(),
+                image: item.cover_image_url ?? '',
+                title: item.title ?? '',
                 subtitle: `Latest: Chapter ${item.latest_chapter?.chapter_number ?? 'N/A'}`
             }))
             sectionCallback(section.section)
@@ -238,10 +238,10 @@ export class Shinigami extends Source {
         }
 
         const meta = data.meta
-        const manga = data.data.map((item: any) => createManga({
-            id: item.manga_id,
-            titles: [item.title],
-            image: item.cover_image_url,
+        const manga = data.data.map((item: any) => ({
+            id: item.manga_id.toString(),
+            image: item.cover_image_url ?? '',
+            title: item.title ?? '',
             subtitle: `Latest: Chapter ${item.latest_chapter?.chapter_number ?? 'N/A'}`
         }))
 
@@ -279,10 +279,10 @@ export class Shinigami extends Source {
         }
 
         const meta = data.meta
-        const manga = data.data.map((item: any) => createManga({
-            id: item.manga_id,
-            titles: [item.title],
-            image: item.cover_image_url,
+        const manga = data.data.map((item: any) => ({
+            id: item.manga_id.toString(),
+            image: item.cover_image_url ?? '',
+            title: item.title ?? '',
             subtitle: `Latest: Chapter ${item.latest_chapter?.chapter_number ?? 'N/A'}`
         }))
 
