@@ -6,8 +6,13 @@ const CDN_URL = 'https://storage.shngm.id'
 export const parseMangaDetails = (data: any, mangaId: string) => {
     const mangaInfo = data.data
     const taxonomy = mangaInfo.taxonomy
+
     const titles = [mangaInfo.title, mangaInfo.alternative_title].filter(Boolean)
-    const tags: Tag[] = parseTaxonomyTags(taxonomy, 'Genre')
+    
+    const genreTags = (taxonomy.Genre ?? []).map((item: any) => App.createTag({
+        id: item.slug,
+        label: item.name
+    }))
 
     return App.createSourceManga({
         id: mangaId,
@@ -15,14 +20,14 @@ export const parseMangaDetails = (data: any, mangaId: string) => {
             titles: titles,
             image: mangaInfo.cover_portrait_url || mangaInfo.cover_image_url,
             status: parseStatus(mangaInfo.status),
-            author: getTaxonomyNames(taxonomy, 'Author'),
-            artist: getTaxonomyNames(taxonomy, 'Artist'),
+            author: (taxonomy.Author ?? []).map((item: any) => item.name).join(', ') || 'Unknown',
+            artist: (taxonomy.Artist ?? []).map((item: any) => item.name).join(', ') || 'Unknown',
             desc: mangaInfo.description,
             tags: [
                 App.createTagSection({
                     id: 'genres',
                     label: 'Genres',
-                    tags: tags
+                    tags: genreTags
                 })
             ]
         })
