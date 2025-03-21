@@ -1,25 +1,37 @@
-# Nopools Extensions (0.8 Ver)
-Indonesian Paperback (0.8) sources
-Cloned from [TheNetsky Repo](https://github.com/TheNetsky)
+# 📚 Nopools Extensions (0.8)
+> Indonesian Paperback (0.8) Version - Indonesian Sources by [Naufal](https://github.com/naufaljct48)  
+> Cloned from [TheNetsky Repo](https://github.com/TheNetsky)
 
-Sources:
+## 🔍 Repository Links
+| Source Type | Description | Link |
+|------------|-------------|------|
+| MangaStream | 0.8 Version | [Click Here!](https://naufaljct48.github.io/nopools-ext/mangastream) |
 
-- Kanzenin (18+)
-- Kiryuu
-- Komikcast
-- KomikIndo
-- KomikIndo.Top (18+)
-- KomikTap (18+)
-- Komiku.com
-- AinzScans
-- Mangasusu (18+)
-- WestManga
-- Shinigami
-- PojokManga
+## 📱 Available Sources
+### MangaStream Sources
+| Source | Status | Adult Content |
+|--------|---------|---------------|
+| AinzScans 🇮🇩 | ✅ Working | No |
+| Kanzenin 🇮🇩 | ✅ Working | Yes |
+| Kiryuu 🇮🇩 | ✅ Working | No |
+| KomikIndo 🇮🇩 | ✅ Working | No |
+| KomikIndo.Top 🇮🇩 | ✅ Working | Yes |
+| KomikTap 🇮🇩 | ✅ Working | Yes |
+| Komikcast 🇮🇩 | ✅ Working | No |
+| Komiku 🇮🇩 | ✅ Working | No |
+| Mangasusu 🇮🇩 | ✅ Working | Yes |
+| Shinigami 🇮🇩 | ✅ Working | No |
+| Tenshi 🇮🇩 | ✅ Working | No |
+| WestManga 🇮🇩 | ✅ Working | No |
 
-## Current Repo
+## 📅 Last Update
+- **Date**: March 22, 2025
+- **Status**: All sources are working properly
 
-| Source Type | Description                                   | Link                                                               |
-| ----------- | --------------------------------------------- | ------------------------------------------------------------------ |
-| Madara      | 0.8 Ver                                       | [Click me!](https://naufaljct48.github.io/nopools-ext/madara)      |
-| MangaStream | 0.8 Ver                                       | [Click me!](https://naufaljct48.github.io/nopools-ext/mangastream) |
+## 📝 Notes
+- Sources marked with "Yes" in Adult Content column are NSFW (18+)
+- All sources are in Indonesian language
+- Please report any issues through GitHub issues
+
+## 📜 License
+This project is licensed under the GPL-3.0 License - see the [LICENSE](LICENSE) file for details
