@@ -730,16 +730,22 @@ var _Sources = (() => {
   var import_types = __toESM(require_lib());
 
   // src/Shinigami/ShinigamiHelper.ts
-  var BASE_URL = "https://app.shinigami.asia";
+  var BASE_URL2 = "https://app.shinigami.asia";
   var createRequestObject = (requestObj) => {
+    const headers = {
+      "Accept": "application/json",
+      "Origin": BASE_URL2,
+      "DNT": "1",
+      "Sec-GPC": "1",
+      "Accept-Encoding": "gzip, deflate, br",
+      "Accept-Language": "en-US,en;q=0.9",
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+    };
     return App.createRequest({
       ...requestObj,
       headers: {
-        ...requestObj.headers ?? {},
-        "Accept": "application/json",
-        "Origin": BASE_URL,
-        "DNT": "1",
-        "Sec-GPC": "1"
+        ...headers,
+        ...requestObj.headers ?? {}
       }
     });
   };
@@ -795,9 +801,20 @@ var _Sources = (() => {
   var parseChapterDetails = (data, mangaId, chapterId) => {
     const chapterData = data.data;
     const chapter = chapterData.chapter;
-    const pages = chapter.data.map(
-      (page) => `${chapterData.base_url}${chapter.path}${page}`
-    );
+    const pages = chapter.data.map((page) => {
+      const imageUrl = `${chapterData.base_url}${chapter.path}${page}`;
+      return {
+        url: imageUrl,
+        headers: {
+          "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+          "DNT": "1",
+          "Referer": BASE_URL + "/",
+          "Sec-Fetch-Dest": "empty",
+          "Sec-GPC": "1",
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+        }
+      };
+    });
     return App.createChapterDetails({
       id: chapterId,
       mangaId,
@@ -816,16 +833,16 @@ var _Sources = (() => {
 
   // src/Shinigami/Shinigami.ts
   var API_URL = "https://api.shngm.io";
-  var BASE_URL2 = "https://app.shinigami.asia";
+  var BASE_URL3 = "https://app.shinigami.asia";
   var ShinigamiInfo = {
-    version: "1.0.7",
+    version: "1.0.8",
     name: "Shinigami",
     icon: "icon.png",
     author: "NaufalJCT48",
     authorWebsite: "https://github.com/naufaljct48",
     description: "Extension that pulls manga from Shinigami",
     contentRating: import_types.ContentRating.EVERYONE,
-    websiteBaseURL: BASE_URL2,
+    websiteBaseURL: BASE_URL3,
     sourceTags: [
       {
         text: "Indonesian",
