@@ -1,6 +1,8 @@
 import { PartialSourceManga, MangaInfo, TagSection, Tag } from '@paperback/types'
 import { getTaxonomyNames, parseTaxonomyTags, parseStatus } from './ShinigamiHelper'
 
+const CDN_URL = 'https://storage.shngm.id'
+
 export const parseMangaDetails = (data: any, mangaId: string) => {
     const mangaInfo = data.data
     const taxonomy = mangaInfo.taxonomy
@@ -49,7 +51,7 @@ export const parseChapterDetails = (data: any, mangaId: string, chapterId: strin
 
 export const parseMangaList = (data: any): PartialSourceManga[] => {
     return data.data.map((item: any) => App.createPartialSourceManga({
-        id: String(item.manga_id),
+        mangaId: String(item.manga_id),
         image: item.cover_image_url ?? '',
         title: item.title ?? '',
         subtitle: `Latest: Chapter ${item.latest_chapter?.chapter_number ?? 'N/A'}`

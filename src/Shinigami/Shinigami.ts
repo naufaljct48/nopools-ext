@@ -20,7 +20,7 @@ const CDN_URL = 'https://storage.shngm.id'
 const BASE_URL = 'https://app.shinigami.asia'
 
 export const ShinigamiInfo: SourceInfo = {
-    version: '1.0.4',
+    version: '1.0.5',
     name: 'Shinigami',
     icon: 'icon.png',
     author: 'NaufalJCT48',
