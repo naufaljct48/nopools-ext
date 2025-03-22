@@ -15453,7 +15453,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
   // src/Komiksin/Komiksin.ts
   var DOMAIN = "https://komiksin.id";
   var KomiksinInfo = {
-    version: getExportVersion("0.0.1"),
+    version: getExportVersion("0.0.2"),
     name: "Komiksin",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",
