@@ -12,12 +12,13 @@
 | Source | Status | Adult Content |
 |--------|---------|---------------|
 | AinzScans 🇮🇩 | ✅ Working | No |
+| Ikiru 🇮🇩 | ✅ Working | No |
 | Kanzenin 🇮🇩 | ✅ Working | Yes |
 | Kiryuu 🇮🇩 | ✅ Working | No |
-| KomikIndo 🇮🇩 | ✅ Working | No |
 | KomikIndo.Top 🇮🇩 | ✅ Working | Yes |
 | KomikTap 🇮🇩 | ✅ Working | Yes |
 | Komikcast 🇮🇩 | ✅ Working | No |
+| Komiksin 🇮🇩 | ✅ Working | No |
 | Komiku 🇮🇩 | ✅ Working | No |
 | Mangasusu 🇮🇩 | ✅ Working | Yes |
 | Shinigami 🇮🇩 | ✅ Working | No |
