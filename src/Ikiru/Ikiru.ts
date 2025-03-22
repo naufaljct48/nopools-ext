@@ -18,7 +18,7 @@ import {
 const DOMAIN = 'https://ikiru.world'
 
 export const IkiruInfo: SourceInfo = {
-    version: getExportVersion('0.0.1'),
+    version: getExportVersion('0.0.2'),
     name: 'Ikiru',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
