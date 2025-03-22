@@ -20,7 +20,7 @@ const CDN_URL = 'https://storage.shngm.id'
 const BASE_URL = 'https://app.shinigami.asia'
 
 export const ShinigamiInfo: SourceInfo = {
-    version: '1.1.8',
+    version: '1.1.9',
     name: 'Shinigami',
     icon: 'icon.png',
     author: 'NaufalJCT48',
@@ -141,6 +141,42 @@ export class Shinigami extends Source {
                     type: HomeSectionType.featured,
                     view_more: true
                 })
+            },
+            {
+                request: createRequestObject({
+                    url: `${API_URL}/v1/manga/list?type=mirror&page=1&page_size=15&is_update=true&sort=latest&sort_order=desc`,
+                    method: 'GET'
+                }),
+                section: App.createHomeSection({
+                    id: 'mirror',
+                    title: 'Mirror Project',
+                    type: HomeSectionType.singleRowNormal,
+                    view_more: true
+                })
+            },
+            {
+                request: createRequestObject({
+                    url: `${API_URL}/v1/manga/list?format=manga&page=1&page_size=10&is_recommended=true`,
+                    method: 'GET'
+                }),
+                section: App.createHomeSection({
+                    id: 'manga',
+                    title: 'Recommended Manga',
+                    type: HomeSectionType.singleRowNormal,
+                    view_more: true
+                })
+            },
+            {
+                request: createRequestObject({
+                    url: `${API_URL}/v1/manga/list?format=manhua&page=1&page_size=10&is_recommended=true`,
+                    method: 'GET'
+                }),
+                section: App.createHomeSection({
+                    id: 'manhua',
+                    title: 'Recommended Manhua',
+                    type: HomeSectionType.singleRowNormal,
+                    view_more: true
+                })
             }
         ]
 
@@ -210,11 +246,15 @@ export class Shinigami extends Source {
         }
     
         if (query.includedTags?.length) {
-            const genres = query.includedTags.filter(tag => tag.id === 'genres').map(tag => tag.label)
-            const formats = query.includedTags.filter(tag => tag.id === 'formats').map(tag => tag.label)
+            const genres = query.includedTags.filter(tag => tag.id === 'genres').map(tag => tag.id)
+            const formats = query.includedTags.filter(tag => tag.id === 'types').map(tag => tag.id)
             
-            if (genres.length) params.push(`genre=${genres.join(',')}`)
-            if (formats.length) params.push(`format=${formats.join(',')}`)
+            if (genres.length) {
+                params.push(`genre_include=${genres.join(',')}`)
+            }
+            if (formats.length) {
+                params.push(`format=${formats.join(',')}`)
+            }
         }
     
         const request = createRequestObject({
@@ -247,6 +287,15 @@ export class Shinigami extends Source {
                 break
             case 'featured':
                 param = `?format=manhwa&page=${page}&page_size=30&is_recommended=true`
+                break
+            case 'mirror':
+                param = `?type=mirror&page=${page}&page_size=30&is_update=true&sort=latest&sort_order=desc`
+                break
+            case 'manga':
+                param = `?format=manga&page=${page}&page_size=30&is_recommended=true`
+                break
+            case 'manhua':
+                param = `?format=manhua&page=${page}&page_size=30&is_recommended=true`
                 break
             default:
                 throw new Error(`Invalid homepage section id: ${homepageSectionId}`)
