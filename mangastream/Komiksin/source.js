@@ -886,11 +886,11 @@ var _Sources = (() => {
     }
   });
 
-  // src/KomikIndo/KomikIndo.ts
-  var KomikIndo_exports = {};
-  __export(KomikIndo_exports, {
-    KomikIndo: () => KomikIndo,
-    KomikIndoInfo: () => KomikIndoInfo
+  // src/Komiksin/Komiksin.ts
+  var Komiksin_exports = {};
+  __export(Komiksin_exports, {
+    Komiksin: () => Komiksin,
+    KomiksinInfo: () => KomiksinInfo
   });
   var import_types4 = __toESM(require_lib());
 
@@ -15450,11 +15450,11 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
     }
   };
 
-  // src/KomikIndo/KomikIndo.ts
+  // src/Komiksin/Komiksin.ts
   var DOMAIN = "https://komiksin.id";
-  var KomikIndoInfo = {
+  var KomiksinInfo = {
     version: getExportVersion("0.0.1"),
-    name: "KomikIndo",
+    name: "Komiksin",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",
     authorWebsite: "http://github.com/NaufalJCT48",
@@ -15469,7 +15469,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
       }
     ]
   };
-  var KomikIndo = class extends MangaStream {
+  var Komiksin = class extends MangaStream {
     constructor() {
       super(...arguments);
       this.baseUrl = DOMAIN;
@@ -15498,6 +15498,6 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
       this.homescreen_sections["top_weekly"].enabled = false;
     }
   };
-  return __toCommonJS(KomikIndo_exports);
+  return __toCommonJS(Komiksin_exports);
 })();
 this.Sources = _Sources; if (typeof exports === 'object' && typeof module !== 'undefined') {module.exports.Sources = this.Sources;}
