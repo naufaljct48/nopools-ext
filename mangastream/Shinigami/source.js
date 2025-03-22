@@ -824,7 +824,7 @@ var _Sources = (() => {
   var API_URL = "https://api.shngm.io";
   var BASE_URL2 = "https://app.shinigami.asia";
   var ShinigamiInfo = {
-    version: "1.1.9",
+    version: "1.2.0",
     name: "Shinigami",
     icon: "icon.png",
     author: "NaufalJCT48",
@@ -947,24 +947,24 @@ var _Sources = (() => {
         },
         {
           request: createRequestObject({
-            url: `${API_URL}/v1/manga/list?format=manga&page=1&page_size=10&is_recommended=true`,
+            url: `${API_URL}/v1/manga/list?page=1&page_size=24&genre_include_mode=or&genre_exclude_mode=or&format=manga&sort=popularity&sort_order=desc`,
             method: "GET"
           }),
           section: App.createHomeSection({
             id: "manga",
-            title: "Recommended Manga",
+            title: "Popular Manga",
             type: import_types.HomeSectionType.singleRowNormal,
             view_more: true
           })
         },
         {
           request: createRequestObject({
-            url: `${API_URL}/v1/manga/list?format=manhua&page=1&page_size=10&is_recommended=true`,
+            url: `${API_URL}/v1/manga/list?page=1&page_size=24&genre_include_mode=or&genre_exclude_mode=or&format=manhua&sort=popularity&sort_order=desc`,
             method: "GET"
           }),
           section: App.createHomeSection({
             id: "manhua",
-            title: "Recommended Manhua",
+            title: "Popular Manhua",
             type: import_types.HomeSectionType.singleRowNormal,
             view_more: true
           })
@@ -1064,10 +1064,10 @@ var _Sources = (() => {
           param = `?type=mirror&page=${page}&page_size=30&is_update=true&sort=latest&sort_order=desc`;
           break;
         case "manga":
-          param = `?format=manga&page=${page}&page_size=30&is_recommended=true`;
+          param = `?page=${page}&page_size=24&genre_include_mode=or&genre_exclude_mode=or&format=manga&sort=popularity&sort_order=desc`;
           break;
         case "manhua":
-          param = `?format=manhua&page=${page}&page_size=30&is_recommended=true`;
+          param = `?page=${page}&page_size=24&genre_include_mode=or&genre_exclude_mode=or&format=manhua&sort=popularity&sort_order=desc`;
           break;
         default:
           throw new Error(`Invalid homepage section id: ${homepageSectionId}`);
