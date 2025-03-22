@@ -18,9 +18,9 @@ import {
 
 const DOMAIN = 'https://komiksin.id'
 
-export const KomikIndoInfo: SourceInfo = {
+export const KomiksinInfo: SourceInfo = {
     version: getExportVersion('0.0.1'),
-    name: 'KomikIndo',
+    name: 'Komiksin',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
     authorWebsite: 'http://github.com/NaufalJCT48',
@@ -36,7 +36,7 @@ export const KomikIndoInfo: SourceInfo = {
     ]
 }
 
-export class KomikIndo extends MangaStream {
+export class Komiksin extends MangaStream {
 
     baseUrl: string = DOMAIN
 
