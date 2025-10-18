@@ -6,7 +6,7 @@ const WEBSITE_BASE = 'https://westmanga.me'
 const API_BASE = 'https://data.westmanga.me'
 
 export const WestMangaInfo: SourceInfo = {
-    version: '1.1.2',
+    version: '1.1.3',
     name: 'WestManga',
     icon: 'icon.png',
     author: 'NaufalJCT48',

@@ -51,7 +51,7 @@ export const parseChapterList = (json: any): Chapter[] => {
         if (!id) continue
         chapters.push(App.createChapter({
             id,
-            langCode: 'ID',
+            langCode: '🇮🇩',
             chapNum,
             name: `Chapter ${numberStr}`,
             time: new Date(updatedTime * 1000),
