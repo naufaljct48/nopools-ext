@@ -17102,7 +17102,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
   // src/WestManga/WestManga.ts
   var DOMAIN = "https://westmanga.me";
   var WestMangaInfo = {
-    version: getExportVersion("0.0.2"),
+    version: getExportVersion("0.0.3"),
     name: "WestManga",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",
