@@ -29,10 +29,10 @@ import {
 import { KomikcastParser } from './KomikcastParser'
 import { URLBuilder } from '../UrlBuilder'
 
-const DOMAIN = 'https://komikcast02.com'
+const DOMAIN = 'https://komikcast03.com'
 
 export const KomikcastInfo: SourceInfo = {
-    version: getExportVersion('0.2.8'),
+    version: getExportVersion('0.2.9'),
     name: 'Komikcast',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',

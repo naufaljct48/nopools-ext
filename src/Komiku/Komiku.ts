@@ -15,10 +15,10 @@ import {
     MangaStream
 } from '../MangaStream'
 
-const DOMAIN = 'https://komiku.one'
+const DOMAIN = 'https://01.komiku.asia'
 
 export const KomikuInfo: SourceInfo = {
-    version: getExportVersion('0.0.5'),
+    version: getExportVersion('0.0.6'),
     name: 'Komiku',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',

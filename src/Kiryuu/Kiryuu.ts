@@ -16,10 +16,10 @@ import {
     MangaStream
 } from '../MangaStream'
 
-const DOMAIN = 'https://kiryuu.org'
+const DOMAIN = 'https://kiryuu02.com'
 
 export const KiryuuInfo: SourceInfo = {
-    version: getExportVersion('0.0.4'),
+    version: getExportVersion('0.0.5'),
     name: 'Kiryuu',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
