@@ -71,9 +71,14 @@ export const extractMangaDataFromElement = (element: any) => {
     const linkElement = $element.find('a').first()
     const title = linkElement.find('p.font-medium').text().trim() || linkElement.attr('title') || ''
     
-    // Extract image
+    // Extract image (support various attributes)
     const imageElement = $element.find('img').first()
-    const image = imageElement.attr('src') || imageElement.attr('data-src') || ''
+    const image = imageElement.attr('data-src')
+        || imageElement.attr('data-lazy-src')
+        || (imageElement.attr('srcset') ? imageElement.attr('srcset').split(' ')[0] : '')
+        || imageElement.attr('data-cfsrc')
+        || imageElement.attr('src')
+        || ''
     
     // Extract URL
     const url = linkElement.attr('href') || ''
@@ -109,8 +114,9 @@ export const extractChapterDataFromElement = (element: any) => {
     // Extract date
     const dateText = linkElement.find('p.text-xs').text().trim()
     
-    // Extract chapter ID from URL
-    const chapterId = url.match(/chapter-(\d+)-/i) ? url.match(/chapter-(\d+)-/i)![1] : ''
+    // Extract chapter ID from URL (when available, but we'll prefer URL itself)
+    const chapterIdMatch = url.match(/chapter-(\d+)-/i)
+    const chapterId = chapterIdMatch ? chapterIdMatch[1] : ''
     
     // Extract chapter number
     const chapterNumberMatch = chapterText.match(/chapter\s*(\d+(?:\.\d+)?)/i)

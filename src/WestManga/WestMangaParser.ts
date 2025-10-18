@@ -101,9 +101,9 @@ export class WestMangaParser extends MangaStreamParser {
             const chapterData = extractChapterDataFromElement(chapterElement)
             const date = parseRelativeDate(chapterData.dateText)
 
-            if (chapterData.chapterId) {
+            if (chapterData.url) {
                 chapters.push({
-                    id: chapterData.chapterId,
+                    id: chapterData.url, // gunakan path /view/... langsung sebagai chapterId
                     langCode: source.language,
                     chapNum: chapterData.chapterNumber,
                     name: chapterData.chapterText,
@@ -168,18 +168,38 @@ export class WestMangaParser extends MangaStreamParser {
     override async parseSearchResults($: CheerioAPI, source: any): Promise<any[]> {
         const results: any[] = []
 
-        // This would need to be implemented based on the actual search results page structure
-        // For now, returning empty array
-        
+        // Parse hasil dari halaman /contents (grid berisi kartu komik)
+        const cards = $('div.grid.grid-cols-3, div.grid.lg\\:grid-cols-5').find('> div.overflow-hidden')
+        for (const card of cards.toArray()) {
+            const data = extractMangaDataFromElement(card)
+            if (!data.mangaId || !data.title) continue
+            results.push(App.createPartialSourceManga({
+                mangaId: data.mangaId,
+                image: data.image,
+                title: decodeHTMLEntity(data.title),
+                subtitle: decodeHTMLEntity(data.chapterInfo)
+            }))
+        }
+
         return results
     }
 
     override async parseViewMore($: CheerioAPI, source: any): Promise<PartialSourceManga[]> {
         const items: PartialSourceManga[] = []
 
-        // This would need to be implemented based on the actual view more page structure
-        // For now, returning empty array
-        
+        // View More juga berasal dari /contents?page=... dengan grid yang sama
+        const cards = $('div.grid.grid-cols-3, div.grid.lg\\:grid-cols-5').find('> div.overflow-hidden')
+        for (const card of cards.toArray()) {
+            const data = extractMangaDataFromElement(card)
+            if (!data.mangaId || !data.title) continue
+            items.push(App.createPartialSourceManga({
+                mangaId: data.mangaId,
+                image: data.image,
+                title: decodeHTMLEntity(data.title),
+                subtitle: decodeHTMLEntity(data.chapterInfo)
+            }))
+        }
+
         return items
     }
 
@@ -220,14 +240,14 @@ export class WestMangaParser extends MangaStreamParser {
     override isLastPage = ($: CheerioAPI, id: string): boolean => {
         let isLast = true
         if (id == 'view_more') {
-            const hasNext = Boolean($('a.r')[0])
+            const hasNext = Boolean($('nav[aria-label="pagination"] a[rel="next"], a[aria-label="Next"]').length)
             if (hasNext) {
                 isLast = false
             }
         }
 
         if (id == 'search_request') {
-            const hasNext = Boolean($('a.next.page-numbers')[0])
+            const hasNext = Boolean($('nav[aria-label="pagination"] a[rel="next"], a.next.page-numbers').length)
             if (hasNext) {
                 isLast = false
             }
