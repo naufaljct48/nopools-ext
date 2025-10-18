@@ -1,41 +1,27 @@
 import { Chapter, ChapterDetails, PartialSourceManga, SourceManga, Tag, TagSection } from '@paperback/types'
 import { decode as decodeHTMLEntity } from 'html-entities'
-import { CheerioAPI } from 'cheerio'
-import { extractMangaDataFromElement, extractChapterDataFromElement, parseRelativeDate, getImageSrc } from './WestMangaHelper'
 
-// Parser bergaya Shinigami: fungsi-fungsi ekspor, bukan class
+// Parser untuk API WestManga (JSON)
 
-export const parseMangaDetails = ($: CheerioAPI, mangaId: string): SourceManga => {
+export const parseMangaDetails = (json: any, mangaId: string): SourceManga => {
+    const data = json?.data ?? {}
+
     const titles: string[] = []
-
-    const title = $('div[data-slot="card-title"]').first().text().trim()
+    const title = data?.title ?? ''
     if (title) titles.push(decodeHTMLEntity(title))
 
-    const image = getImageSrc($('img[alt="Comic Cover"]').first())
+    const image: string = data?.cover ?? ''
+    const statusRaw: string = String(data?.status ?? '').toLowerCase()
+    const status: string = statusRaw === 'ongoing' ? 'Ongoing' : statusRaw === 'completed' ? 'Completed' : 'Unknown'
+    const author: string = data?.author ?? 'Unknown'
 
-    const description = decodeHTMLEntity($('p.text-muted-foreground').first().text().trim())
-
-    const tableRows = $('tbody[data-slot="table-body"] tr')
-    let author = 'Unknown'
-    let status = 'Unknown'
-
-    tableRows.each((_, row) => {
-        const label = $('td:first-child', row).text().trim().toLowerCase()
-        const value = $('td:last-child', row).text().trim()
-        if (label.includes('author')) author = value || 'Unknown'
-        if (label.includes('status')) status = value.toLowerCase().includes('ongoing') ? 'Ongoing' : (value ? 'Completed' : 'Unknown')
-    })
-
-    const arrayTags: Tag[] = []
-    $('div.flex.flex-wrap.gap-1 a').each((_, el) => {
-        const label = $('span', el).text().trim()
-        const href = $(el).attr('href') || ''
-        const match = href.match(/genre%5B%5D=(\d+)/)
-        const id = match ? match[1] : ''
-        if (id && label) arrayTags.push({ id, label })
-    })
+    const arrayTags: Tag[] = (Array.isArray(data?.genres) ? data.genres : []).map((g: any) => ({
+        id: String(g?.id ?? ''),
+        label: String(g?.name ?? '')
+    })).filter((t: Tag) => t.id && t.label)
 
     const tagSections: TagSection[] = [App.createTagSection({ id: '0', label: 'genres', tags: arrayTags.map((x) => App.createTag(x)) })]
+    const desc: string = data?.sinopsis ?? ''
 
     return App.createSourceManga({
         id: mangaId,
@@ -46,46 +32,42 @@ export const parseMangaDetails = ($: CheerioAPI, mangaId: string): SourceManga =
             author,
             artist: author,
             tags: tagSections,
-            desc: description
+            desc
         })
     })
 }
 
-export const parseChapterList = ($: CheerioAPI, mangaId: string): Chapter[] => {
+export const parseChapterList = (json: any): Chapter[] => {
+    const list = Array.isArray(json?.data?.chapters) ? json.data.chapters : []
     const chapters: Chapter[] = []
     let sortingIndex = 0
 
-    // Container list chapter
-    $('div.grid div[data-slot="card"]').each((_, card) => {
-        const data = extractChapterDataFromElement(card)
-        const date = parseRelativeDate(data.dateText)
-        if (data.url) {
-            chapters.push(App.createChapter({
-                id: data.url, // gunakan path /view/ sebagai chapterId
-                langCode: 'ID',
-                chapNum: data.chapterNumber,
-                name: data.chapterText,
-                time: date,
-                sortingIndex: sortingIndex--,
-                volume: 0,
-                group: ''
-            }))
-        }
-    })
-
-    if (chapters.length === 0) {
-        throw new Error(`Couldn't find any chapters for mangaId: ${mangaId}!`)
+    for (const ch of list) {
+        const slug: string = ch?.slug ?? ''
+        const id: string = slug ? `/v/${slug}` : ''
+        const numberStr: string = ch?.number ?? '0'
+        const chapNum: number = parseFloat(String(numberStr).replace(',', '.')) || 0
+        const updatedTime: number = ch?.updated_at?.time ?? ch?.created_at?.time ?? Math.floor(Date.now() / 1000)
+        if (!id) continue
+        chapters.push(App.createChapter({
+            id,
+            langCode: 'ID',
+            chapNum,
+            name: `Chapter ${numberStr}`,
+            time: new Date(updatedTime * 1000),
+            sortingIndex: sortingIndex--,
+            volume: 0,
+            group: ''
+        }))
     }
 
-    return chapters.map((c, i) => ({ ...c, sortingIndex: c.sortingIndex + chapters.length }))
+    return chapters.map((c) => ({ ...c, sortingIndex: c.sortingIndex + chapters.length }))
 }
 
-export const parseChapterDetails = ($: CheerioAPI, mangaId: string, chapterId: string): ChapterDetails => {
-    const pages: string[] = []
-    $('div.flex.flex-col.items-center.mb-4 img').each((_, img) => {
-        const src = $(img).attr('src')?.trim()
-        if (src) pages.push(encodeURI(src))
-    })
+export const parseChapterDetails = (json: any, mangaId: string, chapterId: string): ChapterDetails => {
+    const pages: string[] = (Array.isArray(json?.data?.images) ? json.data.images : [])
+        .map((x: any) => String(x))
+        .filter((x: string) => x.length > 0)
 
     if (pages.length === 0) throw new Error(`Failed to find any pages for chapter ${chapterId} of manga ${mangaId}`)
 
@@ -93,35 +75,29 @@ export const parseChapterDetails = ($: CheerioAPI, mangaId: string, chapterId: s
 }
 
 // Digunakan untuk homepage sections dan hasil pencarian (contents)
-export const parseMangaList = (data: any): PartialSourceManga[] => {
-    const $: CheerioAPI = data.$
-    const scope: string | undefined = data.scope
-
-    let cards = [] as any[]
-
-    if (scope === 'popular_today') {
-        // Tab "Sepanjang Waktu" (id berakhiran -content-all_time)
-        const panel = $('div[id$="-content-all_time"]')
-        cards = panel.find('div.overflow-hidden').toArray()
-    } else {
-        // Latest Update atau grid umum pada /contents
-        cards = $('div.grid').filter((_, el) => {
-            const cls = $(el).attr('class') || ''
-            return /grid-cols-(3|5)/.test(cls)
-        }).find('> div.overflow-hidden').toArray()
-    }
-
+export const parseMangaList = (json: any): PartialSourceManga[] => {
+    const items = Array.isArray(json?.data) ? json.data : []
     const results: PartialSourceManga[] = []
-    for (const card of cards) {
-        const d = extractMangaDataFromElement(card)
-        if (!d.mangaId || !d.title) continue
+    for (const it of items) {
+        const slug: string = it?.slug ?? ''
+        const title: string = it?.title ?? ''
+        const image: string = it?.cover ?? ''
+        const lastCh = Array.isArray(it?.lastChapters) ? it.lastChapters[0] : undefined
+        const subtitle: string = lastCh ? `Ch. ${lastCh.number}` : ''
+        if (!slug || !title) continue
         results.push(App.createPartialSourceManga({
-            mangaId: d.mangaId,
-            image: d.image,
-            title: decodeHTMLEntity(d.title),
-            subtitle: decodeHTMLEntity(d.chapterInfo)
+            mangaId: slug,
+            image,
+            title: decodeHTMLEntity(title),
+            subtitle
         }))
     }
-
     return results
+}
+
+export const parseSearchTags = (json: any): TagSection[] => {
+    const items = Array.isArray(json?.data) ? json.data : []
+    const tags: Tag[] = items.map((g: any) => ({ id: String(g?.slug || g?.id), label: String(g?.name ?? '') }))
+        .filter((t: Tag) => t.id && t.label)
+    return [App.createTagSection({ id: 'genres', label: 'Genres', tags: tags.map((t) => App.createTag(t)) })]
 }

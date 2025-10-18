@@ -1,22 +1,48 @@
 import { Request } from '@paperback/types'
 
-const BASE_URL = 'https://westmanga.me'
+const WEBSITE_BASE = 'https://westmanga.me'
+// Removed unused API_BASE
+const isApiUrl = (url: string): boolean => /data\.westmanga\.me\/api/i.test(url)
+
+const generateSignature = (): string => {
+    try {
+        const crypto = require('crypto')
+        return crypto.randomBytes(32).toString('hex')
+    } catch (e) {
+        const chars = 'abcdef0123456789'
+        let out = ''
+        for (let i = 0; i < 64; i++) out += chars[Math.floor(Math.random() * chars.length)]
+        return out
+    }
+}
 
 export const createRequestObject = (requestObj: any): Request => {
     const url: string = requestObj?.url ?? ''
     const isImage = /(\.(png|jpe?g|webp|gif)$)|storage\./i.test(url)
+    const api = isApiUrl(url)
+
+    const accept = api
+        ? 'application/json,*/*;q=0.8'
+        : (isImage
+            ? 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8'
+            : 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8')
 
     const defaultHeaders: Record<string, string> = {
-        'Accept': isImage
-            ? 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8'
-            : 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Origin': BASE_URL,
-        'Referer': `${BASE_URL}/`,
+        'Accept': accept,
+        'Origin': WEBSITE_BASE,
+        'Referer': `${WEBSITE_BASE}/`,
         'DNT': '1',
         'Sec-GPC': '1',
         'Accept-Encoding': 'gzip, deflate, br',
         'Accept-Language': 'en-US,en;q=0.9',
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+    }
+
+    if (api) {
+        const now = Math.floor(Date.now() / 1000).toString()
+        defaultHeaders['x-wm-accses-key'] = 'WM_WEB_FRONT_END'
+        defaultHeaders['x-wm-request-time'] = now
+        defaultHeaders['x-wm-request-signature'] = generateSignature()
     }
 
     const extraHeadersObj = requestObj.headers ?? {}
@@ -39,16 +65,20 @@ export const createRequestObject = (requestObj: any): Request => {
 export const getImageSrc = (imgEl: any): string => {
     const $ = require('cheerio') as any
     const $img = $(imgEl)
-    const srcset: string | undefined = $img.attr('srcset')
-    let src: string = $img.attr('data-src')
-        || $img.attr('data-lazy-src')
-        || (srcset ? srcset.split(' ')[0] : '')
-        || $img.attr('data-cfsrc')
-        || $img.attr('src')
-        || ''
+    const srcset: string | undefined = $img.attr('srcset') ?? undefined
 
-    src = (src || '').split('?resize')[0]
-    src = src.replace(/^\/\//, 'https://').replace(/^\//, 'https:/')
+    const srcComputed: string =
+        ($img.attr('data-src') ?? '') ||
+        ($img.attr('data-lazy-src') ?? '') ||
+        (srcset ? (srcset.split(' ')[0] ?? '') : '') ||
+        ($img.attr('data-cfsrc') ?? '') ||
+        ($img.attr('src') ?? '') ||
+        ''
+
+    let src = srcComputed || ''
+    const resizeIdx = src.indexOf('?resize')
+    if (resizeIdx >= 0) src = src.substring(0, resizeIdx)
+    src = (src || '').replace(/^\/\//, 'https://').replace(/^\//, 'https:/')
     return encodeURI(decodeURI((src || '').trim()))
 }
 

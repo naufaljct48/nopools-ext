@@ -1,18 +1,19 @@
 import { Source, Chapter, ChapterDetails, HomeSection, SearchRequest, PagedResults, HomeSectionType, SourceInfo, ContentRating, BadgeColor, SourceIntents, TagSection, Request, Response, SourceManga } from '@paperback/types'
 import { createRequestObject } from './WestMangaHelper'
-import { parseMangaDetails, parseChapterList, parseChapterDetails, parseMangaList } from './WestMangaParser'
+import { parseMangaDetails, parseChapterList, parseChapterDetails, parseMangaList, parseSearchTags } from './WestMangaParser'
 
-const BASE_URL = 'https://westmanga.me'
+const WEBSITE_BASE = 'https://westmanga.me'
+const API_BASE = 'https://data.westmanga.me'
 
 export const WestMangaInfo: SourceInfo = {
-    version: '1.0.0',
+    version: '1.1.0',
     name: 'WestManga',
     icon: 'icon.png',
     author: 'NaufalJCT48',
     authorWebsite: 'https://github.com/naufaljct48',
-    description: 'Extension yang mengambil manga dari WestManga',
+    description: 'Extension yang mengambil manga dari WestManga (API)',
     contentRating: ContentRating.EVERYONE,
-    websiteBaseURL: BASE_URL,
+    websiteBaseURL: WEBSITE_BASE,
     sourceTags: [{ text: 'Indonesian', type: BadgeColor.GREY }],
     intents: SourceIntents.MANGA_CHAPTERS | SourceIntents.HOMEPAGE_SECTIONS | SourceIntents.CLOUDFLARE_BYPASS_REQUIRED | SourceIntents.SETTINGS_UI,
 }
@@ -24,13 +25,16 @@ export class WestManga extends Source {
         interceptor: {
             interceptRequest: async (request: Request): Promise<Request> => {
                 const isImage = /(\.(png|jpe?g|webp|gif)$)|storage\./i.test(request.url)
+                const isApi = /data\.westmanga\.me\/api/i.test(request.url)
                 request.headers = {
                     ...(request.headers ?? {} as Record<string, string>),
-                    'Accept': isImage
-                        ? 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8'
-                        : 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                    'Origin': BASE_URL,
-                    'Referer': `${BASE_URL}/`,
+                    'Accept': isApi
+                        ? 'application/json,*/*;q=0.8'
+                        : isImage
+                            ? 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8'
+                            : 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    'Origin': WEBSITE_BASE,
+                    'Referer': `${WEBSITE_BASE}/`,
                     'DNT': '1',
                     'Sec-GPC': '1',
                     'Accept-Encoding': 'gzip, deflate, br',
@@ -45,83 +49,91 @@ export class WestManga extends Source {
         }
     })
 
+    private parseJSON(response: Response): any {
+        const data = response?.data
+        if (!data) return {}
+        try {
+            return typeof data === 'string' ? JSON.parse(data) : data
+        } catch (e) {
+            return data
+        }
+    }
+
     override async getMangaDetails(mangaId: string): Promise<SourceManga> {
-        const request = createRequestObject({ url: `${BASE_URL}/comic/${mangaId}`, method: 'GET' })
+        const request = createRequestObject({ url: `${API_BASE}/api/comic/${mangaId}`, method: 'GET' })
         const response = await this.requestManager.schedule(request, 1)
-        const $ = require('cheerio').load(response.data as string)
-        return parseMangaDetails($, mangaId)
+        const json = this.parseJSON(response)
+        return parseMangaDetails(json, mangaId)
     }
 
     override async getChapters(mangaId: string): Promise<Chapter[]> {
-        const request = createRequestObject({ url: `${BASE_URL}/comic/${mangaId}`, method: 'GET' })
+        const request = createRequestObject({ url: `${API_BASE}/api/comic/${mangaId}`, method: 'GET' })
         const response = await this.requestManager.schedule(request, 1)
-        const $ = require('cheerio').load(response.data as string)
-        return parseChapterList($, mangaId)
+        const json = this.parseJSON(response)
+        return parseChapterList(json)
     }
 
     override async getChapterDetails(mangaId: string, chapterId: string): Promise<ChapterDetails> {
-        const isAbs = chapterId.startsWith('http://') || chapterId.startsWith('https://')
-        const url = isAbs ? chapterId : `${BASE_URL}${chapterId.startsWith('/') ? '' : '/'}${chapterId}`
-        const request = createRequestObject({ url, method: 'GET' })
+        const slug = chapterId.replace(/^\/?v\//, '')
+        const request = createRequestObject({ url: `${API_BASE}/api/v/${slug}`, method: 'GET' })
         const response = await this.requestManager.schedule(request, 1)
-        const $ = require('cheerio').load(response.data as string)
-        return parseChapterDetails($, mangaId, chapterId)
+        const json = this.parseJSON(response)
+        return parseChapterDetails(json, mangaId, chapterId)
     }
 
     override async getHomePageSections(sectionCallback: (section: HomeSection) => void): Promise<void> {
-        const sections: { request: any, section: HomeSection, scope: string }[] = [
+        const sections: { request: any, section: HomeSection }[] = [
             {
-                request: createRequestObject({ url: `${BASE_URL}/`, method: 'GET' }),
-                section: App.createHomeSection({ id: 'popular_today', title: 'Popular Today', type: HomeSectionType.singleRowNormal, containsMoreItems: false }),
-                scope: 'popular_today'
+                request: createRequestObject({ url: `${API_BASE}/api/contents?page=1&per_page=25&orderBy=Popular&project=false`, method: 'GET' }),
+                section: App.createHomeSection({ id: 'popular_today', title: 'Popular Today', type: HomeSectionType.singleRowNormal, containsMoreItems: true })
             },
             {
-                request: createRequestObject({ url: `${BASE_URL}/`, method: 'GET' }),
-                section: App.createHomeSection({ id: 'latest_update', title: 'Latest Update', type: HomeSectionType.singleRowNormal, containsMoreItems: true }),
-                scope: 'latest_update'
+                request: createRequestObject({ url: `${API_BASE}/api/contents?page=1&per_page=25&project=false`, method: 'GET' }),
+                section: App.createHomeSection({ id: 'latest_update', title: 'Latest Update', type: HomeSectionType.singleRowNormal, containsMoreItems: true })
             }
         ]
 
         for (const s of sections) {
             sectionCallback(s.section)
             const response = await this.requestManager.schedule(s.request, 1)
-            const $ = require('cheerio').load(response.data as string)
-            const items = parseMangaList({ $, scope: s.scope })
-            s.section.items = items
+            const json = this.parseJSON(response)
+            s.section.items = parseMangaList(json)
             sectionCallback(s.section)
         }
     }
 
     override async getSearchTags(): Promise<TagSection[]> {
-        // Belum ada halaman filter yang stabil, kembalikan kosong
-        return []
+        const request = createRequestObject({ url: `${API_BASE}/api/contents/genres`, method: 'GET' })
+        const response = await this.requestManager.schedule(request, 1)
+        const json = this.parseJSON(response)
+        return parseSearchTags(json)
     }
 
     override async getSearchResults(query: SearchRequest): Promise<PagedResults> {
-        const params: string[] = ['page=1']
         const title = query.title?.trim()
-        if (title) params.push(`s=${encodeURIComponent(title)}`)
-        const request = createRequestObject({ url: `${BASE_URL}/contents?${params.join('&')}`, method: 'GET' })
+        const params: string[] = ['page=1', 'per_page=25', 'project=false']
+        if (title) params.push(`search=${encodeURIComponent(title)}`)
+        const request = createRequestObject({ url: `${API_BASE}/api/contents?${params.join('&')}`, method: 'GET' })
         const response = await this.requestManager.schedule(request, 1)
-        const $ = require('cheerio').load(response.data as string)
-        const results = parseMangaList({ $, scope: 'latest_update' })
-
-        // Deteksi tombol next
-        const hasNext = Boolean($('nav[aria-label="pagination"] a[rel="next"], a[aria-label="Next"]').length)
-        return App.createPagedResults({
-            results,
-            metadata: hasNext ? { page: 2 } : undefined
-        })
+        const json = this.parseJSON(response)
+        const results = parseMangaList(json)
+        const current = Number(json?.paginator?.current_page ?? 1)
+        const last = Number(json?.paginator?.last_page ?? 1)
+        return App.createPagedResults({ results, metadata: current < last ? { page: current + 1, last } : undefined })
     }
 
     override async getViewMoreItems(homepageSectionId: string, metadata: any): Promise<PagedResults> {
-        const page = metadata?.page ?? 1
-        if (homepageSectionId !== 'latest_update') throw new Error(`Invalid homepage section id: ${homepageSectionId}`)
-        const request = createRequestObject({ url: `${BASE_URL}/contents?page=${page}`, method: 'GET' })
+        const page = Number(metadata?.page ?? 1)
+        const params: string[] = [`page=${page}`, 'per_page=25', 'project=false']
+        if (homepageSectionId === 'popular_today') params.push('orderBy=Popular')
+        else if (homepageSectionId !== 'latest_update') throw new Error(`Invalid homepage section id: ${homepageSectionId}`)
+
+        const request = createRequestObject({ url: `${API_BASE}/api/contents?${params.join('&')}`, method: 'GET' })
         const response = await this.requestManager.schedule(request, 1)
-        const $ = require('cheerio').load(response.data as string)
-        const results = parseMangaList({ $, scope: 'latest_update' })
-        const hasNext = Boolean($('nav[aria-label="pagination"] a[rel="next"], a[aria-label="Next"]').length)
-        return App.createPagedResults({ results, metadata: hasNext ? { page: page + 1 } : undefined })
+        const json = this.parseJSON(response)
+        const results = parseMangaList(json)
+        const current = Number(json?.paginator?.current_page ?? page)
+        const last = Number(json?.paginator?.last_page ?? page)
+        return App.createPagedResults({ results, metadata: current < last ? { page: current + 1, last } : undefined })
     }
 }
