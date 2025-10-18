@@ -995,7 +995,7 @@ var _Sources = (() => {
         group: ""
       }));
     }
-    return chapters.map((c) => ({ ...c, sortingIndex: c.sortingIndex + chapters.length }));
+    return chapters;
   };
   var parseChapterDetails = (json, mangaId, chapterId) => {
     const pages = (Array.isArray(json?.data?.images) ? json.data.images : []).map((x) => String(x)).filter((x) => x.length > 0);
@@ -1023,7 +1023,7 @@ var _Sources = (() => {
   };
   var parseSearchTags = (json) => {
     const items = Array.isArray(json?.data) ? json.data : [];
-    const tags = items.map((g) => ({ id: String(g?.slug || g?.id), label: String(g?.name ?? "") })).filter((t) => t.id && t.label);
+    const tags = items.map((g) => ({ id: String(g?.id ?? ""), label: String(g?.name ?? "") })).filter((t) => t.id && t.label);
     return [App.createTagSection({ id: "genres", label: "Genres", tags: tags.map((t) => App.createTag(t)) })];
   };
 
@@ -1031,7 +1031,7 @@ var _Sources = (() => {
   var WEBSITE_BASE2 = "https://westmanga.me";
   var API_BASE = "https://data.westmanga.me";
   var WestMangaInfo = {
-    version: "1.1.0",
+    version: "1.1.1",
     name: "WestManga",
     icon: "icon.png",
     author: "NaufalJCT48",
@@ -1128,6 +1128,13 @@ var _Sources = (() => {
       const title = query.title?.trim();
       const params = ["page=1", "per_page=25", "project=false"];
       if (title) params.push(`search=${encodeURIComponent(title)}`);
+      const included = query?.includedTags;
+      if (Array.isArray(included) && included.length) {
+        for (const tag of included) {
+          const id = String(tag?.id ?? "").trim();
+          if (id) params.push(`genre%5B%5D=${encodeURIComponent(id)}`);
+        }
+      }
       const request = createRequestObject({ url: `${API_BASE}/api/contents?${params.join("&")}`, method: "GET" });
       const response = await this.requestManager.schedule(request, 1);
       const json = this.parseJSON(response);
