@@ -16858,7 +16858,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
     const linkElement = $element.find("a").first();
     const title = linkElement.find("p.font-medium").text().trim() || linkElement.attr("title") || "";
     const imageElement = $element.find("img").first();
-    const image = imageElement.attr("src") || imageElement.attr("data-src") || "";
+    const image = imageElement.attr("data-src") || imageElement.attr("data-lazy-src") || (imageElement.attr("srcset") ? imageElement.attr("srcset").split(" ")[0] : "") || imageElement.attr("data-cfsrc") || imageElement.attr("src") || "";
     const url = linkElement.attr("href") || "";
     const chapterElement = $element.find('div[data-slot="card-content"] p.text-xs').first();
     const chapterInfo = chapterElement.text().trim();
@@ -16878,7 +16878,8 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
     const url = linkElement.attr("href") || "";
     const chapterText = linkElement.find("p").first().text().trim();
     const dateText = linkElement.find("p.text-xs").text().trim();
-    const chapterId = url.match(/chapter-(\d+)-/i) ? url.match(/chapter-(\d+)-/i)[1] : "";
+    const chapterIdMatch = url.match(/chapter-(\d+)-/i);
+    const chapterId = chapterIdMatch ? chapterIdMatch[1] : "";
     const chapterNumberMatch = chapterText.match(/chapter\s*(\d+(?:\.\d+)?)/i);
     const chapterNumber = chapterNumberMatch ? parseFloat(chapterNumberMatch[1]) : 0;
     return {
@@ -16912,13 +16913,13 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
       this.isLastPage = ($2, id) => {
         let isLast = true;
         if (id == "view_more") {
-          const hasNext = Boolean($2("a.r")[0]);
+          const hasNext = Boolean($2('nav[aria-label="pagination"] a[rel="next"], a[aria-label="Next"]').length);
           if (hasNext) {
             isLast = false;
           }
         }
         if (id == "search_request") {
-          const hasNext = Boolean($2("a.next.page-numbers")[0]);
+          const hasNext = Boolean($2('nav[aria-label="pagination"] a[rel="next"], a.next.page-numbers').length);
           if (hasNext) {
             isLast = false;
           }
@@ -16984,9 +16985,10 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
       chapterContainer.find('div[data-slot="card"]').each((_, chapterElement) => {
         const chapterData = extractChapterDataFromElement(chapterElement);
         const date = parseRelativeDate(chapterData.dateText);
-        if (chapterData.chapterId) {
+        if (chapterData.url) {
           chapters.push({
-            id: chapterData.chapterId,
+            id: chapterData.url,
+            // gunakan path /view/... langsung sebagai chapterId
             langCode: source.language,
             chapNum: chapterData.chapterNumber,
             name: chapterData.chapterText,
@@ -17035,10 +17037,32 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
     }
     async parseSearchResults($2, source) {
       const results = [];
+      const cards = $2("div.grid.grid-cols-3, div.grid.lg\\:grid-cols-5").find("> div.overflow-hidden");
+      for (const card of cards.toArray()) {
+        const data2 = extractMangaDataFromElement(card);
+        if (!data2.mangaId || !data2.title) continue;
+        results.push(App.createPartialSourceManga({
+          mangaId: data2.mangaId,
+          image: data2.image,
+          title: decode(data2.title),
+          subtitle: decode(data2.chapterInfo)
+        }));
+      }
       return results;
     }
     async parseViewMore($2, source) {
       const items = [];
+      const cards = $2("div.grid.grid-cols-3, div.grid.lg\\:grid-cols-5").find("> div.overflow-hidden");
+      for (const card of cards.toArray()) {
+        const data2 = extractMangaDataFromElement(card);
+        if (!data2.mangaId || !data2.title) continue;
+        items.push(App.createPartialSourceManga({
+          mangaId: data2.mangaId,
+          image: data2.image,
+          title: decode(data2.title),
+          subtitle: decode(data2.chapterInfo)
+        }));
+      }
       return items;
     }
     async parseHomeSection($2, section, source) {
@@ -17102,7 +17126,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
   // src/WestManga/WestManga.ts
   var DOMAIN = "https://westmanga.me";
   var WestMangaInfo = {
-    version: getExportVersion("0.0.3"),
+    version: getExportVersion("0.0.4"),
     name: "WestManga",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",
@@ -17124,45 +17148,66 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
       this.baseUrl = DOMAIN;
       // Override the parser to use WestMangaParser
       this.parser = new WestMangaParser();
+      // WestManga tidak menggunakan postId (bukan WordPress), pakai slug saja
+      this.usePostIds = false;
+      // Tag box di halaman detail
       this.manga_tag_selector_box = "div.flex.flex-wrap.gap-1";
-      // Override the directory path for WestManga
+      // Path detail manga memakai /comic/:slug
       this.directoryPath = "comic";
-      // Override the manga details selectors for WestManga
+      // Override selector label metadata (untuk fallback saja)
       this.manga_selector_AlternativeTitles = "Alternative Titles";
       this.manga_selector_author = "Author";
       this.manga_selector_artist = "Artist";
       this.manga_selector_status = "Status";
     }
-    // Updated selector for WestManga
     configureSections() {
       this.homescreen_sections["new_titles"].enabled = false;
       this.homescreen_sections["top_alltime"].enabled = false;
       this.homescreen_sections["top_monthly"].enabled = false;
       this.homescreen_sections["top_weekly"].enabled = false;
       this.homescreen_sections["popular_today"].selectorFunc = ($2) => {
-        const tablist = $2('div[role="tablist"]');
-        const activeTab = tablist.find('button[aria-selected="true"]');
-        if (activeTab.text().includes("Sepanjang Waktu")) {
-          return $2("div.grid.grid-cols-3 > div.overflow-hidden");
-        } else {
-          return $2("div.grid.grid-cols-3 > div.overflow-hidden").first();
-        }
-      };
-      this.homescreen_sections["latest_update"].selectorFunc = ($2) => {
-        return $2("div.grid.grid-cols-3.sm\\:grid-cols-3.md\\:grid-cols-3.lg\\:grid-cols-5 > div.overflow-hidden");
+        return $2("div.overflow-hidden").filter((_, el) => Boolean($2('a[href^="/comic/"]', el).length));
       };
       this.homescreen_sections["popular_today"].titleSelectorFunc = ($2, element) => {
         return $2("a p.font-medium", element).text().trim();
       };
       this.homescreen_sections["popular_today"].subtitleSelectorFunc = ($2, element) => {
-        return $2('div[data-slot="card-content"] p.text-xs span:first-child', element).text().trim();
+        return $2('div[data-slot="card"] p.text-xs', element).first().text().trim();
+      };
+      this.homescreen_sections["latest_update"].selectorFunc = ($2) => {
+        return $2("div.grid.grid-cols-3, div.grid.lg\\:grid-cols-5").find("> div.overflow-hidden");
       };
       this.homescreen_sections["latest_update"].titleSelectorFunc = ($2, element) => {
         return $2("a p.font-medium", element).text().trim();
       };
       this.homescreen_sections["latest_update"].subtitleSelectorFunc = ($2, element) => {
-        return $2('div[data-slot="card-content"] p.text-xs span:first-child', element).text().trim();
+        return $2('div[data-slot="card"] p.text-xs', element).first().text().trim();
       };
+      this.homescreen_sections["latest_update"].getViewMoreItemsFunc = (page) => `contents?page=${page}`;
+    }
+    // Hindari pemanggilan /comic/ untuk pengambilan tag pencarian
+    async getSearchTags() {
+      return [];
+    }
+    // Gunakan endpoint "contents" untuk pencarian / listing
+    async constructSearchRequest(page, query) {
+      const base = `${this.baseUrl}/contents`;
+      const params = { page: String(page) };
+      if (query?.title) {
+        params["s"] = encodeURIComponent(query.title);
+      }
+      const qs = Object.entries(params).map(([k, v]) => `${k}=${v}`).join("&");
+      return App.createRequest({ url: `${base}?${qs}`, method: "GET" });
+    }
+    // ChapterId yang dikirim adalah path /view/...; langsung request halaman chapter
+    async getChapterDetails(mangaId, chapterId) {
+      const isAbsolute = chapterId.startsWith("http://") || chapterId.startsWith("https://");
+      const url = isAbsolute ? chapterId : `${this.baseUrl}${chapterId.startsWith("/") ? "" : "/"}${chapterId}`;
+      const request = App.createRequest({ url, method: "GET" });
+      const response = await this.requestManager.schedule(request, 1);
+      this.checkResponseError(response);
+      const $2 = (init_browser(), __toCommonJS(browser_exports)).load(response.data);
+      return this.parser.parseChapterDetails($2, mangaId, chapterId);
     }
   };
   return __toCommonJS(WestManga_exports);
