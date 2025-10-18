@@ -1,150 +1,99 @@
-import {
-    HomeSection,
-    HomeSectionType,
-    Tag
-} from '@paperback/types'
+import { Request } from '@paperback/types'
 
-import {
-    BasicAcceptedElems,
-    CheerioAPI
-} from 'cheerio'
-import { AnyNode } from 'domhandler'
+const BASE_URL = 'https://westmanga.me'
 
-export interface WestMangaHomeSectionData {
-    selectorFunc: Function;
-    titleSelectorFunc: Function;
-    subtitleSelectorFunc: Function;
-    getViewMoreItemsFunc: Function;
-    section: HomeSection;
-    enabled: boolean;
-    sortIndex: number;
-}
+export const createRequestObject = (requestObj: any): Request => {
+    const url: string = requestObj?.url ?? ''
+    const isImage = /(\.(png|jpe?g|webp|gif)$)|storage\./i.test(url)
 
-export const DefaultWestMangaHomeSectionData = {
-    titleSelectorFunc: ($: CheerioAPI, element: BasicAcceptedElems<AnyNode> | null | undefined) => {
-        // For WestManga, extract title from the link within the element
-        const linkElement = $('a', element)
-        return linkElement.find('p.font-medium').text().trim() || linkElement.attr('title') || ''
-    },
-    subtitleSelectorFunc: ($: CheerioAPI, element: BasicAcceptedElems<AnyNode> | null | undefined) => {
-        // For WestManga, extract chapter info from the card content
-        const cardElement = $('div[data-slot="card-content"] p.text-xs', element)
-        return cardElement.first().text().trim()
-    },
-    getViewMoreItemsFunc: () => undefined,
-    enabled: true
-}
-
-export function createWestMangaHomeSection(id: string, title: string, containsMoreItems = true, type: string = HomeSectionType.singleRowNormal): HomeSection {
-    return App.createHomeSection({
-        id,
-        title,
-        type,
-        containsMoreItems
-    })
-}
-
-export function getIncludedTagBySection(section: string, tags: Tag[]): any {
-    return (tags?.find((x: Tag) => x.id.startsWith(`${section}:`))?.id.replace(`${section}:`, '') ?? '').replace(' ', '+')
-}
-
-export function getFilterTagsBySection(section: string, tags: Tag[], included: boolean, supportsExclusion = false): string[] {
-    if (!included && !supportsExclusion) {
-        return []
+    const defaultHeaders: Record<string, string> = {
+        'Accept': isImage
+            ? 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8'
+            : 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Origin': BASE_URL,
+        'Referer': `${BASE_URL}/`,
+        'DNT': '1',
+        'Sec-GPC': '1',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
     }
 
-    return tags?.filter((x: Tag) => x.id.startsWith(`${section}:`)).map((x: Tag) => {
-        let id: string = x.id.replace(`${section}:`, '')
-        if (!included) {
-            id = encodeURI(`-${id}`)
+    const extraHeadersObj = requestObj.headers ?? {}
+    const extraHeaders: Record<string, string> = {}
+    for (const k of Object.keys(extraHeadersObj)) {
+        const v = extraHeadersObj[k]
+        if (typeof v === 'string') extraHeaders[k] = v
+    }
+
+    return App.createRequest({
+        ...requestObj,
+        headers: {
+            ...defaultHeaders,
+            ...extraHeaders
         }
-        return id
     })
 }
 
-// Helper function to extract manga data from WestManga's specific HTML structure
+// Mendapatkan sumber gambar dari berbagai atribut yang umum digunakan
+export const getImageSrc = (imgEl: any): string => {
+    const $ = require('cheerio') as any
+    const $img = $(imgEl)
+    const srcset: string | undefined = $img.attr('srcset')
+    let src: string = $img.attr('data-src')
+        || $img.attr('data-lazy-src')
+        || (srcset ? srcset.split(' ')[0] : '')
+        || $img.attr('data-cfsrc')
+        || $img.attr('src')
+        || ''
+
+    src = (src || '').split('?resize')[0]
+    src = src.replace(/^\/\//, 'https://').replace(/^\//, 'https:/')
+    return encodeURI(decodeURI((src || '').trim()))
+}
+
+// Ekstraksi data manga dari kartu (homepage, contents)
 export const extractMangaDataFromElement = (element: any) => {
     const $ = require('cheerio') as any
-    const $element = $(element)
-    
-    // Extract title from the link
-    const linkElement = $element.find('a').first()
-    const title = linkElement.find('p.font-medium').text().trim() || linkElement.attr('title') || ''
-    
-    // Extract image (support various attributes)
-    const imageElement = $element.find('img').first()
-    const image = imageElement.attr('data-src')
-        || imageElement.attr('data-lazy-src')
-        || (imageElement.attr('srcset') ? imageElement.attr('srcset').split(' ')[0] : '')
-        || imageElement.attr('data-cfsrc')
-        || imageElement.attr('src')
-        || ''
-    
-    // Extract URL
-    const url = linkElement.attr('href') || ''
-    
-    // Extract chapter info
-    const chapterElement = $element.find('div[data-slot="card-content"] p.text-xs').first()
-    const chapterInfo = chapterElement.text().trim()
-    
-    // Extract manga ID from URL
+    const $el = $(element)
+
+    const link = $el.find('a').first()
+    const title = link.find('p.font-medium').text().trim() || link.attr('title') || ''
+    const image = getImageSrc($el.find('img').first())
+    const url = link.attr('href') || ''
+
+    const chapterInfo = $el.find('div[data-slot="card-content"] p.text-xs').first().text().trim()
     const mangaId = url.replace(/\/$/, '').split('/').pop() || ''
-    
-    return {
-        title,
-        image,
-        url,
-        mangaId,
-        chapterInfo
-    }
+
+    return { title, image, url, mangaId, chapterInfo }
 }
 
-// Helper function to extract chapter data from WestManga's specific HTML structure
+// Ekstraksi data chapter dari elemen list chapter di halaman detail
 export const extractChapterDataFromElement = (element: any) => {
     const $ = require('cheerio') as any
-    const $element = $(element)
-    
-    // Extract chapter link
-    const linkElement = $element.find('a').first()
-    const url = linkElement.attr('href') || ''
-    
-    // Extract chapter text
-    const chapterText = linkElement.find('p').first().text().trim()
-    
-    // Extract date
-    const dateText = linkElement.find('p.text-xs').text().trim()
-    
-    // Extract chapter ID from URL (when available, but we'll prefer URL itself)
-    const chapterIdMatch = url.match(/chapter-(\d+)-/i)
-    const chapterId = chapterIdMatch ? chapterIdMatch[1] : ''
-    
-    // Extract chapter number
-    const chapterNumberMatch = chapterText.match(/chapter\s*(\d+(?:\.\d+)?)/i)
-    const chapterNumber = chapterNumberMatch ? parseFloat(chapterNumberMatch[1]) : 0
-    
-    return {
-        url,
-        chapterText,
-        dateText,
-        chapterId,
-        chapterNumber
-    }
+    const $el = $(element)
+
+    const link = $el.find('a').first()
+    const url = link.attr('href') || ''
+    const chapterText = link.find('p').first().text().trim()
+    const dateText = link.find('p.text-xs').text().trim()
+    const numMatch = chapterText.match(/chapter\s*(\d+(?:\.\d+)?)/i)
+    const chapterNumber = numMatch ? parseFloat(numMatch[1]) : 0
+
+    return { url, chapterText, dateText, chapterNumber }
 }
 
-// Helper function to parse relative dates like "2 hari", "4 jam"
+// Parsing tanggal relatif seperti "2 hari" atau "4 jam"
 export const parseRelativeDate = (dateText: string): Date => {
-    if (dateText.includes('hari')) {
-        const days = parseInt(dateText) || 0
-        const date = new Date()
-        date.setDate(date.getDate() - days)
-        return date
-    } else if (dateText.includes('jam')) {
-        const hours = parseInt(dateText) || 0
-        const date = new Date()
-        date.setHours(date.getHours() - hours)
-        return date
-    } else {
-        // Try to parse as a regular date
-        return new Date(dateText)
+    if (!dateText) return new Date()
+    const lower = dateText.toLowerCase()
+    if (lower.includes('hari')) {
+        const days = parseInt(lower) || 0
+        const d = new Date(); d.setDate(d.getDate() - days); return d
     }
+    if (lower.includes('jam')) {
+        const hours = parseInt(lower) || 0
+        const d = new Date(); d.setHours(d.getHours() - hours); return d
+    }
+    return new Date(dateText)
 }

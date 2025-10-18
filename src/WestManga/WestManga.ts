@@ -1,127 +1,127 @@
-import {
-    BadgeColor,
-    ContentRating,
-    SourceInfo,
-    SourceIntents
-} from '@paperback/types'
-import {
-    BasicAcceptedElems,
-    CheerioAPI
-} from 'cheerio'
-import { AnyNode } from 'domhandler'
+import { Source, Chapter, ChapterDetails, HomeSection, SearchRequest, PagedResults, HomeSectionType, SourceInfo, ContentRating, BadgeColor, SourceIntents, TagSection, Request, Response, SourceManga } from '@paperback/types'
+import { createRequestObject } from './WestMangaHelper'
+import { parseMangaDetails, parseChapterList, parseChapterDetails, parseMangaList } from './WestMangaParser'
 
-import {
-    getExportVersion,
-    MangaStream
-} from '../MangaStream'
-import { WestMangaParser } from './WestMangaParser'
-import {
-    DefaultWestMangaHomeSectionData,
-    WestMangaHomeSectionData,
-    createWestMangaHomeSection
-} from './WestMangaHelper'
-
-const DOMAIN = 'https://westmanga.me'
+const BASE_URL = 'https://westmanga.me'
 
 export const WestMangaInfo: SourceInfo = {
-    version: getExportVersion('0.0.4'),
+    version: '1.0.0',
     name: 'WestManga',
-    description: `Extension that pulls manga from ${DOMAIN}`,
-    author: 'NaufalJCT48',
-    authorWebsite: 'http://github.com/NaufalJCT48',
     icon: 'icon.png',
+    author: 'NaufalJCT48',
+    authorWebsite: 'https://github.com/naufaljct48',
+    description: 'Extension yang mengambil manga dari WestManga',
     contentRating: ContentRating.EVERYONE,
-    websiteBaseURL: DOMAIN,
+    websiteBaseURL: BASE_URL,
+    sourceTags: [{ text: 'Indonesian', type: BadgeColor.GREY }],
     intents: SourceIntents.MANGA_CHAPTERS | SourceIntents.HOMEPAGE_SECTIONS | SourceIntents.CLOUDFLARE_BYPASS_REQUIRED | SourceIntents.SETTINGS_UI,
-    sourceTags: [
-        {
-            text: "Indonesia",
-            type: BadgeColor.GREY
-        },
-    ]
 }
 
-export class WestManga extends MangaStream {
+export class WestManga extends Source {
+    requestManager = App.createRequestManager({
+        requestsPerSecond: 4,
+        requestTimeout: 15000,
+        interceptor: {
+            interceptRequest: async (request: Request): Promise<Request> => {
+                const isImage = /(\.(png|jpe?g|webp|gif)$)|storage\./i.test(request.url)
+                request.headers = {
+                    ...(request.headers ?? {} as Record<string, string>),
+                    'Accept': isImage
+                        ? 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8'
+                        : 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    'Origin': BASE_URL,
+                    'Referer': `${BASE_URL}/`,
+                    'DNT': '1',
+                    'Sec-GPC': '1',
+                    'Accept-Encoding': 'gzip, deflate, br',
+                    'Accept-Language': 'en-US,en;q=0.9',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+                }
+                return request
+            },
+            interceptResponse: async (response: Response): Promise<Response> => {
+                return response
+            }
+        }
+    })
 
-    baseUrl: string = DOMAIN
-    
-    // Override the parser to use WestMangaParser
-    override parser = new WestMangaParser()
-
-    // WestManga tidak menggunakan postId (bukan WordPress), pakai slug saja
-    override usePostIds = false
-
-    // Tag box di halaman detail
-    override manga_tag_selector_box = 'div.flex.flex-wrap.gap-1'
-
-    override configureSections(): void {
-        // Nonaktifkan section yang tidak tersedia
-        this.homescreen_sections['new_titles'].enabled = false
-        this.homescreen_sections['top_alltime'].enabled = false
-        this.homescreen_sections['top_monthly'].enabled = false
-        this.homescreen_sections['top_weekly'].enabled = false
-        
-        // Popular Today: kartu vertikal berisi cover + judul + info chapter
-        this.homescreen_sections['popular_today'].selectorFunc = ($: CheerioAPI) => {
-            // Ambil elemen kartu komik (overflow-hidden) yang memiliki link ke /comic/
-            return $('div.overflow-hidden').filter((_, el) => Boolean($('a[href^="/comic/"]', el).length))
-        }
-        this.homescreen_sections['popular_today'].titleSelectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => {
-            return $('a p.font-medium', element).text().trim()
-        }
-        this.homescreen_sections['popular_today'].subtitleSelectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => {
-            return $('div[data-slot="card"] p.text-xs', element).first().text().trim()
-        }
-
-        // Latest Update: grid 3/5 kolom berisi kartu komik
-        this.homescreen_sections['latest_update'].selectorFunc = ($: CheerioAPI) => {
-            return $('div.grid.grid-cols-3, div.grid.lg\\:grid-cols-5').find('> div.overflow-hidden')
-        }
-        this.homescreen_sections['latest_update'].titleSelectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => {
-            return $('a p.font-medium', element).text().trim()
-        }
-        this.homescreen_sections['latest_update'].subtitleSelectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => {
-            return $('div[data-slot="card"] p.text-xs', element).first().text().trim()
-        }
-        // Hindari request ke /comic/?..., gunakan halaman contents untuk View More
-        this.homescreen_sections['latest_update'].getViewMoreItemsFunc = (page: string) => `contents?page=${page}`
+    override async getMangaDetails(mangaId: string): Promise<SourceManga> {
+        const request = createRequestObject({ url: `${BASE_URL}/comic/${mangaId}`, method: 'GET' })
+        const response = await this.requestManager.schedule(request, 1)
+        const $ = require('cheerio').load(response.data as string)
+        return parseMangaDetails($, mangaId)
     }
-    
-    // Path detail manga memakai /comic/:slug
-    override directoryPath = 'comic'
-    
-    // Override selector label metadata (untuk fallback saja)
-    override manga_selector_AlternativeTitles = 'Alternative Titles'
-    override manga_selector_author = 'Author'
-    override manga_selector_artist = 'Artist'
-    override manga_selector_status = 'Status'
 
-    // Hindari pemanggilan /comic/ untuk pengambilan tag pencarian
-    async getSearchTags() {
-        // WestManga tidak menyediakan dropdown tags konvensional; kembalikan kosong agar Discover tidak error
+    override async getChapters(mangaId: string): Promise<Chapter[]> {
+        const request = createRequestObject({ url: `${BASE_URL}/comic/${mangaId}`, method: 'GET' })
+        const response = await this.requestManager.schedule(request, 1)
+        const $ = require('cheerio').load(response.data as string)
+        return parseChapterList($, mangaId)
+    }
+
+    override async getChapterDetails(mangaId: string, chapterId: string): Promise<ChapterDetails> {
+        const isAbs = chapterId.startsWith('http://') || chapterId.startsWith('https://')
+        const url = isAbs ? chapterId : `${BASE_URL}${chapterId.startsWith('/') ? '' : '/'}${chapterId}`
+        const request = createRequestObject({ url, method: 'GET' })
+        const response = await this.requestManager.schedule(request, 1)
+        const $ = require('cheerio').load(response.data as string)
+        return parseChapterDetails($, mangaId, chapterId)
+    }
+
+    override async getHomePageSections(sectionCallback: (section: HomeSection) => void): Promise<void> {
+        const sections: { request: any, section: HomeSection, scope: string }[] = [
+            {
+                request: createRequestObject({ url: `${BASE_URL}/`, method: 'GET' }),
+                section: App.createHomeSection({ id: 'popular_today', title: 'Popular Today', type: HomeSectionType.singleRowNormal, containsMoreItems: false }),
+                scope: 'popular_today'
+            },
+            {
+                request: createRequestObject({ url: `${BASE_URL}/`, method: 'GET' }),
+                section: App.createHomeSection({ id: 'latest_update', title: 'Latest Update', type: HomeSectionType.singleRowNormal, containsMoreItems: true }),
+                scope: 'latest_update'
+            }
+        ]
+
+        for (const s of sections) {
+            sectionCallback(s.section)
+            const response = await this.requestManager.schedule(s.request, 1)
+            const $ = require('cheerio').load(response.data as string)
+            const items = parseMangaList({ $, scope: s.scope })
+            s.section.items = items
+            sectionCallback(s.section)
+        }
+    }
+
+    override async getSearchTags(): Promise<TagSection[]> {
+        // Belum ada halaman filter yang stabil, kembalikan kosong
         return []
     }
 
-    // Gunakan endpoint "contents" untuk pencarian / listing
-    async constructSearchRequest(page: number, query: any): Promise<any> {
-        const base = `${this.baseUrl}/contents`
-        const params: Record<string, string> = { page: String(page) }
-        if (query?.title) {
-            params['s'] = encodeURIComponent(query.title)
-        }
-        // Bangun URL
-        const qs = Object.entries(params).map(([k,v]) => `${k}=${v}`).join('&')
-        return App.createRequest({ url: `${base}?${qs}`, method: 'GET' })
+    override async getSearchResults(query: SearchRequest): Promise<PagedResults> {
+        const params: string[] = ['page=1']
+        const title = query.title?.trim()
+        if (title) params.push(`s=${encodeURIComponent(title)}`)
+        const request = createRequestObject({ url: `${BASE_URL}/contents?${params.join('&')}`, method: 'GET' })
+        const response = await this.requestManager.schedule(request, 1)
+        const $ = require('cheerio').load(response.data as string)
+        const results = parseMangaList({ $, scope: 'latest_update' })
+
+        // Deteksi tombol next
+        const hasNext = Boolean($('nav[aria-label="pagination"] a[rel="next"], a[aria-label="Next"]').length)
+        return App.createPagedResults({
+            results,
+            metadata: hasNext ? { page: 2 } : undefined
+        })
     }
 
-    // ChapterId yang dikirim adalah path /view/...; langsung request halaman chapter
-    async getChapterDetails(mangaId: string, chapterId: string) {
-        const isAbsolute = chapterId.startsWith('http://') || chapterId.startsWith('https://')
-        const url = isAbsolute ? chapterId : `${this.baseUrl}${chapterId.startsWith('/') ? '' : '/'}${chapterId}`
-        const request = App.createRequest({ url, method: 'GET' })
+    override async getViewMoreItems(homepageSectionId: string, metadata: any): Promise<PagedResults> {
+        const page = metadata?.page ?? 1
+        if (homepageSectionId !== 'latest_update') throw new Error(`Invalid homepage section id: ${homepageSectionId}`)
+        const request = createRequestObject({ url: `${BASE_URL}/contents?page=${page}`, method: 'GET' })
         const response = await this.requestManager.schedule(request, 1)
-        this.checkResponseError(response)
         const $ = require('cheerio').load(response.data as string)
-        return this.parser.parseChapterDetails($, mangaId, chapterId)
+        const results = parseMangaList({ $, scope: 'latest_update' })
+        const hasNext = Boolean($('nav[aria-label="pagination"] a[rel="next"], a[aria-label="Next"]').length)
+        return App.createPagedResults({ results, metadata: hasNext ? { page: page + 1 } : undefined })
     }
 }
