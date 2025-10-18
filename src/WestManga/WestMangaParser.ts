@@ -61,7 +61,8 @@ export const parseChapterList = (json: any): Chapter[] => {
         }))
     }
 
-    return chapters.map((c) => ({ ...c, sortingIndex: c.sortingIndex + chapters.length }))
+    // Return the created Chapter array directly to maintain the correct return type expected by Paperback
+    return chapters
 }
 
 export const parseChapterDetails = (json: any, mangaId: string, chapterId: string): ChapterDetails => {
@@ -97,7 +98,7 @@ export const parseMangaList = (json: any): PartialSourceManga[] => {
 
 export const parseSearchTags = (json: any): TagSection[] => {
     const items = Array.isArray(json?.data) ? json.data : []
-    const tags: Tag[] = items.map((g: any) => ({ id: String(g?.slug || g?.id), label: String(g?.name ?? '') }))
+    const tags: Tag[] = items.map((g: any) => ({ id: String(g?.id ?? ''), label: String(g?.name ?? '') }))
         .filter((t: Tag) => t.id && t.label)
     return [App.createTagSection({ id: 'genres', label: 'Genres', tags: tags.map((t) => App.createTag(t)) })]
 }
