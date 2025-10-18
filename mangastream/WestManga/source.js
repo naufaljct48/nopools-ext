@@ -986,7 +986,7 @@ var _Sources = (() => {
       if (!id) continue;
       chapters.push(App.createChapter({
         id,
-        langCode: "ID",
+        langCode: "\u{1F1EE}\u{1F1E9}",
         chapNum,
         name: `Chapter ${numberStr}`,
         time: new Date(updatedTime * 1e3),
@@ -1031,7 +1031,7 @@ var _Sources = (() => {
   var WEBSITE_BASE2 = "https://westmanga.me";
   var API_BASE = "https://data.westmanga.me";
   var WestMangaInfo = {
-    version: "1.1.2",
+    version: "1.1.3",
     name: "WestManga",
     icon: "icon.png",
     author: "NaufalJCT48",
