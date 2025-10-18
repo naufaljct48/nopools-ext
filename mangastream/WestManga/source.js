@@ -1031,7 +1031,7 @@ var _Sources = (() => {
   var WEBSITE_BASE2 = "https://westmanga.me";
   var API_BASE = "https://data.westmanga.me";
   var WestMangaInfo = {
-    version: "1.1.1",
+    version: "1.1.2",
     name: "WestManga",
     icon: "icon.png",
     author: "NaufalJCT48",
@@ -1127,7 +1127,7 @@ var _Sources = (() => {
     async getSearchResults(query) {
       const title = query.title?.trim();
       const params = ["page=1", "per_page=25", "project=false"];
-      if (title) params.push(`search=${encodeURIComponent(title)}`);
+      if (title) params.push(`q=${encodeURIComponent(title)}`);
       const included = query?.includedTags;
       if (Array.isArray(included) && included.length) {
         for (const tag of included) {
