@@ -6,7 +6,7 @@ const WEBSITE_BASE = 'https://westmanga.me'
 const API_BASE = 'https://data.westmanga.me'
 
 export const WestMangaInfo: SourceInfo = {
-    version: '1.1.1',
+    version: '1.1.2',
     name: 'WestManga',
     icon: 'icon.png',
     author: 'NaufalJCT48',
@@ -112,7 +112,7 @@ export class WestManga extends Source {
     override async getSearchResults(query: SearchRequest): Promise<PagedResults> {
         const title = query.title?.trim()
         const params: string[] = ['page=1', 'per_page=25', 'project=false']
-        if (title) params.push(`search=${encodeURIComponent(title)}`)
+        if (title) params.push(`q=${encodeURIComponent(title)}`)
         // Support genre filter via includedTags (Tag.id should be numeric per parseSearchTags)
         const included = (query as any)?.includedTags as Array<{ id: string }>
         if (Array.isArray(included) && included.length) {
