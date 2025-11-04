@@ -15563,6 +15563,41 @@ ${additionalInfo.join(" \u2022 ")}`;
         }));
       }
     });
+    $2("#searchResults a").each((_, elem) => {
+      const $elem = $2(elem);
+      const href = $elem.attr("href") ?? "";
+      const mangaId = href.split("/").filter((x) => x).pop() ?? "";
+      if (!mangaId) return;
+      const title = $elem.find("h3").first().text().trim() || $elem.attr("title") || "";
+      const image = normalizeUrl($elem.find("img").first().attr("src") ?? "");
+      const subtitle = $elem.find("p").first().text().trim() || "";
+      if (title) {
+        results.push(App.createPartialSourceManga({
+          mangaId,
+          image,
+          title: decodeHTMLEntity(title),
+          subtitle: decodeHTMLEntity(subtitle)
+        }));
+      }
+    });
+    $2('.group-data-[mode=horizontal]:hidden a[href*="/manga/"], .group-data-[mode=vertical]:hidden a[href*="/manga/"]').each((_, elem) => {
+      const $link = $2(elem);
+      const href = $link.attr("href") ?? "";
+      const mangaId = href.split("/").filter((x) => x).pop() ?? "";
+      if (!mangaId) return;
+      const title = $link.find("h1, h2, h3, .text-base, .font-medium").first().text().trim() || $link.attr("title") || "";
+      const image = normalizeUrl($link.find("img").first().attr("src") ?? "");
+      const parent2 = $link.closest("div").parent();
+      let subtitle = parent2.find("time").first().text().trim() || parent2.find(".text-sm.text-gray-300").first().text().trim() || "";
+      if (title) {
+        results.push(App.createPartialSourceManga({
+          mangaId,
+          image,
+          title: decodeHTMLEntity(title),
+          subtitle: decodeHTMLEntity(subtitle)
+        }));
+      }
+    });
     $2(".flex.flex-col.justify-between.px-4.py-1\\.5").each((_, elem) => {
       const $elem = $2(elem);
       const link = $2("a.text-base", $elem).first();
@@ -15596,6 +15631,45 @@ ${additionalInfo.join(" \u2022 ")}`;
         genres.push({ id, label: decodeHTMLEntity(label) });
       }
     });
+    if (genres.length === 0) {
+      genres.push(
+        { id: "4-koma", label: "4-Koma" },
+        { id: "action", label: "Action" },
+        { id: "adaptation", label: "Adaptation" },
+        { id: "adult", label: "Adult" },
+        { id: "adventure", label: "Adventure" },
+        { id: "animals", label: "Animals" },
+        { id: "anthology", label: "Anthology" },
+        { id: "antihero", label: "Antihero" },
+        { id: "award-winning", label: "Award Winning" },
+        { id: "beasts", label: "Beasts" },
+        { id: "bodyswap", label: "Bodyswap" },
+        { id: "boys-love", label: "Boys' Love" },
+        { id: "bully", label: "Bully" },
+        { id: "cartoon", label: "Cartoon" },
+        { id: "childhood-friends", label: "Childhood Friends" },
+        { id: "comedy", label: "Comedy" },
+        { id: "comic", label: "Comic" },
+        { id: "cooking", label: "Cooking" },
+        { id: "crime", label: "Crime" },
+        { id: "crossdressing", label: "Crossdressing" },
+        { id: "dance", label: "Dance" },
+        { id: "dark-fantasy", label: "Dark Fantasy" },
+        { id: "delinquent", label: "Delinquent" },
+        { id: "delinquents", label: "Delinquents" },
+        { id: "dementia", label: "Dementia" },
+        { id: "demon", label: "Demon" },
+        { id: "demons", label: "Demons" },
+        { id: "doujinshi", label: "Doujinshi" },
+        { id: "drama", label: "Drama" },
+        { id: "dungeons", label: "Dungeons" },
+        { id: "ecchi", label: "Ecchi" },
+        { id: "emperors-daughter", label: "Emperor's daughter" },
+        { id: "fan-colored", label: "Fan-Colored" },
+        { id: "fantasy", label: "Fantasy" },
+        { id: "fetish", label: "Fetish" }
+      );
+    }
     $2("button[data-type]").each((_, elem) => {
       const $elem = $2(elem);
       const id = $elem.attr("data-type") ?? "";
@@ -15606,6 +15680,15 @@ ${additionalInfo.join(" \u2022 ")}`;
         }
       }
     });
+    if (types.length === 0) {
+      types.push(
+        { id: "manga", label: "Manga" },
+        { id: "manhwa", label: "Manhwa" },
+        { id: "manhua", label: "Manhua" },
+        { id: "comic", label: "Comic" },
+        { id: "novel", label: "Novel" }
+      );
+    }
     statuses.push({ id: "ongoing", label: "Ongoing" });
     statuses.push({ id: "completed", label: "Completed" });
     const sections = [];
@@ -15636,7 +15719,7 @@ ${additionalInfo.join(" \u2022 ")}`;
   // src/Kiryuu/Kiryuu.ts
   var WEBSITE_BASE2 = "https://kiryuu03.com";
   var KiryuuInfo = {
-    version: "1.0.0",
+    version: "1.0.1",
     name: "Kiryuu",
     icon: "icon.png",
     author: "NaufalJCT48",
@@ -15756,10 +15839,19 @@ ${additionalInfo.join(" \u2022 ")}`;
           params.push(`the_genre=${encodeURIComponent(genres)}`);
         }
       }
-      const url = `${WEBSITE_BASE2}/advanced-search/?${params.join("&")}`;
-      const request = createRequestObject(url);
-      const response = await this.requestManager.schedule(request, 1);
-      const $2 = load(response.data);
+      let $2;
+      if (searchTerm) {
+        const ajaxUrl = `${WEBSITE_BASE2}/wp-admin/admin-ajax.php?action=search`;
+        const body = `query=${encodeURIComponent(searchTerm)}`;
+        const request = createRequestObject(`${ajaxUrl}`, { method: "POST", data: body, headers: { "content-type": "application/x-www-form-urlencoded", "hx-request": "true" } });
+        const response = await this.requestManager.schedule(request, 1);
+        $2 = load(response.data);
+      } else {
+        const url = `${WEBSITE_BASE2}/advanced-search/?${params.join("&")}`;
+        const request = createRequestObject(url);
+        const response = await this.requestManager.schedule(request, 1);
+        $2 = load(response.data);
+      }
       const results = parseMangaList($2);
       const hasMore = results.length >= 20;
       return App.createPagedResults({
