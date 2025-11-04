@@ -15580,24 +15580,6 @@ ${additionalInfo.join(" \u2022 ")}`;
         }));
       }
     });
-    $2('.group-data-[mode=horizontal]:hidden a[href*="/manga/"], .group-data-[mode=vertical]:hidden a[href*="/manga/"]').each((_, elem) => {
-      const $link = $2(elem);
-      const href = $link.attr("href") ?? "";
-      const mangaId = href.split("/").filter((x) => x).pop() ?? "";
-      if (!mangaId) return;
-      const title = $link.find("h1, h2, h3, .text-base, .font-medium").first().text().trim() || $link.attr("title") || "";
-      const image = normalizeUrl($link.find("img").first().attr("src") ?? "");
-      const parent2 = $link.closest("div").parent();
-      let subtitle = parent2.find("time").first().text().trim() || parent2.find(".text-sm.text-gray-300").first().text().trim() || "";
-      if (title) {
-        results.push(App.createPartialSourceManga({
-          mangaId,
-          image,
-          title: decodeHTMLEntity(title),
-          subtitle: decodeHTMLEntity(subtitle)
-        }));
-      }
-    });
     $2(".flex.flex-col.justify-between.px-4.py-1\\.5").each((_, elem) => {
       const $elem = $2(elem);
       const link = $2("a.text-base", $elem).first();
@@ -15719,7 +15701,7 @@ ${additionalInfo.join(" \u2022 ")}`;
   // src/Kiryuu/Kiryuu.ts
   var WEBSITE_BASE2 = "https://kiryuu03.com";
   var KiryuuInfo = {
-    version: "1.0.1",
+    version: "1.0.2",
     name: "Kiryuu",
     icon: "icon.png",
     author: "NaufalJCT48",
@@ -15789,12 +15771,14 @@ ${additionalInfo.join(" \u2022 ")}`;
         {
           id: "popular_today",
           title: "Popular Today",
-          url: WEBSITE_BASE2
+          url: WEBSITE_BASE2,
+          type: "get"
         },
         {
           id: "latest_update",
           title: "Latest Update",
-          url: `${WEBSITE_BASE2}/advanced-search/?the_page=1&orderby=updated&order=desc`
+          url: `${WEBSITE_BASE2}/wp-admin/admin-ajax.php?action=advanced_search`,
+          type: "post"
         }
       ];
       for (const s of sections) {
@@ -15805,9 +15789,25 @@ ${additionalInfo.join(" \u2022 ")}`;
           containsMoreItems: s.id === "latest_update"
         });
         sectionCallback(section);
-        const request = createRequestObject(s.url);
-        const response = await this.requestManager.schedule(request, 1);
-        const $2 = load(response.data);
+        let $2;
+        if (s.type === "post") {
+          const body = "nonce=2b6ee24052&inclusion=OR&exclusion=OR&page=1&genre=[]&genre_exclude=[]&author=[]&artist=[]&project=0&type=[]&status=[]&order=desc&orderby=updated&query=";
+          const request = createRequestObject(s.url, {
+            method: "POST",
+            data: body,
+            headers: {
+              "content-type": "application/x-www-form-urlencoded",
+              "origin": WEBSITE_BASE2,
+              "referer": `${WEBSITE_BASE2}/advanced-search/`
+            }
+          });
+          const response = await this.requestManager.schedule(request, 1);
+          $2 = load(response.data);
+        } else {
+          const request = createRequestObject(s.url);
+          const response = await this.requestManager.schedule(request, 1);
+          $2 = load(response.data);
+        }
         section.items = parseMangaList($2);
         sectionCallback(section);
       }
@@ -15821,34 +15821,41 @@ ${additionalInfo.join(" \u2022 ")}`;
     async getSearchResults(query, metadata) {
       const page = metadata?.page ?? 1;
       const searchTerm = query.title?.trim() ?? "";
-      const params = [
-        `the_page=${page}`,
-        "order=desc",
-        "orderby=updated"
-      ];
-      if (searchTerm) {
-        params.push(`search_term=${encodeURIComponent(searchTerm)}`);
-      }
       const includedTags = query?.includedTags;
+      let genreList = [];
       if (Array.isArray(includedTags) && includedTags.length > 0) {
-        const genreTags = includedTags.filter((tag) => {
-          return true;
-        });
-        if (genreTags.length > 0) {
-          const genres = genreTags.map((tag) => tag.id).join(",");
-          params.push(`the_genre=${encodeURIComponent(genres)}`);
-        }
+        genreList = includedTags.map((tag) => tag.id);
       }
       let $2;
-      if (searchTerm) {
+      if (searchTerm && genreList.length === 0) {
         const ajaxUrl = `${WEBSITE_BASE2}/wp-admin/admin-ajax.php?action=search`;
         const body = `query=${encodeURIComponent(searchTerm)}`;
-        const request = createRequestObject(`${ajaxUrl}`, { method: "POST", data: body, headers: { "content-type": "application/x-www-form-urlencoded", "hx-request": "true" } });
+        const request = createRequestObject(ajaxUrl, {
+          method: "POST",
+          data: body,
+          headers: {
+            "content-type": "application/x-www-form-urlencoded",
+            "hx-request": "true",
+            "origin": WEBSITE_BASE2,
+            "referer": WEBSITE_BASE2
+          }
+        });
         const response = await this.requestManager.schedule(request, 1);
         $2 = load(response.data);
       } else {
-        const url = `${WEBSITE_BASE2}/advanced-search/?${params.join("&")}`;
-        const request = createRequestObject(url);
+        const ajaxUrl = `${WEBSITE_BASE2}/wp-admin/admin-ajax.php?action=advanced_search`;
+        const genreParam = genreList.length > 0 ? JSON.stringify(genreList) : "[]";
+        const queryParam = searchTerm ? encodeURIComponent(searchTerm) : "";
+        const body = `nonce=2b6ee24052&inclusion=OR&exclusion=OR&page=${page}&genre=${genreParam}&genre_exclude=[]&author=[]&artist=[]&project=0&type=[]&status=[]&order=desc&orderby=updated&query=${queryParam}`;
+        const request = createRequestObject(ajaxUrl, {
+          method: "POST",
+          data: body,
+          headers: {
+            "content-type": "application/x-www-form-urlencoded",
+            "origin": WEBSITE_BASE2,
+            "referer": `${WEBSITE_BASE2}/advanced-search/`
+          }
+        });
         const response = await this.requestManager.schedule(request, 1);
         $2 = load(response.data);
       }
@@ -15864,8 +15871,17 @@ ${additionalInfo.join(" \u2022 ")}`;
       if (homepageSectionId !== "latest_update") {
         throw new Error(`View more not supported for section: ${homepageSectionId}`);
       }
-      const url = `${WEBSITE_BASE2}/advanced-search/?the_page=${page}&orderby=updated&order=desc`;
-      const request = createRequestObject(url);
+      const url = `${WEBSITE_BASE2}/wp-admin/admin-ajax.php?action=advanced_search`;
+      const body = `nonce=2b6ee24052&inclusion=OR&exclusion=OR&page=${page}&genre=[]&genre_exclude=[]&author=[]&artist=[]&project=0&type=[]&status=[]&order=desc&orderby=updated&query=`;
+      const request = createRequestObject(url, {
+        method: "POST",
+        data: body,
+        headers: {
+          "content-type": "application/x-www-form-urlencoded",
+          "origin": WEBSITE_BASE2,
+          "referer": `${WEBSITE_BASE2}/advanced-search/`
+        }
+      });
       const response = await this.requestManager.schedule(request, 1);
       const $2 = load(response.data);
       const results = parseMangaList($2);
