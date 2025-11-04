@@ -15420,7 +15420,21 @@ var _Sources = (() => {
       const altTitles = altTitle.split(",").map((t) => t.trim()).filter((t) => t);
       titles.push(...altTitles.map((t) => decodeHTMLEntity(t)));
     }
-    const image = normalizeUrl($2('img[itemprop="image"]').first().attr("src") ?? "");
+    let image = "";
+    const imageParent = $2('[itemprop="image"]');
+    if (imageParent.length > 0) {
+      image = imageParent.find("img").first().attr("src") ?? "";
+    }
+    if (!image) {
+      image = $2("img.wp-post-image").first().attr("src") ?? "";
+    }
+    if (!image) {
+      image = $2(".rounded-lg img").first().attr("src") ?? "";
+    }
+    if (!image) {
+      image = $2(".sm\\:w-\\[17rem\\] img, .flex.w-full.h-auto img").first().attr("src") ?? "";
+    }
+    image = normalizeUrl(image);
     const statusText = $2(".bg-accent.text-xs.px-2.py-0\\.5.rounded-lg").first().text().trim().toLowerCase();
     const status = statusText.includes("ongoing") ? "Ongoing" : statusText.includes("completed") ? "Completed" : "Unknown";
     let author = "Unknown";
@@ -15648,8 +15662,85 @@ ${additionalInfo.join(" \u2022 ")}`;
         { id: "ecchi", label: "Ecchi" },
         { id: "emperors-daughter", label: "Emperor's daughter" },
         { id: "fan-colored", label: "Fan-Colored" },
+        { id: "fantas", label: "Fantas" },
         { id: "fantasy", label: "Fantasy" },
-        { id: "fetish", label: "Fetish" }
+        { id: "fetish", label: "Fetish" },
+        { id: "food", label: "Food" },
+        { id: "full-color", label: "Full Color" },
+        { id: "game", label: "Game" },
+        { id: "gender-bender", label: "Gender Bender" },
+        { id: "genderswap", label: "Genderswap" },
+        { id: "ghosts", label: "Ghosts" },
+        { id: "girls-love", label: "Girls' Love" },
+        { id: "gore", label: "Gore" },
+        { id: "gyaru", label: "Gyaru" },
+        { id: "harem", label: "Harem" },
+        { id: "historical", label: "Historical" },
+        { id: "horror", label: "Horror" },
+        { id: "incest", label: "Incest" },
+        { id: "isekai", label: "Isekai" },
+        { id: "josei", label: "Josei" },
+        { id: "loli", label: "Loli" },
+        { id: "lolicon", label: "Lolicon" },
+        { id: "long-strip", label: "Long Strip" },
+        { id: "magic", label: "Magic" },
+        { id: "magical-girls", label: "Magical Girls" },
+        { id: "martial-arts", label: "Martial Arts" },
+        { id: "mature", label: "Mature" },
+        { id: "mecha", label: "Mecha" },
+        { id: "medical", label: "Medical" },
+        { id: "military", label: "Military" },
+        { id: "monster-girls", label: "Monster Girls" },
+        { id: "monsters", label: "Monsters" },
+        { id: "music", label: "Music" },
+        { id: "mystery", label: "Mystery" },
+        { id: "ninja", label: "Ninja" },
+        { id: "office-workers", label: "Office Workers" },
+        { id: "official-colored", label: "Official Colored" },
+        { id: "oneshot", label: "Oneshot" },
+        { id: "parody", label: "Parody" },
+        { id: "philosophical", label: "Philosophical" },
+        { id: "police", label: "Police" },
+        { id: "post-apocalyptic", label: "Post-Apocalyptic" },
+        { id: "psychological", label: "Psychological" },
+        { id: "reincarnation", label: "Reincarnation" },
+        { id: "reverse-harem", label: "Reverse Harem" },
+        { id: "romance", label: "Romance" },
+        { id: "samurai", label: "Samurai" },
+        { id: "school-life", label: "School Life" },
+        { id: "sci-fi", label: "Sci-Fi" },
+        { id: "seinen", label: "Seinen" },
+        { id: "sexual-violence", label: "Sexual Violence" },
+        { id: "shota", label: "Shota" },
+        { id: "shotacon", label: "Shotacon" },
+        { id: "shoujo", label: "Shoujo" },
+        { id: "shoujo-ai", label: "Shoujo Ai" },
+        { id: "shounen", label: "Shounen" },
+        { id: "shounen-ai", label: "Shounen Ai" },
+        { id: "slice-of-life", label: "Slice of Life" },
+        { id: "sm-bdsm", label: "SM/BDSM" },
+        { id: "smut", label: "Smut" },
+        { id: "space", label: "Space" },
+        { id: "sports", label: "Sports" },
+        { id: "super-power", label: "Super Power" },
+        { id: "superhero", label: "Superhero" },
+        { id: "supernatural", label: "Supernatural" },
+        { id: "survival", label: "Survival" },
+        { id: "thriller", label: "Thriller" },
+        { id: "time-travel", label: "Time Travel" },
+        { id: "traditional-games", label: "Traditional Games" },
+        { id: "tragedy", label: "Tragedy" },
+        { id: "vamp", label: "Vamp" },
+        { id: "vampires", label: "Vampires" },
+        { id: "video-games", label: "Video Games" },
+        { id: "villainess", label: "Villainess" },
+        { id: "violence", label: "Violence" },
+        { id: "virtual-reality", label: "Virtual Reality" },
+        { id: "web-comic", label: "Web Comic" },
+        { id: "wuxia", label: "Wuxia" },
+        { id: "yaoi", label: "Yaoi" },
+        { id: "yuri", label: "Yuri" },
+        { id: "zombies", label: "Zombies" }
       );
     }
     $2("button[data-type]").each((_, elem) => {
@@ -15701,7 +15792,7 @@ ${additionalInfo.join(" \u2022 ")}`;
   // src/Kiryuu/Kiryuu.ts
   var WEBSITE_BASE2 = "https://kiryuu03.com";
   var KiryuuInfo = {
-    version: "1.0.2",
+    version: "1.0.3",
     name: "Kiryuu",
     icon: "icon.png",
     author: "NaufalJCT48",
@@ -15791,14 +15882,15 @@ ${additionalInfo.join(" \u2022 ")}`;
         sectionCallback(section);
         let $2;
         if (s.type === "post") {
-          const body = "nonce=2b6ee24052&inclusion=OR&exclusion=OR&page=1&genre=[]&genre_exclude=[]&author=[]&artist=[]&project=0&type=[]&status=[]&order=desc&orderby=updated&query=";
+          const body = "inclusion=OR&exclusion=OR&page=1&genre=[]&genre_exclude=[]&author=[]&artist=[]&project=0&type=[]&status=[]&order=desc&orderby=updated&query=";
           const request = createRequestObject(s.url, {
             method: "POST",
             data: body,
             headers: {
               "content-type": "application/x-www-form-urlencoded",
               "origin": WEBSITE_BASE2,
-              "referer": `${WEBSITE_BASE2}/advanced-search/`
+              "referer": `${WEBSITE_BASE2}/advanced-search/`,
+              "x-requested-with": "XMLHttpRequest"
             }
           });
           const response = await this.requestManager.schedule(request, 1);
@@ -15846,14 +15938,15 @@ ${additionalInfo.join(" \u2022 ")}`;
         const ajaxUrl = `${WEBSITE_BASE2}/wp-admin/admin-ajax.php?action=advanced_search`;
         const genreParam = genreList.length > 0 ? JSON.stringify(genreList) : "[]";
         const queryParam = searchTerm ? encodeURIComponent(searchTerm) : "";
-        const body = `nonce=2b6ee24052&inclusion=OR&exclusion=OR&page=${page}&genre=${genreParam}&genre_exclude=[]&author=[]&artist=[]&project=0&type=[]&status=[]&order=desc&orderby=updated&query=${queryParam}`;
+        const body = `inclusion=OR&exclusion=OR&page=${page}&genre=${genreParam}&genre_exclude=[]&author=[]&artist=[]&project=0&type=[]&status=[]&order=desc&orderby=updated&query=${queryParam}`;
         const request = createRequestObject(ajaxUrl, {
           method: "POST",
           data: body,
           headers: {
             "content-type": "application/x-www-form-urlencoded",
             "origin": WEBSITE_BASE2,
-            "referer": `${WEBSITE_BASE2}/advanced-search/`
+            "referer": `${WEBSITE_BASE2}/advanced-search/`,
+            "x-requested-with": "XMLHttpRequest"
           }
         });
         const response = await this.requestManager.schedule(request, 1);
@@ -15872,14 +15965,15 @@ ${additionalInfo.join(" \u2022 ")}`;
         throw new Error(`View more not supported for section: ${homepageSectionId}`);
       }
       const url = `${WEBSITE_BASE2}/wp-admin/admin-ajax.php?action=advanced_search`;
-      const body = `nonce=2b6ee24052&inclusion=OR&exclusion=OR&page=${page}&genre=[]&genre_exclude=[]&author=[]&artist=[]&project=0&type=[]&status=[]&order=desc&orderby=updated&query=`;
+      const body = `inclusion=OR&exclusion=OR&page=${page}&genre=[]&genre_exclude=[]&author=[]&artist=[]&project=0&type=[]&status=[]&order=desc&orderby=updated&query=`;
       const request = createRequestObject(url, {
         method: "POST",
         data: body,
         headers: {
           "content-type": "application/x-www-form-urlencoded",
           "origin": WEBSITE_BASE2,
-          "referer": `${WEBSITE_BASE2}/advanced-search/`
+          "referer": `${WEBSITE_BASE2}/advanced-search/`,
+          "x-requested-with": "XMLHttpRequest"
         }
       });
       const response = await this.requestManager.schedule(request, 1);
