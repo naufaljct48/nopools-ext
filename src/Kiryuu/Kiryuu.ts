@@ -28,7 +28,7 @@ import {
 const WEBSITE_BASE = 'https://kiryuu03.com'
 
 export const KiryuuInfo: SourceInfo = {
-    version: '1.0.0',
+    version: '1.0.1',
     name: 'Kiryuu',
     icon: 'icon.png',
     author: 'NaufalJCT48',
@@ -173,11 +173,21 @@ export class Kiryuu extends Source {
             }
         }
 
-        const url = `${WEBSITE_BASE}/advanced-search/?${params.join('&')}`
-        const request = createRequestObject(url)
-        const response = await this.requestManager.schedule(request, 1)
-        const $ = cheerioLoad(response.data as string)
-        
+        // If there's a search term, use the AJAX search endpoint (returns #searchResults HTML)
+    let $: any
+        if (searchTerm) {
+            const ajaxUrl = `${WEBSITE_BASE}/wp-admin/admin-ajax.php?action=search`
+            const body = `query=${encodeURIComponent(searchTerm)}`
+            const request = createRequestObject(`${ajaxUrl}`, { method: 'POST', data: body, headers: { 'content-type': 'application/x-www-form-urlencoded', 'hx-request': 'true' } })
+            const response = await this.requestManager.schedule(request, 1)
+            $ = cheerioLoad(response.data as string)
+        } else {
+            const url = `${WEBSITE_BASE}/advanced-search/?${params.join('&')}`
+            const request = createRequestObject(url)
+            const response = await this.requestManager.schedule(request, 1)
+            $ = cheerioLoad(response.data as string)
+        }
+
         const results = parseMangaList($)
         
         // Check if there are more results

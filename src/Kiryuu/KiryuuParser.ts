@@ -212,6 +212,50 @@ export const parseMangaList = ($: CheerioAPI): PartialSourceManga[] => {
         }
     })
 
+    // Search modal results (AJAX search)
+    $('#searchResults a').each((_: number, elem: any) => {
+        const $elem = $(elem)
+        const href = $elem.attr('href') ?? ''
+        const mangaId = href.split('/').filter((x: string) => x).pop() ?? ''
+        if (!mangaId) return
+
+        const title = $elem.find('h3').first().text().trim() || $elem.attr('title') || ''
+        const image = normalizeUrl($elem.find('img').first().attr('src') ?? '')
+        const subtitle = $elem.find('p').first().text().trim() || ''
+
+        if (title) {
+            results.push(App.createPartialSourceManga({
+                mangaId,
+                image,
+                title: decodeHTMLEntity(title),
+                subtitle: decodeHTMLEntity(subtitle)
+            }))
+        }
+    })
+
+    // Generic card/list items fallback: find anchors that look like manga cards inside result containers
+    $('.group-data-[mode=horizontal]:hidden a[href*="/manga/"], .group-data-[mode=vertical]:hidden a[href*="/manga/"]').each((_: number, elem: any) => {
+        const $link = $(elem)
+        const href = $link.attr('href') ?? ''
+        const mangaId = href.split('/').filter((x: string) => x).pop() ?? ''
+        if (!mangaId) return
+
+        const title = $link.find('h1, h2, h3, .text-base, .font-medium').first().text().trim() || $link.attr('title') || ''
+        const image = normalizeUrl($link.find('img').first().attr('src') ?? '')
+        // look for nearby latest chapter/time text
+        const parent = $link.closest('div').parent()
+        let subtitle = parent.find('time').first().text().trim() || parent.find('.text-sm.text-gray-300').first().text().trim() || ''
+
+        if (title) {
+            results.push(App.createPartialSourceManga({
+                mangaId,
+                image,
+                title: decodeHTMLEntity(title),
+                subtitle: decodeHTMLEntity(subtitle)
+            }))
+        }
+    })
+
     // For advanced search results / latest updates
     $('.flex.flex-col.justify-between.px-4.py-1\\.5').each((_: number, elem: any) => {
         const $elem = $(elem)
@@ -242,14 +286,14 @@ export const parseMangaList = ($: CheerioAPI): PartialSourceManga[] => {
 }
 
 /**
- * Parse search tags/genres from advanced search page
+ * Parse search tags/genres from advanced search page or fallback to local genre file
  */
 export const parseSearchTags = ($: CheerioAPI): TagSection[] => {
     const genres: Tag[] = []
     const types: Tag[] = []
     const statuses: Tag[] = []
 
-    // Parse genres
+    // Parse genres from page
     $('button[data-genre]').each((_: number, elem: any) => {
         const $elem = $(elem)
         const id = $elem.attr('data-genre') ?? ''
@@ -258,6 +302,47 @@ export const parseSearchTags = ($: CheerioAPI): TagSection[] => {
             genres.push({ id, label: decodeHTMLEntity(label) })
         }
     })
+
+    // If no genres found from live page, use fallback list from KiryuuGenre.html
+    if (genres.length === 0) {
+        genres.push(
+            { id: '4-koma', label: '4-Koma' },
+            { id: 'action', label: 'Action' },
+            { id: 'adaptation', label: 'Adaptation' },
+            { id: 'adult', label: 'Adult' },
+            { id: 'adventure', label: 'Adventure' },
+            { id: 'animals', label: 'Animals' },
+            { id: 'anthology', label: 'Anthology' },
+            { id: 'antihero', label: 'Antihero' },
+            { id: 'award-winning', label: 'Award Winning' },
+            { id: 'beasts', label: 'Beasts' },
+            { id: 'bodyswap', label: 'Bodyswap' },
+            { id: 'boys-love', label: "Boys' Love" },
+            { id: 'bully', label: 'Bully' },
+            { id: 'cartoon', label: 'Cartoon' },
+            { id: 'childhood-friends', label: 'Childhood Friends' },
+            { id: 'comedy', label: 'Comedy' },
+            { id: 'comic', label: 'Comic' },
+            { id: 'cooking', label: 'Cooking' },
+            { id: 'crime', label: 'Crime' },
+            { id: 'crossdressing', label: 'Crossdressing' },
+            { id: 'dance', label: 'Dance' },
+            { id: 'dark-fantasy', label: 'Dark Fantasy' },
+            { id: 'delinquent', label: 'Delinquent' },
+            { id: 'delinquents', label: 'Delinquents' },
+            { id: 'dementia', label: 'Dementia' },
+            { id: 'demon', label: 'Demon' },
+            { id: 'demons', label: 'Demons' },
+            { id: 'doujinshi', label: 'Doujinshi' },
+            { id: 'drama', label: 'Drama' },
+            { id: 'dungeons', label: 'Dungeons' },
+            { id: 'ecchi', label: 'Ecchi' },
+            { id: 'emperors-daughter', label: "Emperor's daughter" },
+            { id: 'fan-colored', label: 'Fan-Colored' },
+            { id: 'fantasy', label: 'Fantasy' },
+            { id: 'fetish', label: 'Fetish' }
+        )
+    }
 
     // Parse types
     $('button[data-type]').each((_: number, elem: any) => {
@@ -271,6 +356,17 @@ export const parseSearchTags = ($: CheerioAPI): TagSection[] => {
             }
         }
     })
+
+    // If no types found, add common ones
+    if (types.length === 0) {
+        types.push(
+            { id: 'manga', label: 'Manga' },
+            { id: 'manhwa', label: 'Manhwa' },
+            { id: 'manhua', label: 'Manhua' },
+            { id: 'comic', label: 'Comic' },
+            { id: 'novel', label: 'Novel' }
+        )
+    }
 
     // Status options (hardcoded common values)
     statuses.push({ id: 'ongoing', label: 'Ongoing' })
