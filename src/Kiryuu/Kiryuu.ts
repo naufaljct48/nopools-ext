@@ -28,7 +28,7 @@ import {
 const WEBSITE_BASE = 'https://kiryuu03.com'
 
 export const KiryuuInfo: SourceInfo = {
-    version: '1.0.2',
+    version: '1.0.3',
     name: 'Kiryuu',
     icon: 'icon.png',
     author: 'NaufalJCT48',
@@ -130,15 +130,16 @@ export class Kiryuu extends Source {
             
             let $: any
             if (s.type === 'post') {
-                // Latest Update uses AJAX POST
-                const body = 'nonce=2b6ee24052&inclusion=OR&exclusion=OR&page=1&genre=[]&genre_exclude=[]&author=[]&artist=[]&project=0&type=[]&status=[]&order=desc&orderby=updated&query='
+                // Latest Update uses AJAX POST (nonce optional, may not be enforced)
+                const body = 'inclusion=OR&exclusion=OR&page=1&genre=[]&genre_exclude=[]&author=[]&artist=[]&project=0&type=[]&status=[]&order=desc&orderby=updated&query='
                 const request = createRequestObject(s.url, { 
                     method: 'POST', 
                     data: body,
                     headers: { 
                         'content-type': 'application/x-www-form-urlencoded',
                         'origin': WEBSITE_BASE,
-                        'referer': `${WEBSITE_BASE}/advanced-search/`
+                        'referer': `${WEBSITE_BASE}/advanced-search/`,
+                        'x-requested-with': 'XMLHttpRequest'
                     } 
                 })
                 const response = await this.requestManager.schedule(request, 1)
@@ -195,7 +196,7 @@ export class Kiryuu extends Source {
             const ajaxUrl = `${WEBSITE_BASE}/wp-admin/admin-ajax.php?action=advanced_search`
             const genreParam = genreList.length > 0 ? JSON.stringify(genreList) : '[]'
             const queryParam = searchTerm ? encodeURIComponent(searchTerm) : ''
-            const body = `nonce=2b6ee24052&inclusion=OR&exclusion=OR&page=${page}&genre=${genreParam}&genre_exclude=[]&author=[]&artist=[]&project=0&type=[]&status=[]&order=desc&orderby=updated&query=${queryParam}`
+            const body = `inclusion=OR&exclusion=OR&page=${page}&genre=${genreParam}&genre_exclude=[]&author=[]&artist=[]&project=0&type=[]&status=[]&order=desc&orderby=updated&query=${queryParam}`
             
             const request = createRequestObject(ajaxUrl, { 
                 method: 'POST', 
@@ -203,7 +204,8 @@ export class Kiryuu extends Source {
                 headers: { 
                     'content-type': 'application/x-www-form-urlencoded',
                     'origin': WEBSITE_BASE,
-                    'referer': `${WEBSITE_BASE}/advanced-search/`
+                    'referer': `${WEBSITE_BASE}/advanced-search/`,
+                    'x-requested-with': 'XMLHttpRequest'
                 } 
             })
             const response = await this.requestManager.schedule(request, 1)
@@ -230,14 +232,15 @@ export class Kiryuu extends Source {
 
         // Latest Update uses AJAX POST
         const url = `${WEBSITE_BASE}/wp-admin/admin-ajax.php?action=advanced_search`
-        const body = `nonce=2b6ee24052&inclusion=OR&exclusion=OR&page=${page}&genre=[]&genre_exclude=[]&author=[]&artist=[]&project=0&type=[]&status=[]&order=desc&orderby=updated&query=`
+        const body = `inclusion=OR&exclusion=OR&page=${page}&genre=[]&genre_exclude=[]&author=[]&artist=[]&project=0&type=[]&status=[]&order=desc&orderby=updated&query=`
         const request = createRequestObject(url, { 
             method: 'POST', 
             data: body,
             headers: { 
                 'content-type': 'application/x-www-form-urlencoded',
                 'origin': WEBSITE_BASE,
-                'referer': `${WEBSITE_BASE}/advanced-search/`
+                'referer': `${WEBSITE_BASE}/advanced-search/`,
+                'x-requested-with': 'XMLHttpRequest'
             } 
         })
         const response = await this.requestManager.schedule(request, 1)

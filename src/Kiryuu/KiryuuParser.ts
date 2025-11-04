@@ -19,8 +19,31 @@ export const parseMangaDetails = ($: CheerioAPI, mangaId: string): SourceManga =
         titles.push(...altTitles.map((t: string) => decodeHTMLEntity(t)))
     }
 
-    // Image
-    const image = normalizeUrl($('img[itemprop="image"]').first().attr('src') ?? '')
+    // Image - try multiple selectors
+    let image = ''
+    
+    // Try parent div with itemprop="image" then find img inside
+    const imageParent = $('[itemprop="image"]')
+    if (imageParent.length > 0) {
+        image = imageParent.find('img').first().attr('src') ?? ''
+    }
+    
+    // Fallback to wp-post-image class (WordPress standard)
+    if (!image) {
+        image = $('img.wp-post-image').first().attr('src') ?? ''
+    }
+    
+    // Fallback to common manga cover selectors
+    if (!image) {
+        image = $('.rounded-lg img').first().attr('src') ?? ''
+    }
+    
+    if (!image) {
+        // Last resort: any img in the sidebar/cover area
+        image = $('.sm\\:w-\\[17rem\\] img, .flex.w-full.h-auto img').first().attr('src') ?? ''
+    }
+    
+    image = normalizeUrl(image)
 
     // Status
     const statusText = $('.bg-accent.text-xs.px-2.py-0\\.5.rounded-lg').first().text().trim().toLowerCase()
@@ -280,7 +303,7 @@ export const parseSearchTags = ($: CheerioAPI): TagSection[] => {
         }
     })
 
-    // If no genres found from live page, use fallback list from KiryuuGenre.html
+    // If no genres found from live page, use fallback list from KiryuuGenre.html (complete list)
     if (genres.length === 0) {
         genres.push(
             { id: '4-koma', label: '4-Koma' },
@@ -316,8 +339,85 @@ export const parseSearchTags = ($: CheerioAPI): TagSection[] => {
             { id: 'ecchi', label: 'Ecchi' },
             { id: 'emperors-daughter', label: "Emperor's daughter" },
             { id: 'fan-colored', label: 'Fan-Colored' },
+            { id: 'fantas', label: 'Fantas' },
             { id: 'fantasy', label: 'Fantasy' },
-            { id: 'fetish', label: 'Fetish' }
+            { id: 'fetish', label: 'Fetish' },
+            { id: 'food', label: 'Food' },
+            { id: 'full-color', label: 'Full Color' },
+            { id: 'game', label: 'Game' },
+            { id: 'gender-bender', label: 'Gender Bender' },
+            { id: 'genderswap', label: 'Genderswap' },
+            { id: 'ghosts', label: 'Ghosts' },
+            { id: 'girls-love', label: "Girls' Love" },
+            { id: 'gore', label: 'Gore' },
+            { id: 'gyaru', label: 'Gyaru' },
+            { id: 'harem', label: 'Harem' },
+            { id: 'historical', label: 'Historical' },
+            { id: 'horror', label: 'Horror' },
+            { id: 'incest', label: 'Incest' },
+            { id: 'isekai', label: 'Isekai' },
+            { id: 'josei', label: 'Josei' },
+            { id: 'loli', label: 'Loli' },
+            { id: 'lolicon', label: 'Lolicon' },
+            { id: 'long-strip', label: 'Long Strip' },
+            { id: 'magic', label: 'Magic' },
+            { id: 'magical-girls', label: 'Magical Girls' },
+            { id: 'martial-arts', label: 'Martial Arts' },
+            { id: 'mature', label: 'Mature' },
+            { id: 'mecha', label: 'Mecha' },
+            { id: 'medical', label: 'Medical' },
+            { id: 'military', label: 'Military' },
+            { id: 'monster-girls', label: 'Monster Girls' },
+            { id: 'monsters', label: 'Monsters' },
+            { id: 'music', label: 'Music' },
+            { id: 'mystery', label: 'Mystery' },
+            { id: 'ninja', label: 'Ninja' },
+            { id: 'office-workers', label: 'Office Workers' },
+            { id: 'official-colored', label: 'Official Colored' },
+            { id: 'oneshot', label: 'Oneshot' },
+            { id: 'parody', label: 'Parody' },
+            { id: 'philosophical', label: 'Philosophical' },
+            { id: 'police', label: 'Police' },
+            { id: 'post-apocalyptic', label: 'Post-Apocalyptic' },
+            { id: 'psychological', label: 'Psychological' },
+            { id: 'reincarnation', label: 'Reincarnation' },
+            { id: 'reverse-harem', label: 'Reverse Harem' },
+            { id: 'romance', label: 'Romance' },
+            { id: 'samurai', label: 'Samurai' },
+            { id: 'school-life', label: 'School Life' },
+            { id: 'sci-fi', label: 'Sci-Fi' },
+            { id: 'seinen', label: 'Seinen' },
+            { id: 'sexual-violence', label: 'Sexual Violence' },
+            { id: 'shota', label: 'Shota' },
+            { id: 'shotacon', label: 'Shotacon' },
+            { id: 'shoujo', label: 'Shoujo' },
+            { id: 'shoujo-ai', label: 'Shoujo Ai' },
+            { id: 'shounen', label: 'Shounen' },
+            { id: 'shounen-ai', label: 'Shounen Ai' },
+            { id: 'slice-of-life', label: 'Slice of Life' },
+            { id: 'sm-bdsm', label: 'SM/BDSM' },
+            { id: 'smut', label: 'Smut' },
+            { id: 'space', label: 'Space' },
+            { id: 'sports', label: 'Sports' },
+            { id: 'super-power', label: 'Super Power' },
+            { id: 'superhero', label: 'Superhero' },
+            { id: 'supernatural', label: 'Supernatural' },
+            { id: 'survival', label: 'Survival' },
+            { id: 'thriller', label: 'Thriller' },
+            { id: 'time-travel', label: 'Time Travel' },
+            { id: 'traditional-games', label: 'Traditional Games' },
+            { id: 'tragedy', label: 'Tragedy' },
+            { id: 'vamp', label: 'Vamp' },
+            { id: 'vampires', label: 'Vampires' },
+            { id: 'video-games', label: 'Video Games' },
+            { id: 'villainess', label: 'Villainess' },
+            { id: 'violence', label: 'Violence' },
+            { id: 'virtual-reality', label: 'Virtual Reality' },
+            { id: 'web-comic', label: 'Web Comic' },
+            { id: 'wuxia', label: 'Wuxia' },
+            { id: 'yaoi', label: 'Yaoi' },
+            { id: 'yuri', label: 'Yuri' },
+            { id: 'zombies', label: 'Zombies' }
         )
     }
 
