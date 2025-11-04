@@ -28,7 +28,7 @@ import {
 const WEBSITE_BASE = 'https://kiryuu03.com'
 
 export const KiryuuInfo: SourceInfo = {
-    version: '1.0.1',
+    version: '1.0.2',
     name: 'Kiryuu',
     icon: 'icon.png',
     author: 'NaufalJCT48',
@@ -107,12 +107,14 @@ export class Kiryuu extends Source {
             {
                 id: 'popular_today',
                 title: 'Popular Today',
-                url: WEBSITE_BASE
+                url: WEBSITE_BASE,
+                type: 'get'
             },
             {
                 id: 'latest_update',
                 title: 'Latest Update',
-                url: `${WEBSITE_BASE}/advanced-search/?the_page=1&orderby=updated&order=desc`
+                url: `${WEBSITE_BASE}/wp-admin/admin-ajax.php?action=advanced_search`,
+                type: 'post'
             }
         ]
 
@@ -126,9 +128,26 @@ export class Kiryuu extends Source {
             
             sectionCallback(section)
             
-            const request = createRequestObject(s.url)
-            const response = await this.requestManager.schedule(request, 1)
-            const $ = cheerioLoad(response.data as string)
+            let $: any
+            if (s.type === 'post') {
+                // Latest Update uses AJAX POST
+                const body = 'nonce=2b6ee24052&inclusion=OR&exclusion=OR&page=1&genre=[]&genre_exclude=[]&author=[]&artist=[]&project=0&type=[]&status=[]&order=desc&orderby=updated&query='
+                const request = createRequestObject(s.url, { 
+                    method: 'POST', 
+                    data: body,
+                    headers: { 
+                        'content-type': 'application/x-www-form-urlencoded',
+                        'origin': WEBSITE_BASE,
+                        'referer': `${WEBSITE_BASE}/advanced-search/`
+                    } 
+                })
+                const response = await this.requestManager.schedule(request, 1)
+                $ = cheerioLoad(response.data as string)
+            } else {
+                const request = createRequestObject(s.url)
+                const response = await this.requestManager.schedule(request, 1)
+                $ = cheerioLoad(response.data as string)
+            }
             
             section.items = parseMangaList($)
             sectionCallback(section)
@@ -146,44 +165,47 @@ export class Kiryuu extends Source {
         const page = metadata?.page ?? 1
         const searchTerm = query.title?.trim() ?? ''
         
-        // Build URL params
-        const params: string[] = [
-            `the_page=${page}`,
-            'order=desc',
-            'orderby=updated'
-        ]
-
-        if (searchTerm) {
-            params.push(`search_term=${encodeURIComponent(searchTerm)}`)
-        }
-
         // Handle genre filter
         const includedTags = (query as any)?.includedTags as Array<{ id: string }>
+        let genreList: string[] = []
         if (Array.isArray(includedTags) && includedTags.length > 0) {
-            // Find genre tags (section id: 'genre')
-            const genreTags = includedTags.filter((tag: any) => {
-                // Assuming genre tags don't have specific section marker, use all for now
-                return true
-            })
-            
-            if (genreTags.length > 0) {
-                // Kiryuu uses the_genre parameter with comma-separated values
-                const genres = genreTags.map((tag: any) => tag.id).join(',')
-                params.push(`the_genre=${encodeURIComponent(genres)}`)
-            }
+            genreList = includedTags.map((tag: any) => tag.id)
         }
 
         // If there's a search term, use the AJAX search endpoint (returns #searchResults HTML)
-    let $: any
-        if (searchTerm) {
+        let $: any
+        if (searchTerm && genreList.length === 0) {
+            // Simple text search
             const ajaxUrl = `${WEBSITE_BASE}/wp-admin/admin-ajax.php?action=search`
             const body = `query=${encodeURIComponent(searchTerm)}`
-            const request = createRequestObject(`${ajaxUrl}`, { method: 'POST', data: body, headers: { 'content-type': 'application/x-www-form-urlencoded', 'hx-request': 'true' } })
+            const request = createRequestObject(ajaxUrl, { 
+                method: 'POST', 
+                data: body, 
+                headers: { 
+                    'content-type': 'application/x-www-form-urlencoded', 
+                    'hx-request': 'true',
+                    'origin': WEBSITE_BASE,
+                    'referer': WEBSITE_BASE
+                } 
+            })
             const response = await this.requestManager.schedule(request, 1)
             $ = cheerioLoad(response.data as string)
         } else {
-            const url = `${WEBSITE_BASE}/advanced-search/?${params.join('&')}`
-            const request = createRequestObject(url)
+            // Advanced search (with genres or filters) - use POST to advanced_search AJAX
+            const ajaxUrl = `${WEBSITE_BASE}/wp-admin/admin-ajax.php?action=advanced_search`
+            const genreParam = genreList.length > 0 ? JSON.stringify(genreList) : '[]'
+            const queryParam = searchTerm ? encodeURIComponent(searchTerm) : ''
+            const body = `nonce=2b6ee24052&inclusion=OR&exclusion=OR&page=${page}&genre=${genreParam}&genre_exclude=[]&author=[]&artist=[]&project=0&type=[]&status=[]&order=desc&orderby=updated&query=${queryParam}`
+            
+            const request = createRequestObject(ajaxUrl, { 
+                method: 'POST', 
+                data: body,
+                headers: { 
+                    'content-type': 'application/x-www-form-urlencoded',
+                    'origin': WEBSITE_BASE,
+                    'referer': `${WEBSITE_BASE}/advanced-search/`
+                } 
+            })
             const response = await this.requestManager.schedule(request, 1)
             $ = cheerioLoad(response.data as string)
         }
@@ -206,8 +228,18 @@ export class Kiryuu extends Source {
             throw new Error(`View more not supported for section: ${homepageSectionId}`)
         }
 
-        const url = `${WEBSITE_BASE}/advanced-search/?the_page=${page}&orderby=updated&order=desc`
-        const request = createRequestObject(url)
+        // Latest Update uses AJAX POST
+        const url = `${WEBSITE_BASE}/wp-admin/admin-ajax.php?action=advanced_search`
+        const body = `nonce=2b6ee24052&inclusion=OR&exclusion=OR&page=${page}&genre=[]&genre_exclude=[]&author=[]&artist=[]&project=0&type=[]&status=[]&order=desc&orderby=updated&query=`
+        const request = createRequestObject(url, { 
+            method: 'POST', 
+            data: body,
+            headers: { 
+                'content-type': 'application/x-www-form-urlencoded',
+                'origin': WEBSITE_BASE,
+                'referer': `${WEBSITE_BASE}/advanced-search/`
+            } 
+        })
         const response = await this.requestManager.schedule(request, 1)
         const $ = cheerioLoad(response.data as string)
         

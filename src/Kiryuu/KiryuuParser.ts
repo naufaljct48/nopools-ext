@@ -233,29 +233,6 @@ export const parseMangaList = ($: CheerioAPI): PartialSourceManga[] => {
         }
     })
 
-    // Generic card/list items fallback: find anchors that look like manga cards inside result containers
-    $('.group-data-[mode=horizontal]:hidden a[href*="/manga/"], .group-data-[mode=vertical]:hidden a[href*="/manga/"]').each((_: number, elem: any) => {
-        const $link = $(elem)
-        const href = $link.attr('href') ?? ''
-        const mangaId = href.split('/').filter((x: string) => x).pop() ?? ''
-        if (!mangaId) return
-
-        const title = $link.find('h1, h2, h3, .text-base, .font-medium').first().text().trim() || $link.attr('title') || ''
-        const image = normalizeUrl($link.find('img').first().attr('src') ?? '')
-        // look for nearby latest chapter/time text
-        const parent = $link.closest('div').parent()
-        let subtitle = parent.find('time').first().text().trim() || parent.find('.text-sm.text-gray-300').first().text().trim() || ''
-
-        if (title) {
-            results.push(App.createPartialSourceManga({
-                mangaId,
-                image,
-                title: decodeHTMLEntity(title),
-                subtitle: decodeHTMLEntity(subtitle)
-            }))
-        }
-    })
-
     // For advanced search results / latest updates
     $('.flex.flex-col.justify-between.px-4.py-1\\.5').each((_: number, elem: any) => {
         const $elem = $(elem)
