@@ -824,7 +824,7 @@ var _Sources = (() => {
   var API_URL = "https://api.shngm.io";
   var BASE_URL2 = "https://app.shinigami.asia";
   var ShinigamiInfo = {
-    version: "1.2.0",
+    version: "1.2.1",
     name: "Shinigami",
     icon: "icon.png",
     author: "NaufalJCT48",
@@ -1088,6 +1088,20 @@ var _Sources = (() => {
         results: parseMangaList(data),
         metadata: hasNextPage ? { page: page + 1 } : void 0
       });
+    }
+    async getCloudflareBypassRequestAsync() {
+      return App.createRequest({
+        url: `${BASE_URL2}/`,
+        method: "GET",
+        headers: {
+          "referer": `${BASE_URL2}/`,
+          "origin": `${BASE_URL2}/`,
+          "user-agent": await this.requestManager.getDefaultUserAgent()
+        }
+      });
+    }
+    getMangaShareUrl(mangaId) {
+      return `${BASE_URL2}/series/${mangaId}`;
     }
   };
   return __toCommonJS(Shinigami_exports);

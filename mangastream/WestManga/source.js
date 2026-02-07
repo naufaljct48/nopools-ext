@@ -1031,7 +1031,7 @@ var _Sources = (() => {
   var WEBSITE_BASE2 = "https://westmanga.me";
   var API_BASE = "https://data.westmanga.me";
   var WestMangaInfo = {
-    version: "1.1.3",
+    version: "1.1.4",
     name: "WestManga",
     icon: "icon.png",
     author: "NaufalJCT48",
@@ -1155,6 +1155,20 @@ var _Sources = (() => {
       const current = Number(json?.paginator?.current_page ?? page);
       const last = Number(json?.paginator?.last_page ?? page);
       return App.createPagedResults({ results, metadata: current < last ? { page: current + 1, last } : void 0 });
+    }
+    async getCloudflareBypassRequestAsync() {
+      return App.createRequest({
+        url: `${WEBSITE_BASE2}/`,
+        method: "GET",
+        headers: {
+          "referer": `${WEBSITE_BASE2}/`,
+          "origin": `${WEBSITE_BASE2}/`,
+          "user-agent": await this.requestManager.getDefaultUserAgent()
+        }
+      });
+    }
+    getMangaShareUrl(mangaId) {
+      return `${WEBSITE_BASE2}/manga/${mangaId}/`;
     }
   };
   return __toCommonJS(WestManga_exports);
