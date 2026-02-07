@@ -6,7 +6,7 @@ const WEBSITE_BASE = 'https://westmanga.me'
 const API_BASE = 'https://data.westmanga.me'
 
 export const WestMangaInfo: SourceInfo = {
-    version: '1.1.3',
+    version: '1.1.6',
     name: 'WestManga',
     icon: 'icon.png',
     author: 'NaufalJCT48',
@@ -143,5 +143,21 @@ export class WestManga extends Source {
         const current = Number(json?.paginator?.current_page ?? page)
         const last = Number(json?.paginator?.last_page ?? page)
         return App.createPagedResults({ results, metadata: current < last ? { page: current + 1, last } : undefined })
+    }
+
+    override async getCloudflareBypassRequestAsync(): Promise<Request> {
+        return App.createRequest({
+            url: `${WEBSITE_BASE}/`,
+            method: 'GET',
+            headers: {
+                'referer': `${WEBSITE_BASE}/`,
+                'origin': `${WEBSITE_BASE}/`,
+                'user-agent': await this.requestManager.getDefaultUserAgent()
+            }
+        })
+    }
+
+    override getMangaShareUrl(mangaId: string): string {
+        return `${WEBSITE_BASE}/manga/${mangaId}`
     }
 }

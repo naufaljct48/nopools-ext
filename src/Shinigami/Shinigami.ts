@@ -20,7 +20,7 @@ const CDN_URL = 'https://storage.shngm.id'
 const BASE_URL = 'https://app.shinigami.asia'
 
 export const ShinigamiInfo: SourceInfo = {
-    version: '1.2.0',
+    version: '1.2.1',
     name: 'Shinigami',
     icon: 'icon.png',
     author: 'NaufalJCT48',
@@ -322,5 +322,21 @@ export class Shinigami extends Source {
             results: parseMangaList(data),
             metadata: hasNextPage ? { page: page + 1 } : undefined
         })
+    }
+
+    async getCloudflareBypassRequestAsync(): Promise<Request> {
+        return App.createRequest({
+            url: `${BASE_URL}/`,
+            method: 'GET',
+            headers: {
+                'referer': `${BASE_URL}/`,
+                'origin': `${BASE_URL}/`,
+                'user-agent': await this.requestManager.getDefaultUserAgent()
+            }
+        })
+    }
+
+    getMangaShareUrl(mangaId: string): string {
+        return `${BASE_URL}/series/${mangaId}`
     }
 }

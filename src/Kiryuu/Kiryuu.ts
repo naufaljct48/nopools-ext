@@ -28,7 +28,7 @@ import {
 const WEBSITE_BASE = 'https://kiryuu03.com'
 
 export const KiryuuInfo: SourceInfo = {
-    version: '1.0.3',
+    version: '2.1.2',
     name: 'Kiryuu',
     icon: 'icon.png',
     author: 'NaufalJCT48',
