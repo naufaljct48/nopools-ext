@@ -15874,7 +15874,7 @@ ${additionalInfo.join(" \u2022 ")}`;
   // src/Kiryuu/Kiryuu.ts
   var WEBSITE_BASE2 = "https://kiryuu03.com";
   var KiryuuInfo = {
-    version: "1.0.6",
+    version: "2.0.0",
     name: "Kiryuu",
     icon: "icon.png",
     author: "NaufalJCT48",
@@ -16066,6 +16066,15 @@ ${additionalInfo.join(" \u2022 ")}`;
         results,
         metadata: hasMore ? { page: page + 1 } : void 0
       });
+    }
+    getCloudflareBypassRequest() {
+      return App.createRequest({
+        url: `${WEBSITE_BASE2}/`,
+        method: "GET"
+      });
+    }
+    getMangaShareUrl(mangaId) {
+      return `${WEBSITE_BASE2}/manga/${mangaId}/`;
     }
   };
   return __toCommonJS(Kiryuu_exports);
