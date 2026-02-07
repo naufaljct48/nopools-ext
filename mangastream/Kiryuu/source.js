@@ -16067,6 +16067,12 @@ ${additionalInfo.join(" \u2022 ")}`;
         metadata: hasMore ? { page: page + 1 } : void 0
       });
     }
+    getCloudflareBypassRequest() {
+      return App.createRequest({
+        url: `${WEBSITE_BASE2}/`,
+        method: "GET"
+      });
+    }
     async getCloudflareBypassRequestAsync() {
       return App.createRequest({
         url: `${WEBSITE_BASE2}/`,
