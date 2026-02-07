@@ -15874,7 +15874,7 @@ ${additionalInfo.join(" \u2022 ")}`;
   // src/KiryuuID/KiryuuID.ts
   var WEBSITE_BASE2 = "https://kiryuu03.com";
   var KiryuuIDInfo = {
-    version: "1.0.1",
+    version: "1.0.2",
     name: "KiryuuID",
     icon: "icon.png",
     author: "NaufalJCT48",
