@@ -735,11 +735,11 @@ var _Sources = (() => {
     }
   });
 
-  // src/Kiryuu/Kiryuu.ts
-  var Kiryuu_exports = {};
-  __export(Kiryuu_exports, {
-    Kiryuu: () => Kiryuu,
-    KiryuuInfo: () => KiryuuInfo
+  // src/KiryuuID/KiryuuID.ts
+  var KiryuuID_exports = {};
+  __export(KiryuuID_exports, {
+    KiryuuID: () => KiryuuID,
+    KiryuuIDInfo: () => KiryuuIDInfo
   });
   var import_types2 = __toESM(require_lib());
 
@@ -15414,7 +15414,7 @@ var _Sources = (() => {
   var parse5 = getParse((content, options, isDocument2, context) => options._useHtmlParser2 ? parseDocument(content, options) : parseWithParse5(content, options, isDocument2, context));
   var load = getLoad(parse5, (dom, options) => options._useHtmlParser2 ? esm_default(dom, options) : renderWithParse5(dom));
 
-  // src/Kiryuu/KiryuuHelper.ts
+  // src/KiryuuID/KiryuuIDHelper.ts
   var WEBSITE_BASE = "https://kiryuu03.com";
   var createRequestObject = (url, metadata = {}) => {
     const isImage = /\.(png|jpe?g|webp|gif)$/i.test(url);
@@ -15492,7 +15492,7 @@ var _Sources = (() => {
     return str.replace(/&#(\d+);/g, (match, dec) => String.fromCharCode(parseInt(dec))).replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&#x27;/g, "'").replace(/&#x2F;/g, "/");
   };
 
-  // src/Kiryuu/KiryuuParser.ts
+  // src/KiryuuID/KiryuuIDParser.ts
   var parseMangaDetails = ($2, mangaId) => {
     const titles = [];
     const mainTitle = $2('h1[itemprop="name"]').first().text().trim();
@@ -15871,11 +15871,11 @@ ${additionalInfo.join(" \u2022 ")}`;
     return sections;
   };
 
-  // src/Kiryuu/Kiryuu.ts
+  // src/KiryuuID/KiryuuID.ts
   var WEBSITE_BASE2 = "https://kiryuu03.com";
-  var KiryuuInfo = {
-    version: "2.0.5",
-    name: "Kiryuu",
+  var KiryuuIDInfo = {
+    version: "1.0.0",
+    name: "KiryuuID",
     icon: "icon.png",
     author: "NaufalJCT48",
     authorWebsite: "https://github.com/naufaljct48",
@@ -15885,7 +15885,7 @@ ${additionalInfo.join(" \u2022 ")}`;
     sourceTags: [{ text: "Indonesian", type: import_types2.BadgeColor.GREY }],
     intents: import_types2.SourceIntents.MANGA_CHAPTERS | import_types2.SourceIntents.HOMEPAGE_SECTIONS | import_types2.SourceIntents.CLOUDFLARE_BYPASS_REQUIRED | import_types2.SourceIntents.SETTINGS_UI
   };
-  var Kiryuu = class extends import_types2.Source {
+  var KiryuuID = class extends import_types2.Source {
     constructor() {
       super(...arguments);
       this.requestManager = App.createRequestManager({
@@ -16093,6 +16093,6 @@ ${additionalInfo.join(" \u2022 ")}`;
       return `${WEBSITE_BASE2}/manga/${mangaId}/`;
     }
   };
-  return __toCommonJS(Kiryuu_exports);
+  return __toCommonJS(KiryuuID_exports);
 })();
 this.Sources = _Sources; if (typeof exports === 'object' && typeof module !== 'undefined') {module.exports.Sources = this.Sources;}
