@@ -1031,7 +1031,7 @@ var _Sources = (() => {
   var WEBSITE_BASE2 = "https://westmanga.me";
   var API_BASE = "https://data.westmanga.me";
   var WestMangaInfo = {
-    version: "1.1.5",
+    version: "1.1.6",
     name: "WestManga",
     icon: "icon.png",
     author: "NaufalJCT48",
@@ -1168,7 +1168,7 @@ var _Sources = (() => {
       });
     }
     getMangaShareUrl(mangaId) {
-      return `${WEBSITE_BASE2}/comic/${mangaId}/`;
+      return `${WEBSITE_BASE2}/manga/${mangaId}`;
     }
   };
   return __toCommonJS(WestManga_exports);
