@@ -15874,7 +15874,7 @@ ${additionalInfo.join(" \u2022 ")}`;
   // src/Kiryuu/Kiryuu.ts
   var WEBSITE_BASE2 = "https://kiryuu03.com";
   var KiryuuInfo = {
-    version: "2.0.3",
+    version: "2.0.4",
     name: "Kiryuu",
     icon: "icon.png",
     author: "NaufalJCT48",
@@ -16075,6 +16075,17 @@ ${additionalInfo.join(" \u2022 ")}`;
           "referer": `${WEBSITE_BASE2}/`,
           "origin": `${WEBSITE_BASE2}/`,
           "user-agent": await this.requestManager.getDefaultUserAgent()
+        }
+      });
+    }
+    getCloudflareBypassRequest() {
+      return App.createRequest({
+        url: `${WEBSITE_BASE2}/`,
+        method: "GET",
+        headers: {
+          "referer": `${WEBSITE_BASE2}/`,
+          "origin": `${WEBSITE_BASE2}/`,
+          "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
         }
       });
     }
