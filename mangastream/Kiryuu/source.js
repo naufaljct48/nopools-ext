@@ -16067,10 +16067,15 @@ ${additionalInfo.join(" \u2022 ")}`;
         metadata: hasMore ? { page: page + 1 } : void 0
       });
     }
-    getCloudflareBypassRequest() {
+    async getCloudflareBypassRequestAsync() {
       return App.createRequest({
         url: `${WEBSITE_BASE2}/`,
-        method: "GET"
+        method: "GET",
+        headers: {
+          "referer": `${WEBSITE_BASE2}/`,
+          "origin": `${WEBSITE_BASE2}/`,
+          "user-agent": await this.requestManager.getDefaultUserAgent()
+        }
       });
     }
     getMangaShareUrl(mangaId) {
