@@ -15874,7 +15874,7 @@ ${additionalInfo.join(" \u2022 ")}`;
   // src/KiryuuID/KiryuuID.ts
   var WEBSITE_BASE2 = "https://kiryuu03.com";
   var KiryuuIDInfo = {
-    version: "1.0.0",
+    version: "1.0.1",
     name: "KiryuuID",
     icon: "icon.png",
     author: "NaufalJCT48",
@@ -15942,48 +15942,39 @@ ${additionalInfo.join(" \u2022 ")}`;
     async getHomePageSections(sectionCallback) {
       const sections = [
         {
-          id: "popular_today",
-          title: "Popular Today",
-          url: WEBSITE_BASE2,
-          type: "get"
+          request: createRequestObject(`${WEBSITE_BASE2}/`, { method: "GET" }),
+          section: App.createHomeSection({
+            id: "popular_today",
+            title: "Popular Today",
+            type: import_types2.HomeSectionType.singleRowNormal,
+            containsMoreItems: false
+          })
         },
         {
-          id: "latest_update",
-          title: "Latest Update",
-          url: `${WEBSITE_BASE2}/wp-admin/admin-ajax.php?action=advanced_search`,
-          type: "post"
-        }
-      ];
-      for (const s of sections) {
-        const section = App.createHomeSection({
-          id: s.id,
-          title: s.title,
-          type: import_types2.HomeSectionType.singleRowNormal,
-          containsMoreItems: s.id === "latest_update"
-        });
-        sectionCallback(section);
-        let $2;
-        if (s.type === "post") {
-          const body = "inclusion=OR&exclusion=OR&page=1&genre=[]&genre_exclude=[]&author=[]&artist=[]&project=0&type=[]&status=[]&order=desc&orderby=updated&query=";
-          const request = createRequestObject(s.url, {
+          request: createRequestObject(`${WEBSITE_BASE2}/wp-admin/admin-ajax.php?action=advanced_search`, {
             method: "POST",
-            data: body,
+            data: "inclusion=OR&exclusion=OR&page=1&genre=[]&genre_exclude=[]&author=[]&artist=[]&project=0&type=[]&status=[]&order=desc&orderby=updated&query=",
             headers: {
               "content-type": "application/x-www-form-urlencoded",
               "origin": WEBSITE_BASE2,
               "referer": `${WEBSITE_BASE2}/advanced-search/`,
               "x-requested-with": "XMLHttpRequest"
             }
-          });
-          const response = await this.requestManager.schedule(request, 1);
-          $2 = load(response.data);
-        } else {
-          const request = createRequestObject(s.url);
-          const response = await this.requestManager.schedule(request, 1);
-          $2 = load(response.data);
+          }),
+          section: App.createHomeSection({
+            id: "latest_update",
+            title: "Latest Update",
+            type: import_types2.HomeSectionType.singleRowNormal,
+            containsMoreItems: true
+          })
         }
-        section.items = parseMangaList($2);
-        sectionCallback(section);
+      ];
+      for (const section of sections) {
+        sectionCallback(section.section);
+        const response = await this.requestManager.schedule(section.request, 1);
+        const $2 = load(response.data);
+        section.section.items = parseMangaList($2);
+        sectionCallback(section.section);
       }
     }
     async getSearchTags() {
@@ -16078,17 +16069,17 @@ ${additionalInfo.join(" \u2022 ")}`;
         }
       });
     }
-    // getCloudflareBypassRequest(): Request {
-    //     return App.createRequest({
-    //         url: `${WEBSITE_BASE}/`,
-    //         method: 'GET',
-    //         headers: {
-    //             'referer': `${WEBSITE_BASE}/`,
-    //             'origin': `${WEBSITE_BASE}/`,
-    //             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36'
-    //         }
-    //     })
-    // }
+    getCloudflareBypassRequest() {
+      return App.createRequest({
+        url: `${WEBSITE_BASE2}/`,
+        method: "GET",
+        headers: {
+          "referer": `${WEBSITE_BASE2}/`,
+          "origin": `${WEBSITE_BASE2}/`,
+          "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
+        }
+      });
+    }
     getMangaShareUrl(mangaId) {
       return `${WEBSITE_BASE2}/manga/${mangaId}/`;
     }
