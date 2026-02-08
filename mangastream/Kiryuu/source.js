@@ -744,6 +744,7 @@ var _Sources = (() => {
       "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
     };
     return App.createRequest({
+      method: "GET",
       ...requestObj,
       headers: {
         ...headers,
@@ -1106,7 +1107,7 @@ ${additionalInfo.join(" \u2022 ")}`;
     return parser.parseFromString(html, "text/html");
   };
   var KiryuuInfo = {
-    version: "2.1.5",
+    version: "2.1.6",
     name: "Kiryuu",
     icon: "icon.png",
     author: "NaufalJCT48",
