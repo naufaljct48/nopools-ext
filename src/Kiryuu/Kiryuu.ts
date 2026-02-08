@@ -27,7 +27,7 @@ import {
 const WEBSITE_BASE = 'https://kiryuu03.com'
 
 export const KiryuuInfo: SourceInfo = {
-    version: '2.2.0',
+    version: '2.2.1',
     name: 'Kiryuu',
     icon: 'icon.png',
     author: 'NaufalJCT48',
@@ -216,25 +216,19 @@ export class Kiryuu extends Source {
     override async getViewMoreItems(homepageSectionId: string, metadata: any): Promise<PagedResults> {
         const page = metadata?.page ?? 1
         
-        if (homepageSectionId !== 'latest_update') {
+        let url: string
+        if (homepageSectionId === 'latest_update') {
+            url = `${WEBSITE_BASE}/latest/?the_page=${page}`
+        } else if (homepageSectionId === 'project_updates') {
+            url = `${WEBSITE_BASE}/project/?the_page=${page}`
+        } else {
             throw new Error(`View more not supported for section: ${homepageSectionId}`)
         }
 
-        const request = createRequestObject({
-            url: `${WEBSITE_BASE}/wp-admin/admin-ajax.php?action=advanced_search`,
-            method: 'POST',
-            data: `inclusion=OR&exclusion=OR&page=${page}&genre=[]&genre_exclude=[]&author=[]&artist=[]&project=0&type=[]&status=[]&order=desc&orderby=updated&query=`,
-            headers: {
-                'content-type': 'application/x-www-form-urlencoded',
-                'origin': WEBSITE_BASE,
-                'referer': `${WEBSITE_BASE}/advanced-search/`,
-                'x-requested-with': 'XMLHttpRequest'
-            }
-        })
-        
+        const request = createRequestObject({ url })
         const response = await this.requestManager.schedule(request, 1)
         const results = parseMangaList(response.data as string)
-        const hasMore = results.length >= 20
+        const hasMore = results.length >= 12
 
         return App.createPagedResults({
             results,

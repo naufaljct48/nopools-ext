@@ -128,70 +128,48 @@ export const parseChapterDetails = (html: string, mangaId: string, chapterId: st
 
 export const parseMangaList = (html: string): PartialSourceManga[] => {
     const results: PartialSourceManga[] = []
+    const seen = new Set<string>()
 
-    // Pattern 1: Search results / project / latest pages (new structure)
-    // Match container div with wp-post-image and h1 title
-    const itemMatches = html.matchAll(/<div[^>]*overflow-hidden[^>]*>.*?<a[^>]*href=["'](?:https?:\/\/[^\/]+)?\/manga\/([^"\/]+)["'][^>]*>.*?<img[^>]*class=["'][^"']*wp-post-image[^"']*["'][^>]*src=["']([^"']+)["'][^>]*alt=["']([^"']*)["'][^>]*>.*?<\/a>.*?<h1[^>]*class=["'][^"']*text-\[[^"']*\][^"']*["'][^>]*>([^<]+)<\/h1>/gis)
+    // Match wp-post-image and extract nearby manga link and title
+    // This works for latest, project, and featured sections
+    const imgMatches = html.matchAll(/<img[^>]*class=["'][^"']*wp-post-image[^"']*["'][^>]*src=["']([^"']+)["'][^>]*alt=["']([^"']*)["'][^>]*>/gi)
+    
+    for (const imgMatch of imgMatches) {
+        const image = imgMatch[1] ?? ''
+        const titleFromAlt = imgMatch[2] ?? ''
 
-    for (const match of itemMatches) {
-        const mangaId = match[1] ?? ''
-        const image = match[2] ?? ''
-        const titleFromAlt = match[3] ?? ''
-        const titleFromH1 = match[4] ?? ''
+        if (image) {
+            // Find the manga ID from nearby context (before and after the image)
+            const imgPosition = html.indexOf(imgMatch[0])
+            const nearbyContext = html.substring(
+                Math.max(0, imgPosition - 500),
+                Math.min(html.length, imgPosition + imgMatch[0].length + 1000)
+            )
+            
+            // Extract manga ID from href
+            const linkMatch = nearbyContext.match(/<a[^>]*href=["'](?:https?:\/\/[^\/]+)?\/manga\/([^"\/]+)["']/i)
+            const mangaId = linkMatch?.[1] ?? ''
 
-        if (mangaId) {
-            results.push(App.createPartialSourceManga({
-                mangaId,
-                image: normalizeUrl(image),
-                title: decodeHTMLEntity(titleFromH1.trim() || titleFromAlt || mangaId),
-                subtitle: ''
-            }))
-        }
-    }
-
-    // Pattern 2: Alternative - simpler img + alt pattern
-    if (results.length === 0) {
-        const imgMatches = html.matchAll(/<img[^>]*class=["'][^"']*wp-post-image[^"']*["'][^>]*src=["']([^"']+)["'][^>]*alt=["']([^"']*)["'][^>]*>/gi)
-        for (const imgMatch of imgMatches) {
-            const image = imgMatch[1] ?? ''
-            const titleFromAlt = imgMatch[2] ?? ''
-
-            if (image) {
-                // Try to find manga slug from nearby anchor
-                const nearbyContext = html.substring(
-                    Math.max(0, html.lastIndexOf(image) - 1000),
-                    html.indexOf(image) + image.length + 500
-                )
-                const linkMatch = nearbyContext.match(/<a[^>]*href=["'](?:https?:\/\/[^\/]+)?\/manga\/([^"\/]+)["']/i)
-                const mangaId = linkMatch?.[1] ?? ''
-
-                if (mangaId) {
-                    results.push(App.createPartialSourceManga({
-                        mangaId,
-                        image: normalizeUrl(image),
-                        title: decodeHTMLEntity(titleFromAlt || mangaId),
-                        subtitle: ''
-                    }))
+            if (mangaId && !seen.has(mangaId)) {
+                seen.add(mangaId)
+                
+                // Try to find H1 title in nearby context
+                let title = titleFromAlt
+                const h1Match = nearbyContext.match(/<h1[^>]*class=["'][^"']*text-\[[^"']*\][^"']*["'][^>]*>\s*([^<]+?)\s*<\/h1>/i)
+                if (h1Match?.[1]) {
+                    title = h1Match[1].trim()
+                } else {
+                    // Try alternative title pattern for featured section
+                    const altTitleMatch = nearbyContext.match(/<a[^>]*href=["'][^"']*\/manga\/[^"']+["'][^>]*class=["'][^"']*text-base[^"']*font-medium[^"']*["'][^>]*>\s*([^<]+?)\s*<\/a>/i)
+                    if (altTitleMatch?.[1]) {
+                        title = altTitleMatch[1].trim()
+                    }
                 }
-            }
-        }
-    }
 
-    // Pattern 3: Admin-ajax response (featured/popular)
-    if (results.length === 0) {
-        // Match the card structure from admin-ajax
-        const cardMatches = html.matchAll(/<a[^>]*href=["'](?:https?:\/\/[^\/]+)?\/manga\/([^"\/]+)["'][^>]*>\s*<div[^>]*>\s*<img[^>]*src=["']([^"']+)["'][^>]*class=["'][^"']*wp-post-image[^"']*["'][^>]*alt=["']([^"']*)["'][^>]*>/gis)
-
-        for (const match of cardMatches) {
-            const mangaId = match[1] ?? ''
-            const image = match[2] ?? ''
-            const titleFromAlt = match[3] ?? ''
-
-            if (mangaId) {
                 results.push(App.createPartialSourceManga({
                     mangaId,
                     image: normalizeUrl(image),
-                    title: decodeHTMLEntity(titleFromAlt || mangaId),
+                    title: decodeHTMLEntity(title || mangaId),
                     subtitle: ''
                 }))
             }
