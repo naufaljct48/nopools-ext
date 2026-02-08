@@ -833,11 +833,17 @@ var _Sources = (() => {
       const mangaData = item.data;
       const chapters = item.chapters || [];
       const latestChapter = chapters[0];
+      let subtitle = "";
+      if (latestChapter?.data?.index) {
+        subtitle = `Ch. ${latestChapter.data.index}`;
+      } else if (mangaData.totalChapters) {
+        subtitle = `${mangaData.totalChapters} Chapters`;
+      }
       results.push(App.createPartialSourceManga({
         mangaId: mangaData.slug || item.id.toString(),
         image: mangaData.coverImage || "",
         title: mangaData.title || "",
-        subtitle: latestChapter?.data?.index ? `Ch. ${latestChapter.data.index}` : ""
+        subtitle
       }));
     }
     return results;
@@ -864,7 +870,7 @@ var _Sources = (() => {
   var BASE_URL2 = "https://v1.komikcast.fit";
   var AUTH_TOKEN2 = "oat_NTQwNjU.eVU0Tjc4aEhpNmlwcDJkNWlDSU9GT0w2VXJxR25UdFc5UnV0dHRGdzY1MDY1NjYyNw";
   var KomikcastInfo = {
-    version: "4.0.0",
+    version: "4.0.1",
     name: "Komikcast",
     icon: "icon.png",
     author: "NaufalJCT48",
@@ -1019,10 +1025,13 @@ var _Sources = (() => {
       }
       if (query.includedTags?.length) {
         const genreIds = query.includedTags.filter((tag) => tag.id.startsWith("genre_")).map((tag) => tag.id.replace("genre_", ""));
-        if (genreIds.length) {
-          params.append("genreIds", genreIds.join(","));
+        for (const genreId of genreIds) {
+          params.append("genreIds", genreId);
         }
       }
+      params.append("includeMeta", "true");
+      params.append("sort", "latest");
+      params.append("sortOrder", "desc");
       const request = createRequestObject({
         url: `${API_URL2}/series?${params.toString()}`,
         method: "GET"
