@@ -851,9 +851,10 @@ var _Sources = (() => {
   var parseSearchTags = (data) => {
     const genres = [];
     for (const genre of data || []) {
+      const genreName = genre.data?.name || "";
       genres.push(App.createTag({
-        id: `genre_${genre.id}`,
-        label: genre.data?.name || ""
+        id: `genre_${genreName}`,
+        label: genreName
       }));
     }
     return [
@@ -870,7 +871,7 @@ var _Sources = (() => {
   var BASE_URL2 = "https://v1.komikcast.fit";
   var AUTH_TOKEN2 = "oat_NTQwNjU.eVU0Tjc4aEhpNmlwcDJkNWlDSU9GT0w2VXJxR25UdFc5UnV0dHRGdzY1MDY1NjYyNw";
   var KomikcastInfo = {
-    version: "4.0.1",
+    version: "4.0.2",
     name: "Komikcast",
     icon: "icon.png",
     author: "NaufalJCT48",

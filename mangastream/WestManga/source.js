@@ -959,7 +959,8 @@ var _Sources = (() => {
       label: String(g?.name ?? "")
     })).filter((t) => t.id && t.label);
     const tagSections = [App.createTagSection({ id: "0", label: "genres", tags: arrayTags.map((x) => App.createTag(x)) })];
-    const desc = data?.sinopsis ?? "";
+    const rawDesc = data?.sinopsis ?? "";
+    const desc = rawDesc.replace(/<[^>]*>/g, "").trim();
     return App.createSourceManga({
       id: mangaId,
       mangaInfo: App.createMangaInfo({
@@ -1031,7 +1032,7 @@ var _Sources = (() => {
   var WEBSITE_BASE2 = "https://westmanga.me";
   var API_BASE = "https://data.westmanga.me";
   var WestMangaInfo = {
-    version: "1.1.6",
+    version: "1.1.7",
     name: "WestManga",
     icon: "icon.png",
     author: "NaufalJCT48",
