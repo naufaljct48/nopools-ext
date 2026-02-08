@@ -871,7 +871,7 @@ var _Sources = (() => {
   var BASE_URL2 = "https://v1.komikcast.fit";
   var AUTH_TOKEN2 = "oat_NTQwNjU.eVU0Tjc4aEhpNmlwcDJkNWlDSU9GT0w2VXJxR25UdFc5UnV0dHRGdzY1MDY1NjYyNw";
   var KomikcastInfo = {
-    version: "4.0.3",
+    version: "4.0.4",
     name: "Komikcast",
     icon: "icon.png",
     author: "NaufalJCT48",
@@ -1018,25 +1018,26 @@ var _Sources = (() => {
     }
     async getSearchResults(query, metadata) {
       const page = metadata?.page ?? 1;
-      const params = new URLSearchParams();
-      params.append("page", page.toString());
-      params.append("take", "24");
+      const params = [];
+      params.push(`page=${page}`);
+      params.push("take=24");
       if (query.title) {
-        const searchTerm = query.title;
+        const searchTerm = encodeURIComponent(query.title);
         const filterParam = `title=like="${searchTerm}",nativeTitle=like="${searchTerm}"`;
-        params.append("filter", filterParam);
+        params.push(`filter=${filterParam}`);
       }
       if (query.includedTags?.length) {
         const genreNames = query.includedTags.filter((tag) => tag.id && tag.label).map((tag) => tag.id);
         for (const genreName of genreNames) {
-          params.append("genreIds", genreName);
+          params.push(`genreIds=${encodeURIComponent(genreName)}`);
         }
       }
-      params.append("includeMeta", "true");
-      params.append("sort", "latest");
-      params.append("sortOrder", "desc");
+      params.push("includeMeta=true");
+      params.push("sort=latest");
+      params.push("sortOrder=desc");
+      const queryString = params.join("&");
       const request = createRequestObject({
-        url: `${API_URL2}/series?${params.toString()}`,
+        url: `${API_URL2}/series?${queryString}`,
         method: "GET"
       });
       const response = await this.requestManager.schedule(request, 1);
