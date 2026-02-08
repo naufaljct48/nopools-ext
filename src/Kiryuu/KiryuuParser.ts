@@ -1,54 +1,77 @@
 import { Chapter, ChapterDetails, PartialSourceManga, SourceManga, Tag, TagSection } from '@paperback/types'
-import { CheerioAPI } from 'cheerio'
 import { decodeHTMLEntity, convertTime, normalizeUrl } from './KiryuuHelper'
 
-export const parseMangaDetails = ($: CheerioAPI, mangaId: string): SourceManga => {
+// Simple HTML parser using DOMParser (no cheerio bundle)
+const parseHTML = (html: string): Document => {
+    const parser = new DOMParser()
+    return parser.parseFromString(html, 'text/html')
+}
+
+const $ = (doc: Document, selector: string): Element | null => {
+    return doc.querySelector(selector)
+}
+
+const $$ = (doc: Document, selector: string): Element[] => {
+    return Array.from(doc.querySelectorAll(selector))
+}
+
+const text = (el: Element | null): string => {
+    return el?.textContent?.trim() ?? ''
+}
+
+const attr = (el: Element | null, attribute: string): string => {
+    return el?.getAttribute(attribute) ?? ''
+}
+
+export const parseMangaDetails = (doc: Document, mangaId: string): SourceManga => {
     const titles: string[] = []
     
-    const mainTitle = $('h1[itemprop="name"]').first().text().trim()
+    const mainTitle = text($(doc, 'h1[itemprop="name"]'))
     if (mainTitle) titles.push(decodeHTMLEntity(mainTitle))
 
-    const altTitle = $('.text-sm.text-text.line-clamp-1').first().text().trim()
+    const altTitle = text($(doc, '.text-sm.text-text.line-clamp-1'))
     if (altTitle) {
         const altTitles = altTitle.split(',').map((t: string) => t.trim()).filter((t: string) => t)
         titles.push(...altTitles.map((t: string) => decodeHTMLEntity(t)))
     }
 
     let image = ''
-    const imageParent = $('[itemprop="image"]')
-    if (imageParent.length > 0) {
-        image = imageParent.find('img').first().attr('src') ?? ''
+    const imageParent = $(doc, '[itemprop="image"]')
+    if (imageParent) {
+        const img = imageParent.querySelector('img')
+        image = attr(img, 'src')
     }
     
     if (!image) {
-        image = $('img.wp-post-image').first().attr('src') ?? ''
+        image = attr($(doc, 'img.wp-post-image'), 'src')
     }
     
     if (!image) {
-        image = $('.rounded-lg img').first().attr('src') ?? ''
+        image = attr($(doc, '.rounded-lg img'), 'src')
     }
     
     if (!image) {
-        image = $('.sm\\:w-\\[17rem\\] img, .flex.w-full.h-auto img').first().attr('src') ?? ''
+        const imgs = $$(doc, '.sm\\:w-\\[17rem\\] img, .flex.w-full.h-auto img')
+        image = imgs.length > 0 ? attr(imgs[0], 'src') : ''
     }
     
     image = normalizeUrl(image)
 
-    const statusText = $('.bg-accent.text-xs.px-2.py-0\\.5.rounded-lg').first().text().trim().toLowerCase()
+    const statusText = text($(doc, '.bg-accent.text-xs.px-2.py-0\\.5.rounded-lg')).toLowerCase()
     const status = statusText.includes('ongoing') ? 'Ongoing' : statusText.includes('completed') ? 'Completed' : 'Unknown'
 
     let author = 'Unknown'
-    $('.flex.sm\\:justify-between.justify-start.items-center.gap-2').each((_: number, elem: any) => {
-        const label = $('h4', elem).text().toLowerCase()
+    $$(doc, '.flex.sm\\:justify-between.justify-start.items-center.gap-2').forEach((elem: Element) => {
+        const label = text(elem.querySelector('h4')).toLowerCase()
         if (label.includes('author')) {
-            author = $('.inline p', elem).text().trim() || 'Unknown'
+            author = text(elem.querySelector('.inline p')) || 'Unknown'
         }
     })
 
     const arrayTags: Tag[] = []
-    $('a[itemprop="genre"]').each((_: number, elem: any) => {
-        const label = $('span', elem).text().trim()
-        const href = $(elem).attr('href') ?? ''
+    $$(doc, 'a[itemprop="genre"]').forEach((elem: Element) => {
+        const label = text(elem.querySelector('span'))
+        const href = attr(elem, 'href')
         const id = href.split('/').filter((x: string) => x).pop() ?? ''
         if (id && label) {
             arrayTags.push({ id, label: decodeHTMLEntity(label) })
@@ -64,9 +87,9 @@ export const parseMangaDetails = ($: CheerioAPI, mangaId: string): SourceManga =
         }))
     }
 
-    let desc = $('div[itemprop="description"][data-show="true"]').first().text().trim()
+    let desc = text($(doc, 'div[itemprop="description"][data-show="true"]'))
     if (!desc) {
-        desc = $('div[itemprop="description"][data-show="false"]').first().text().trim()
+        desc = text($(doc, 'div[itemprop="description"][data-show="false"]'))
     }
 
     let type = ''
@@ -74,9 +97,9 @@ export const parseMangaDetails = ($: CheerioAPI, mangaId: string): SourceManga =
     let views = ''
     let rating = ''
 
-    $('.space-y-2 .flex.sm\\:justify-between.justify-start.items-center.gap-2').each((_: number, elem: any) => {
-        const label = $('h4', elem).text().toLowerCase()
-        const value = $('.inline p, .inline', elem).text().trim()
+    $$(doc, '.space-y-2 .flex.sm\\:justify-between.justify-start.items-center.gap-2').forEach((elem: Element) => {
+        const label = text(elem.querySelector('h4')).toLowerCase()
+        const value = text(elem.querySelector('.inline p, .inline'))
 
         if (label.includes('type')) {
             type = value
@@ -117,25 +140,24 @@ export const parseMangaDetails = ($: CheerioAPI, mangaId: string): SourceManga =
     })
 }
 
-export const parseChapterList = ($: CheerioAPI, mangaId: string): Chapter[] => {
+export const parseChapterList = (doc: Document, mangaId: string): Chapter[] => {
     const chapters: Chapter[] = []
     let sortingIndex = 0
 
-    $('div[data-chapter-number]').each((_: number, elem: any) => {
-        const $elem = $(elem)
-        const link = $('a', $elem).first()
-        const chapterUrl = link.attr('href') ?? ''
+    $$(doc, 'div[data-chapter-number]').forEach((elem: Element) => {
+        const link = elem.querySelector('a')
+        const chapterUrl = attr(link, 'href')
         const chapterId = chapterUrl.split('/').filter((x: string) => x).pop() ?? ''
         
         if (!chapterId) return
 
-        const chapNumStr = $elem.attr('data-chapter-number') ?? '0'
+        const chapNumStr = attr(elem, 'data-chapter-number') ?? '0'
         const chapNum = parseFloat(chapNumStr) || 0
 
-        const title = $('.font-medium.text-base span', $elem).first().text().trim()
+        const title = text(elem.querySelector('.font-medium.text-base span'))
         const name = title || `Chapter ${chapNumStr}`
 
-        const timeStr = $('time', $elem).attr('datetime') ?? $('time', $elem).text().trim()
+        const timeStr = attr(elem.querySelector('time'), 'datetime') ?? text(elem.querySelector('time'))
         const time = timeStr ? (timeStr.includes('T') ? new Date(timeStr) : convertTime(timeStr)) : new Date()
 
         chapters.push(App.createChapter({
@@ -151,11 +173,11 @@ export const parseChapterList = ($: CheerioAPI, mangaId: string): Chapter[] => {
     return chapters
 }
 
-export const parseChapterDetails = ($: CheerioAPI, mangaId: string, chapterId: string): ChapterDetails => {
+export const parseChapterDetails = (doc: Document, mangaId: string, chapterId: string): ChapterDetails => {
     const pages: string[] = []
 
-    $('section[data-image-data] img').each((_: number, elem: any) => {
-        const src = $(elem).attr('src') ?? ''
+    $$(doc, 'section[data-image-data] img').forEach((elem: Element) => {
+        const src = attr(elem, 'src')
         if (src) {
             pages.push(normalizeUrl(src))
         }
@@ -172,22 +194,21 @@ export const parseChapterDetails = ($: CheerioAPI, mangaId: string, chapterId: s
     })
 }
 
-export const parseMangaList = ($: CheerioAPI): PartialSourceManga[] => {
+export const parseMangaList = (doc: Document): PartialSourceManga[] => {
     const results: PartialSourceManga[] = []
 
-    $('.swiper-slide.manga-swipe, .swiper-slide').each((_: number, elem: any) => {
-        const $elem = $(elem)
-        const link = $('a', $elem).first()
-        const href = link.attr('href') ?? ''
+    $$(doc, '.swiper-slide.manga-swipe, .swiper-slide').forEach((elem: Element) => {
+        const link = elem.querySelector('a')
+        const href = attr(link, 'href')
         const mangaId = href.split('/').filter((x: string) => x).pop() ?? ''
         
         if (!mangaId) return
 
-        const title = link.attr('title') ?? $('a', $elem).attr('title') ?? ''
-        const image = normalizeUrl($('img', $elem).first().attr('src') ?? '')
+        const title = attr(link, 'title') ?? attr(elem.querySelector('a'), 'title') ?? ''
+        const image = normalizeUrl(attr(elem.querySelector('img'), 'src'))
         
         let subtitle = ''
-        const chapterText = $('.text-sm.text-gray-300', $elem).first().text().trim()
+        const chapterText = text(elem.querySelector('.text-sm.text-gray-300'))
         if (chapterText) {
             subtitle = chapterText
         }
@@ -202,15 +223,14 @@ export const parseMangaList = ($: CheerioAPI): PartialSourceManga[] => {
         }
     })
 
-    $('#searchResults a').each((_: number, elem: any) => {
-        const $elem = $(elem)
-        const href = $elem.attr('href') ?? ''
+    $$(doc, '#searchResults a').forEach((elem: Element) => {
+        const href = attr(elem, 'href')
         const mangaId = href.split('/').filter((x: string) => x).pop() ?? ''
         if (!mangaId) return
 
-        const title = $elem.find('h3').first().text().trim() || $elem.attr('title') || ''
-        const image = normalizeUrl($elem.find('img').first().attr('src') ?? '')
-        const subtitle = $elem.find('p').first().text().trim() || ''
+        const title = text(elem.querySelector('h3')) || attr(elem, 'title') || ''
+        const image = normalizeUrl(attr(elem.querySelector('img'), 'src'))
+        const subtitle = text(elem.querySelector('p')) || ''
 
         if (title) {
             results.push(App.createPartialSourceManga({
@@ -222,18 +242,18 @@ export const parseMangaList = ($: CheerioAPI): PartialSourceManga[] => {
         }
     })
 
-    $('.flex.flex-col.justify-between.px-4.py-1\\.5').each((_: number, elem: any) => {
-        const $elem = $(elem)
-        const link = $('a.text-base', $elem).first()
-        const href = link.attr('href') ?? ''
+    $$(doc, '.flex.flex-col.justify-between.px-4.py-1\\.5').forEach((elem: Element) => {
+        const link = elem.querySelector('a.text-base')
+        const href = attr(link, 'href')
         const mangaId = href.split('/').filter((x: string) => x).pop() ?? ''
         
         if (!mangaId) return
 
-        const title = link.text().trim()
-        const image = normalizeUrl($('img', $elem.parent()).first().attr('src') ?? '')
+        const title = text(link)
+        const parent = elem.parentElement
+        const image = parent ? normalizeUrl(attr(parent.querySelector('img'), 'src')) : ''
         
-        const chapterText = $('.text-sm.text-gray-300', $elem).first().text().trim()
+        const chapterText = text(elem.querySelector('.text-sm.text-gray-300'))
         const subtitle = chapterText
 
         if (title) {
@@ -249,15 +269,14 @@ export const parseMangaList = ($: CheerioAPI): PartialSourceManga[] => {
     return results
 }
 
-export const parseSearchTags = ($: CheerioAPI): TagSection[] => {
+export const parseSearchTags = (doc: Document): TagSection[] => {
     const genres: Tag[] = []
     const types: Tag[] = []
     const statuses: Tag[] = []
 
-    $('button[data-genre]').each((_: number, elem: any) => {
-        const $elem = $(elem)
-        const id = $elem.attr('data-genre') ?? ''
-        const label = $elem.text().trim()
+    $$(doc, 'button[data-genre]').forEach((elem: Element) => {
+        const id = attr(elem, 'data-genre')
+        const label = text(elem)
         if (id && label) {
             genres.push({ id, label: decodeHTMLEntity(label) })
         }
@@ -265,125 +284,35 @@ export const parseSearchTags = ($: CheerioAPI): TagSection[] => {
 
     if (genres.length === 0) {
         genres.push(
-            { id: '4-koma', label: '4-Koma' },
             { id: 'action', label: 'Action' },
-            { id: 'adaptation', label: 'Adaptation' },
-            { id: 'adult', label: 'Adult' },
             { id: 'adventure', label: 'Adventure' },
-            { id: 'animals', label: 'Animals' },
-            { id: 'anthology', label: 'Anthology' },
-            { id: 'antihero', label: 'Antihero' },
-            { id: 'award-winning', label: 'Award Winning' },
-            { id: 'beasts', label: 'Beasts' },
-            { id: 'bodyswap', label: 'Bodyswap' },
-            { id: 'boys-love', label: "Boys' Love" },
-            { id: 'bully', label: 'Bully' },
-            { id: 'cartoon', label: 'Cartoon' },
-            { id: 'childhood-friends', label: 'Childhood Friends' },
             { id: 'comedy', label: 'Comedy' },
-            { id: 'comic', label: 'Comic' },
-            { id: 'cooking', label: 'Cooking' },
-            { id: 'crime', label: 'Crime' },
-            { id: 'crossdressing', label: 'Crossdressing' },
-            { id: 'dance', label: 'Dance' },
-            { id: 'dark-fantasy', label: 'Dark Fantasy' },
-            { id: 'delinquent', label: 'Delinquent' },
-            { id: 'delinquents', label: 'Delinquents' },
-            { id: 'dementia', label: 'Dementia' },
-            { id: 'demon', label: 'Demon' },
-            { id: 'demons', label: 'Demons' },
-            { id: 'doujinshi', label: 'Doujinshi' },
             { id: 'drama', label: 'Drama' },
-            { id: 'dungeons', label: 'Dungeons' },
             { id: 'ecchi', label: 'Ecchi' },
-            { id: 'emperors-daughter', label: "Emperor's daughter" },
-            { id: 'fan-colored', label: 'Fan-Colored' },
-            { id: 'fantas', label: 'Fantas' },
             { id: 'fantasy', label: 'Fantasy' },
-            { id: 'fetish', label: 'Fetish' },
-            { id: 'food', label: 'Food' },
-            { id: 'full-color', label: 'Full Color' },
-            { id: 'game', label: 'Game' },
-            { id: 'gender-bender', label: 'Gender Bender' },
-            { id: 'genderswap', label: 'Genderswap' },
-            { id: 'ghosts', label: 'Ghosts' },
-            { id: 'girls-love', label: "Girls' Love" },
-            { id: 'gore', label: 'Gore' },
-            { id: 'gyaru', label: 'Gyaru' },
             { id: 'harem', label: 'Harem' },
-            { id: 'historical', label: 'Historical' },
-            { id: 'horror', label: 'Horror' },
-            { id: 'incest', label: 'Incest' },
             { id: 'isekai', label: 'Isekai' },
-            { id: 'josei', label: 'Josei' },
-            { id: 'loli', label: 'Loli' },
-            { id: 'lolicon', label: 'Lolicon' },
-            { id: 'long-strip', label: 'Long Strip' },
-            { id: 'magic', label: 'Magic' },
-            { id: 'magical-girls', label: 'Magical Girls' },
             { id: 'martial-arts', label: 'Martial Arts' },
             { id: 'mature', label: 'Mature' },
             { id: 'mecha', label: 'Mecha' },
-            { id: 'medical', label: 'Medical' },
-            { id: 'military', label: 'Military' },
-            { id: 'monster-girls', label: 'Monster Girls' },
-            { id: 'monsters', label: 'Monsters' },
-            { id: 'music', label: 'Music' },
             { id: 'mystery', label: 'Mystery' },
-            { id: 'ninja', label: 'Ninja' },
-            { id: 'office-workers', label: 'Office Workers' },
-            { id: 'official-colored', label: 'Official Colored' },
-            { id: 'oneshot', label: 'Oneshot' },
-            { id: 'parody', label: 'Parody' },
-            { id: 'philosophical', label: 'Philosophical' },
-            { id: 'police', label: 'Police' },
-            { id: 'post-apocalyptic', label: 'Post-Apocalyptic' },
             { id: 'psychological', label: 'Psychological' },
-            { id: 'reincarnation', label: 'Reincarnation' },
-            { id: 'reverse-harem', label: 'Reverse Harem' },
             { id: 'romance', label: 'Romance' },
-            { id: 'samurai', label: 'Samurai' },
             { id: 'school-life', label: 'School Life' },
             { id: 'sci-fi', label: 'Sci-Fi' },
             { id: 'seinen', label: 'Seinen' },
-            { id: 'sexual-violence', label: 'Sexual Violence' },
-            { id: 'shota', label: 'Shota' },
-            { id: 'shotacon', label: 'Shotacon' },
             { id: 'shoujo', label: 'Shoujo' },
-            { id: 'shoujo-ai', label: 'Shoujo Ai' },
             { id: 'shounen', label: 'Shounen' },
-            { id: 'shounen-ai', label: 'Shounen Ai' },
             { id: 'slice-of-life', label: 'Slice of Life' },
-            { id: 'sm-bdsm', label: 'SM/BDSM' },
-            { id: 'smut', label: 'Smut' },
-            { id: 'space', label: 'Space' },
             { id: 'sports', label: 'Sports' },
-            { id: 'super-power', label: 'Super Power' },
-            { id: 'superhero', label: 'Superhero' },
             { id: 'supernatural', label: 'Supernatural' },
-            { id: 'survival', label: 'Survival' },
-            { id: 'thriller', label: 'Thriller' },
-            { id: 'time-travel', label: 'Time Travel' },
-            { id: 'traditional-games', label: 'Traditional Games' },
-            { id: 'tragedy', label: 'Tragedy' },
-            { id: 'vamp', label: 'Vamp' },
-            { id: 'vampires', label: 'Vampires' },
-            { id: 'video-games', label: 'Video Games' },
-            { id: 'villainess', label: 'Villainess' },
-            { id: 'violence', label: 'Violence' },
-            { id: 'virtual-reality', label: 'Virtual Reality' },
-            { id: 'web-comic', label: 'Web Comic' },
-            { id: 'wuxia', label: 'Wuxia' },
-            { id: 'yaoi', label: 'Yaoi' },
-            { id: 'yuri', label: 'Yuri' },
-            { id: 'zombies', label: 'Zombies' }
+            { id: 'thriller', label: 'Thriller' }
         )
     }
 
-    $('button[data-type]').each((_: number, elem: any) => {
-        const $elem = $(elem)
-        const id = $elem.attr('data-type') ?? ''
-        const label = $elem.text().trim()
+    $$(doc, 'button[data-type]').forEach((elem: Element) => {
+        const id = attr(elem, 'data-type')
+        const label = text(elem)
         if (id && label) {
             if (!types.find((t: Tag) => t.id === id)) {
                 types.push({ id, label: decodeHTMLEntity(label) })
@@ -395,9 +324,7 @@ export const parseSearchTags = ($: CheerioAPI): TagSection[] => {
         types.push(
             { id: 'manga', label: 'Manga' },
             { id: 'manhwa', label: 'Manhwa' },
-            { id: 'manhua', label: 'Manhua' },
-            { id: 'comic', label: 'Comic' },
-            { id: 'novel', label: 'Novel' }
+            { id: 'manhua', label: 'Manhua' }
         )
     }
 
