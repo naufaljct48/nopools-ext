@@ -28,12 +28,12 @@ import {
 const WEBSITE_BASE = 'https://kiryuu03.com'
 
 export const KiryuuInfo: SourceInfo = {
-    version: '2.1.3',
+    version: '2.1.4',
     name: 'Kiryuu',
     icon: 'icon.png',
     author: 'NaufalJCT48',
     authorWebsite: 'https://github.com/naufaljct48',
-    description: 'Extension that pulls manga from Kiryuu (Custom Template)',
+    description: 'Extension that pulls manga from Kiryuu',
     contentRating: ContentRating.MATURE,
     websiteBaseURL: WEBSITE_BASE,
     sourceTags: [{ text: 'Indonesian', type: BadgeColor.GREY }],
@@ -68,16 +68,19 @@ export class Kiryuu extends Source {
         }
     })
 
-    async getMangaDetails(mangaId: string): Promise<SourceManga> {
-        const request = createRequestObject(`${WEBSITE_BASE}/manga/${mangaId}/`)
+    override async getMangaDetails(mangaId: string): Promise<SourceManga> {
+        const request = createRequestObject({
+            url: `${WEBSITE_BASE}/manga/${mangaId}/`
+        })
         const response = await this.requestManager.schedule(request, 1)
         const $ = cheerioLoad(response.data as string)
         return parseMangaDetails($, mangaId)
     }
 
-    async getChapters(mangaId: string): Promise<Chapter[]> {
-        // First, get manga details page to extract manga ID
-        const detailsRequest = createRequestObject(`${WEBSITE_BASE}/manga/${mangaId}/`)
+    override async getChapters(mangaId: string): Promise<Chapter[]> {
+        const detailsRequest = createRequestObject({
+            url: `${WEBSITE_BASE}/manga/${mangaId}/`
+        })
         const detailsResponse = await this.requestManager.schedule(detailsRequest, 1)
         const html = detailsResponse.data as string
         
@@ -86,17 +89,20 @@ export class Kiryuu extends Source {
             throw new Error(`Failed to extract manga_id from ${mangaId}`)
         }
 
-        // Then fetch chapter list via AJAX
         const ajaxUrl = `${WEBSITE_BASE}/wp-admin/admin-ajax.php?manga_id=${numericMangaId}&page=1&action=chapter_list`
-        const request = createRequestObject(ajaxUrl)
+        const request = createRequestObject({
+            url: ajaxUrl
+        })
         const response = await this.requestManager.schedule(request, 1)
         const $ = cheerioLoad(response.data as string)
         
         return parseChapterList($, mangaId)
     }
 
-    async getChapterDetails(mangaId: string, chapterId: string): Promise<ChapterDetails> {
-        const request = createRequestObject(`${WEBSITE_BASE}/manga/${mangaId}/${chapterId}/`)
+    override async getChapterDetails(mangaId: string, chapterId: string): Promise<ChapterDetails> {
+        const request = createRequestObject({
+            url: `${WEBSITE_BASE}/manga/${mangaId}/${chapterId}/`
+        })
         const response = await this.requestManager.schedule(request, 1)
         const $ = cheerioLoad(response.data as string)
         return parseChapterDetails($, mangaId, chapterId)
@@ -105,118 +111,99 @@ export class Kiryuu extends Source {
     override async getHomePageSections(sectionCallback: (section: HomeSection) => void): Promise<void> {
         const sections = [
             {
-                id: 'popular_today',
-                title: 'Popular Today',
-                url: WEBSITE_BASE,
-                type: 'get'
+                request: createRequestObject({
+                    url: WEBSITE_BASE
+                }),
+                section: App.createHomeSection({
+                    id: 'popular_today',
+                    title: 'Popular Today',
+                    type: HomeSectionType.singleRowNormal,
+                    containsMoreItems: false
+                })
             },
             {
-                id: 'latest_update',
-                title: 'Latest Update',
-                url: `${WEBSITE_BASE}/wp-admin/admin-ajax.php?action=advanced_search`,
-                type: 'post'
-            }
-        ]
-
-        for (const s of sections) {
-            const section = App.createHomeSection({
-                id: s.id,
-                title: s.title,
-                type: HomeSectionType.singleRowNormal,
-                containsMoreItems: s.id === 'latest_update'
-            })
-            
-            sectionCallback(section)
-            
-            let $: any
-            if (s.type === 'post') {
-                // Latest Update uses AJAX POST (nonce optional, may not be enforced)
-                const body = 'inclusion=OR&exclusion=OR&page=1&genre=[]&genre_exclude=[]&author=[]&artist=[]&project=0&type=[]&status=[]&order=desc&orderby=updated&query='
-                const request = createRequestObject(s.url, { 
-                    method: 'POST', 
-                    data: body,
-                    headers: { 
+                request: createRequestObject({
+                    url: `${WEBSITE_BASE}/wp-admin/admin-ajax.php?action=advanced_search`,
+                    method: 'POST',
+                    data: 'inclusion=OR&exclusion=OR&page=1&genre=[]&genre_exclude=[]&author=[]&artist=[]&project=0&type=[]&status=[]&order=desc&orderby=updated&query=',
+                    headers: {
                         'content-type': 'application/x-www-form-urlencoded',
                         'origin': WEBSITE_BASE,
                         'referer': `${WEBSITE_BASE}/advanced-search/`,
                         'x-requested-with': 'XMLHttpRequest'
-                    } 
+                    }
+                }),
+                section: App.createHomeSection({
+                    id: 'latest_update',
+                    title: 'Latest Update',
+                    type: HomeSectionType.singleRowNormal,
+                    containsMoreItems: true
                 })
-                const response = await this.requestManager.schedule(request, 1)
-                $ = cheerioLoad(response.data as string)
-            } else {
-                const request = createRequestObject(s.url)
-                const response = await this.requestManager.schedule(request, 1)
-                $ = cheerioLoad(response.data as string)
             }
-            
-            section.items = parseMangaList($)
-            sectionCallback(section)
+        ]
+
+        for (const item of sections) {
+            sectionCallback(item.section)
+            const response = await this.requestManager.schedule(item.request, 1)
+            const $ = cheerioLoad(response.data as string)
+            item.section.items = parseMangaList($)
+            sectionCallback(item.section)
         }
     }
 
     override async getSearchTags(): Promise<TagSection[]> {
-        const request = createRequestObject(`${WEBSITE_BASE}/advanced-search/`)
+        const request = createRequestObject({
+            url: `${WEBSITE_BASE}/advanced-search/`
+        })
         const response = await this.requestManager.schedule(request, 1)
         const $ = cheerioLoad(response.data as string)
         return parseSearchTags($)
     }
 
-    async getSearchResults(query: SearchRequest, metadata: any): Promise<PagedResults> {
+    override async getSearchResults(query: SearchRequest, metadata: any): Promise<PagedResults> {
         const page = metadata?.page ?? 1
         const searchTerm = query.title?.trim() ?? ''
         
-        // Handle genre filter
         const includedTags = (query as any)?.includedTags as Array<{ id: string }>
         let genreList: string[] = []
         if (Array.isArray(includedTags) && includedTags.length > 0) {
             genreList = includedTags.map((tag: any) => tag.id)
         }
 
-        // If there's a search term, use the AJAX search endpoint (returns #searchResults HTML)
-        let $: any
+        let request
         if (searchTerm && genreList.length === 0) {
-            // Simple text search
-            const ajaxUrl = `${WEBSITE_BASE}/wp-admin/admin-ajax.php?action=search`
-            const body = `query=${encodeURIComponent(searchTerm)}`
-            const request = createRequestObject(ajaxUrl, { 
-                method: 'POST', 
-                data: body, 
-                headers: { 
-                    'content-type': 'application/x-www-form-urlencoded', 
+            request = createRequestObject({
+                url: `${WEBSITE_BASE}/wp-admin/admin-ajax.php?action=search`,
+                method: 'POST',
+                data: `query=${encodeURIComponent(searchTerm)}`,
+                headers: {
+                    'content-type': 'application/x-www-form-urlencoded',
                     'hx-request': 'true',
                     'origin': WEBSITE_BASE,
                     'referer': WEBSITE_BASE
-                } 
+                }
             })
-            const response = await this.requestManager.schedule(request, 1)
-            $ = cheerioLoad(response.data as string)
         } else {
-            // Advanced search (with genres or filters) - use POST to advanced_search AJAX
-            const ajaxUrl = `${WEBSITE_BASE}/wp-admin/admin-ajax.php?action=advanced_search`
             const genreParam = genreList.length > 0 ? JSON.stringify(genreList) : '[]'
             const queryParam = searchTerm ? encodeURIComponent(searchTerm) : ''
-            const body = `inclusion=OR&exclusion=OR&page=${page}&genre=${genreParam}&genre_exclude=[]&author=[]&artist=[]&project=0&type=[]&status=[]&order=desc&orderby=updated&query=${queryParam}`
-            
-            const request = createRequestObject(ajaxUrl, { 
-                method: 'POST', 
-                data: body,
-                headers: { 
+            request = createRequestObject({
+                url: `${WEBSITE_BASE}/wp-admin/admin-ajax.php?action=advanced_search`,
+                method: 'POST',
+                data: `inclusion=OR&exclusion=OR&page=${page}&genre=${genreParam}&genre_exclude=[]&author=[]&artist=[]&project=0&type=[]&status=[]&order=desc&orderby=updated&query=${queryParam}`,
+                headers: {
                     'content-type': 'application/x-www-form-urlencoded',
                     'origin': WEBSITE_BASE,
                     'referer': `${WEBSITE_BASE}/advanced-search/`,
                     'x-requested-with': 'XMLHttpRequest'
-                } 
+                }
             })
-            const response = await this.requestManager.schedule(request, 1)
-            $ = cheerioLoad(response.data as string)
         }
 
+        const response = await this.requestManager.schedule(request, 1)
+        const $ = cheerioLoad(response.data as string)
         const results = parseMangaList($)
-        
-        // Check if there are more results
-        const hasMore = results.length >= 20 // Assuming 20 per page
-        
+        const hasMore = results.length >= 20
+
         return App.createPagedResults({
             results,
             metadata: hasMore ? { page: page + 1 } : undefined
@@ -230,25 +217,23 @@ export class Kiryuu extends Source {
             throw new Error(`View more not supported for section: ${homepageSectionId}`)
         }
 
-        // Latest Update uses AJAX POST
-        const url = `${WEBSITE_BASE}/wp-admin/admin-ajax.php?action=advanced_search`
-        const body = `inclusion=OR&exclusion=OR&page=${page}&genre=[]&genre_exclude=[]&author=[]&artist=[]&project=0&type=[]&status=[]&order=desc&orderby=updated&query=`
-        const request = createRequestObject(url, { 
-            method: 'POST', 
-            data: body,
-            headers: { 
+        const request = createRequestObject({
+            url: `${WEBSITE_BASE}/wp-admin/admin-ajax.php?action=advanced_search`,
+            method: 'POST',
+            data: `inclusion=OR&exclusion=OR&page=${page}&genre=[]&genre_exclude=[]&author=[]&artist=[]&project=0&type=[]&status=[]&order=desc&orderby=updated&query=`,
+            headers: {
                 'content-type': 'application/x-www-form-urlencoded',
                 'origin': WEBSITE_BASE,
                 'referer': `${WEBSITE_BASE}/advanced-search/`,
                 'x-requested-with': 'XMLHttpRequest'
-            } 
+            }
         })
+        
         const response = await this.requestManager.schedule(request, 1)
         const $ = cheerioLoad(response.data as string)
-        
         const results = parseMangaList($)
         const hasMore = results.length >= 20
-        
+
         return App.createPagedResults({
             results,
             metadata: hasMore ? { page: page + 1 } : undefined
@@ -271,4 +256,3 @@ export class Kiryuu extends Source {
         return `${WEBSITE_BASE}/manga/${mangaId}`
     }
 }
-

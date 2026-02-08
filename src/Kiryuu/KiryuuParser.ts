@@ -2,54 +2,41 @@ import { Chapter, ChapterDetails, PartialSourceManga, SourceManga, Tag, TagSecti
 import { CheerioAPI } from 'cheerio'
 import { decodeHTMLEntity, convertTime, normalizeUrl } from './KiryuuHelper'
 
-/**
- * Parse manga details page
- */
 export const parseMangaDetails = ($: CheerioAPI, mangaId: string): SourceManga => {
     const titles: string[] = []
     
-    // Main title
     const mainTitle = $('h1[itemprop="name"]').first().text().trim()
     if (mainTitle) titles.push(decodeHTMLEntity(mainTitle))
 
-    // Alternative titles
     const altTitle = $('.text-sm.text-text.line-clamp-1').first().text().trim()
     if (altTitle) {
         const altTitles = altTitle.split(',').map((t: string) => t.trim()).filter((t: string) => t)
         titles.push(...altTitles.map((t: string) => decodeHTMLEntity(t)))
     }
 
-    // Image - try multiple selectors
     let image = ''
-    
-    // Try parent div with itemprop="image" then find img inside
     const imageParent = $('[itemprop="image"]')
     if (imageParent.length > 0) {
         image = imageParent.find('img').first().attr('src') ?? ''
     }
     
-    // Fallback to wp-post-image class (WordPress standard)
     if (!image) {
         image = $('img.wp-post-image').first().attr('src') ?? ''
     }
     
-    // Fallback to common manga cover selectors
     if (!image) {
         image = $('.rounded-lg img').first().attr('src') ?? ''
     }
     
     if (!image) {
-        // Last resort: any img in the sidebar/cover area
         image = $('.sm\\:w-\\[17rem\\] img, .flex.w-full.h-auto img').first().attr('src') ?? ''
     }
     
     image = normalizeUrl(image)
 
-    // Status
     const statusText = $('.bg-accent.text-xs.px-2.py-0\\.5.rounded-lg').first().text().trim().toLowerCase()
     const status = statusText.includes('ongoing') ? 'Ongoing' : statusText.includes('completed') ? 'Completed' : 'Unknown'
 
-    // Author
     let author = 'Unknown'
     $('.flex.sm\\:justify-between.justify-start.items-center.gap-2').each((_: number, elem: any) => {
         const label = $('h4', elem).text().toLowerCase()
@@ -58,7 +45,6 @@ export const parseMangaDetails = ($: CheerioAPI, mangaId: string): SourceManga =
         }
     })
 
-    // Genres/Tags
     const arrayTags: Tag[] = []
     $('a[itemprop="genre"]').each((_: number, elem: any) => {
         const label = $('span', elem).text().trim()
@@ -78,13 +64,11 @@ export const parseMangaDetails = ($: CheerioAPI, mangaId: string): SourceManga =
         }))
     }
 
-    // Description - try both data-show attributes
     let desc = $('div[itemprop="description"][data-show="true"]').first().text().trim()
     if (!desc) {
         desc = $('div[itemprop="description"][data-show="false"]').first().text().trim()
     }
 
-    // Additional info
     let type = ''
     let released = ''
     let views = ''
@@ -105,7 +89,6 @@ export const parseMangaDetails = ($: CheerioAPI, mangaId: string): SourceManga =
         }
     })
 
-    // Build description with additional info
     if (type || released || views || rating) {
         const additionalInfo = []
         if (type) additionalInfo.push(`Type: ${type}`)
@@ -134,9 +117,6 @@ export const parseMangaDetails = ($: CheerioAPI, mangaId: string): SourceManga =
     })
 }
 
-/**
- * Parse chapter list from AJAX response
- */
 export const parseChapterList = ($: CheerioAPI, mangaId: string): Chapter[] => {
     const chapters: Chapter[] = []
     let sortingIndex = 0
@@ -149,21 +129,17 @@ export const parseChapterList = ($: CheerioAPI, mangaId: string): Chapter[] => {
         
         if (!chapterId) return
 
-        // Chapter number from data attribute
         const chapNumStr = $elem.attr('data-chapter-number') ?? '0'
         const chapNum = parseFloat(chapNumStr) || 0
 
-        // Chapter title
         const title = $('.font-medium.text-base span', $elem).first().text().trim()
         const name = title || `Chapter ${chapNumStr}`
 
-        // Time
         const timeStr = $('time', $elem).attr('datetime') ?? $('time', $elem).text().trim()
         const time = timeStr ? (timeStr.includes('T') ? new Date(timeStr) : convertTime(timeStr)) : new Date()
 
         chapters.push(App.createChapter({
             id: chapterId,
-            mangaId,
             chapNum,
             name: decodeHTMLEntity(name),
             time,
@@ -175,13 +151,9 @@ export const parseChapterList = ($: CheerioAPI, mangaId: string): Chapter[] => {
     return chapters
 }
 
-/**
- * Parse chapter details/images
- */
 export const parseChapterDetails = ($: CheerioAPI, mangaId: string, chapterId: string): ChapterDetails => {
     const pages: string[] = []
 
-    // Images are in section[data-image-data]
     $('section[data-image-data] img').each((_: number, elem: any) => {
         const src = $(elem).attr('src') ?? ''
         if (src) {
@@ -200,13 +172,9 @@ export const parseChapterDetails = ($: CheerioAPI, mangaId: string, chapterId: s
     })
 }
 
-/**
- * Parse manga list (for homepage sections and search results)
- */
 export const parseMangaList = ($: CheerioAPI): PartialSourceManga[] => {
     const results: PartialSourceManga[] = []
 
-    // For trending slider
     $('.swiper-slide.manga-swipe, .swiper-slide').each((_: number, elem: any) => {
         const $elem = $(elem)
         const link = $('a', $elem).first()
@@ -218,7 +186,6 @@ export const parseMangaList = ($: CheerioAPI): PartialSourceManga[] => {
         const title = link.attr('title') ?? $('a', $elem).attr('title') ?? ''
         const image = normalizeUrl($('img', $elem).first().attr('src') ?? '')
         
-        // Try to get latest chapter info
         let subtitle = ''
         const chapterText = $('.text-sm.text-gray-300', $elem).first().text().trim()
         if (chapterText) {
@@ -235,7 +202,6 @@ export const parseMangaList = ($: CheerioAPI): PartialSourceManga[] => {
         }
     })
 
-    // Search modal results (AJAX search)
     $('#searchResults a').each((_: number, elem: any) => {
         const $elem = $(elem)
         const href = $elem.attr('href') ?? ''
@@ -256,7 +222,6 @@ export const parseMangaList = ($: CheerioAPI): PartialSourceManga[] => {
         }
     })
 
-    // For advanced search results / latest updates
     $('.flex.flex-col.justify-between.px-4.py-1\\.5').each((_: number, elem: any) => {
         const $elem = $(elem)
         const link = $('a.text-base', $elem).first()
@@ -268,7 +233,6 @@ export const parseMangaList = ($: CheerioAPI): PartialSourceManga[] => {
         const title = link.text().trim()
         const image = normalizeUrl($('img', $elem.parent()).first().attr('src') ?? '')
         
-        // Latest chapter
         const chapterText = $('.text-sm.text-gray-300', $elem).first().text().trim()
         const subtitle = chapterText
 
@@ -285,15 +249,11 @@ export const parseMangaList = ($: CheerioAPI): PartialSourceManga[] => {
     return results
 }
 
-/**
- * Parse search tags/genres from advanced search page or fallback to local genre file
- */
 export const parseSearchTags = ($: CheerioAPI): TagSection[] => {
     const genres: Tag[] = []
     const types: Tag[] = []
     const statuses: Tag[] = []
 
-    // Parse genres from page
     $('button[data-genre]').each((_: number, elem: any) => {
         const $elem = $(elem)
         const id = $elem.attr('data-genre') ?? ''
@@ -303,7 +263,6 @@ export const parseSearchTags = ($: CheerioAPI): TagSection[] => {
         }
     })
 
-    // If no genres found from live page, use fallback list from KiryuuGenre.html (complete list)
     if (genres.length === 0) {
         genres.push(
             { id: '4-koma', label: '4-Koma' },
@@ -421,20 +380,17 @@ export const parseSearchTags = ($: CheerioAPI): TagSection[] => {
         )
     }
 
-    // Parse types
     $('button[data-type]').each((_: number, elem: any) => {
         const $elem = $(elem)
         const id = $elem.attr('data-type') ?? ''
         const label = $elem.text().trim()
         if (id && label) {
-            // Deduplicate types
             if (!types.find((t: Tag) => t.id === id)) {
                 types.push({ id, label: decodeHTMLEntity(label) })
             }
         }
     })
 
-    // If no types found, add common ones
     if (types.length === 0) {
         types.push(
             { id: 'manga', label: 'Manga' },
@@ -445,7 +401,6 @@ export const parseSearchTags = ($: CheerioAPI): TagSection[] => {
         )
     }
 
-    // Status options (hardcoded common values)
     statuses.push({ id: 'ongoing', label: 'Ongoing' })
     statuses.push({ id: 'completed', label: 'Completed' })
 
@@ -476,40 +431,4 @@ export const parseSearchTags = ($: CheerioAPI): TagSection[] => {
     }
 
     return sections
-}
-
-/**
- * Parse chapter list from JSON response
- */
-export const parseChapterListFromJson = (json: any, mangaId: string): Chapter[] => {
-    const chapters: Chapter[] = []
-    
-    if (!json.success || !json.data) {
-        return chapters
-    }
-
-    let sortingIndex = 0
-
-    for (const item of json.data) {
-        const title = item.title ?? ''
-        const url = item.url ?? ''
-        const chapterId = url.split('/').filter((x: string) => x).pop() ?? ''
-        
-        if (!chapterId) continue
-
-        const chapMatch = title.match(/Chapter\s+([\d.]+)/i)
-        const chapNum = chapMatch ? parseFloat(chapMatch[1]) : 0
-
-        chapters.push(App.createChapter({
-            id: chapterId,
-            mangaId,
-            chapNum,
-            name: decodeHTMLEntity(title),
-            time: new Date(),
-            langCode: '🇮🇩',
-            sortingIndex: sortingIndex--
-        }))
-    }
-
-    return chapters
 }
