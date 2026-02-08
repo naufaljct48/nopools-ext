@@ -27,7 +27,7 @@ import {
 const WEBSITE_BASE = 'https://kiryuu03.com'
 
 export const KiryuuInfo: SourceInfo = {
-    version: '2.1.7',
+    version: '2.2.0',
     name: 'Kiryuu',
     icon: 'icon.png',
     author: 'NaufalJCT48',
@@ -107,26 +107,37 @@ export class Kiryuu extends Source {
         const sections = [
             {
                 request: createRequestObject({
-                    url: WEBSITE_BASE
-                }),
-                section: App.createHomeSection({
-                    id: 'popular_today',
-                    title: 'Popular Today',
-                    type: HomeSectionType.singleRowNormal,
-                    containsMoreItems: false
-                })
-            },
-            {
-                request: createRequestObject({
                     url: `${WEBSITE_BASE}/wp-admin/admin-ajax.php?action=advanced_search`,
                     method: 'POST',
-                    data: 'inclusion=OR&exclusion=OR&page=1&genre=[]&genre_exclude=[]&author=[]&artist=[]&project=0&type=[]&status=[]&order=desc&orderby=updated&query=',
+                    data: 'inclusion=OR&exclusion=OR&page=1&genre=[]&genre_exclude=[]&author=[]&artist=[]&project=0&type=[]&status=[]&order=desc&orderby=popular&query=',
                     headers: {
                         'content-type': 'application/x-www-form-urlencoded',
                         'origin': WEBSITE_BASE,
                         'referer': `${WEBSITE_BASE}/advanced-search/`,
                         'x-requested-with': 'XMLHttpRequest'
                     }
+                }),
+                section: App.createHomeSection({
+                    id: 'featured',
+                    title: 'Featured',
+                    type: HomeSectionType.featured,
+                    containsMoreItems: false
+                })
+            },
+            {
+                request: createRequestObject({
+                    url: `${WEBSITE_BASE}/project/`
+                }),
+                section: App.createHomeSection({
+                    id: 'project_updates',
+                    title: 'Project Updates',
+                    type: HomeSectionType.singleRowNormal,
+                    containsMoreItems: true
+                })
+            },
+            {
+                request: createRequestObject({
+                    url: `${WEBSITE_BASE}/latest/`
                 }),
                 section: App.createHomeSection({
                     id: 'latest_update',
