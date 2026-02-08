@@ -4,7 +4,7 @@ const WEBSITE_BASE = 'https://kiryuu03.com'
 
 export const createRequestObject = (requestObj: any): Request => {
     const isImage = /\.(png|jpe?g|webp|gif)$/i.test(requestObj.url || '')
-    
+
     const headers: Record<string, string> = {
         'Accept': isImage
             ? 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8'
@@ -19,6 +19,7 @@ export const createRequestObject = (requestObj: any): Request => {
     }
 
     return App.createRequest({
+        method: 'GET',
         ...requestObj,
         headers: {
             ...headers,

@@ -33,7 +33,7 @@ const parseHTML = (html: string): Document => {
 }
 
 export const KiryuuInfo: SourceInfo = {
-    version: '2.1.5',
+    version: '2.1.6',
     name: 'Kiryuu',
     icon: 'icon.png',
     author: 'NaufalJCT48',
