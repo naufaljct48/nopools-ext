@@ -1,361 +1,192 @@
 import { Chapter, ChapterDetails, PartialSourceManga, SourceManga, Tag, TagSection } from '@paperback/types'
 import { decodeHTMLEntity, convertTime, normalizeUrl } from './KiryuuHelper'
 
-// Simple HTML parser using DOMParser (no cheerio bundle)
-const parseHTML = (html: string): Document => {
-    const parser = new DOMParser()
-    return parser.parseFromString(html, 'text/html')
+// Regex-based HTML parsing helpers
+const extractText = (html: string, regex: RegExp): string => {
+    const match = html.match(regex)
+    return match?.[1]?.trim() ?? ''
 }
 
-const $ = (doc: Document, selector: string): Element | null => {
-    return doc.querySelector(selector)
-}
-
-const $$ = (doc: Document, selector: string): Element[] => {
-    return Array.from(doc.querySelectorAll(selector))
-}
-
-const text = (el: Element | null): string => {
-    return el?.textContent?.trim() ?? ''
-}
-
-const attr = (el: Element | null, attribute: string): string => {
-    return el?.getAttribute(attribute) ?? ''
-}
-
-export const parseMangaDetails = (doc: Document, mangaId: string): SourceManga => {
+export const parseMangaDetails = (html: string, mangaId: string): SourceManga => {
     const titles: string[] = []
-    
-    const mainTitle = text($(doc, 'h1[itemprop="name"]'))
-    if (mainTitle) titles.push(decodeHTMLEntity(mainTitle))
 
-    const altTitle = text($(doc, '.text-sm.text-text.line-clamp-1'))
+    // Extract main title
+    const mainTitle = extractText(html, /<h1[^>]*itemprop=["']name["'][^>]*>(.*?)<\/h1>/is)
+    if (mainTitle) titles.push(decodeHTMLEntity(mainTitle.replace(/<[^>]*>/g, '')))
+
+    // Extract alt title
+    const altTitle = extractText(html, /<[^>]*class=["'][^"']*text-sm\.text-text\.line-clamp-1[^"']*["'][^>]*>(.*?)<\/[^>]*>/is)
     if (altTitle) {
         const altTitles = altTitle.split(',').map((t: string) => t.trim()).filter((t: string) => t)
-        titles.push(...altTitles.map((t: string) => decodeHTMLEntity(t)))
+        titles.push(...altTitles.map((t: string) => decodeHTMLEntity(t.replace(/<[^>]*>/g, ''))))
     }
 
+    // Extract image
     let image = ''
-    const imageParent = $(doc, '[itemprop="image"]')
-    if (imageParent) {
-        const img = imageParent.querySelector('img')
-        image = attr(img, 'src')
-    }
-    
-    if (!image) {
-        image = attr($(doc, 'img.wp-post-image'), 'src')
-    }
-    
-    if (!image) {
-        image = attr($(doc, '.rounded-lg img'), 'src')
-    }
-    
-    if (!image) {
-        const imgs = $$(doc, '.sm\\:w-\\[17rem\\] img, .flex.w-full.h-auto img')
-        image = imgs.length > 0 ? attr(imgs[0], 'src') : ''
-    }
-    
+    const imageMatch = html.match(/<[^>]*itemprop=["']image["'][^>]*>.*?<img[^>]*src=["']([^"']+)["'][^>]*>/is)
+    if (imageMatch) image = imageMatch[1]
+    if (!image) image = extractText(html, /<img[^>]*class=["'][^"']*wp-post-image[^"']*["'][^>]*src=["']([^"']+)["']/i)
+
     image = normalizeUrl(image)
 
-    const statusText = text($(doc, '.bg-accent.text-xs.px-2.py-0\\.5.rounded-lg')).toLowerCase()
+    // Extract status
+    const statusText = extractText(html, /<[^>]*class=["'][^"']*bg-accent[^"']*["'][^>]*>(.*?)<\/[^>]*>/i).toLowerCase()
     const status = statusText.includes('ongoing') ? 'Ongoing' : statusText.includes('completed') ? 'Completed' : 'Unknown'
 
+    // Extract author
     let author = 'Unknown'
-    $$(doc, '.flex.sm\\:justify-between.justify-start.items-center.gap-2').forEach((elem: Element) => {
-        const label = text(elem.querySelector('h4')).toLowerCase()
-        if (label.includes('author')) {
-            author = text(elem.querySelector('.inline p')) || 'Unknown'
-        }
-    })
+    const authorMatch = html.match(/<h4[^>]*>(.*?)author(.*?)<\/h4>.*?<[^>]*class=["'][^"']*inline[^"']*["'][^>]*>(.*?)<\/[^>]*>/is)
+    if (authorMatch) author = authorMatch[3].replace(/<[^>]*>/g, '').trim() || 'Unknown'
 
+    // Extract genres
     const arrayTags: Tag[] = []
-    $$(doc, 'a[itemprop="genre"]').forEach((elem: Element) => {
-        const label = text(elem.querySelector('span'))
-        const href = attr(elem, 'href')
-        const id = href.split('/').filter((x: string) => x).pop() ?? ''
-        if (id && label) {
-            arrayTags.push({ id, label: decodeHTMLEntity(label) })
-        }
-    })
+    const genreMatches = html.matchAll(/<a[^>]*itemprop=["']genre["'][^>]*>.*?<span[^>]*>(.*?)<\/span>.*?href=["'][^"']*\/genre\/([^"']+)["']/gis)
+    for (const match of genreMatches) {
+        const label = match[1].replace(/<[^>]*>/g, '').trim()
+        const id = match[2]
+        if (id && label) arrayTags.push({ id, label: decodeHTMLEntity(label) })
+    }
 
     const tagSections: TagSection[] = []
     if (arrayTags.length > 0) {
-        tagSections.push(App.createTagSection({ 
-            id: '0', 
-            label: 'genres', 
-            tags: arrayTags.map((x: Tag) => App.createTag(x)) 
+        tagSections.push(App.createTagSection({
+            id: '0', label: 'genres', tags: arrayTags.map((x: Tag) => App.createTag(x))
         }))
     }
 
-    let desc = text($(doc, 'div[itemprop="description"][data-show="true"]'))
-    if (!desc) {
-        desc = text($(doc, 'div[itemprop="description"][data-show="false"]'))
-    }
-
-    let type = ''
-    let released = ''
-    let views = ''
-    let rating = ''
-
-    $$(doc, '.space-y-2 .flex.sm\\:justify-between.justify-start.items-center.gap-2').forEach((elem: Element) => {
-        const label = text(elem.querySelector('h4')).toLowerCase()
-        const value = text(elem.querySelector('.inline p, .inline'))
-
-        if (label.includes('type')) {
-            type = value
-        } else if (label.includes('released')) {
-            released = value
-        } else if (label.includes('view')) {
-            views = value
-        } else if (label.includes('rating')) {
-            rating = value
-        }
-    })
-
-    if (type || released || views || rating) {
-        const additionalInfo = []
-        if (type) additionalInfo.push(`Type: ${type}`)
-        if (released) additionalInfo.push(`Released: ${released}`)
-        if (rating) additionalInfo.push(`Rating: ${rating}`)
-        if (views) additionalInfo.push(`Views: ${views}`)
-        
-        if (desc) {
-            desc = `${desc}\n\n${additionalInfo.join(' • ')}`
-        } else {
-            desc = additionalInfo.join(' • ')
-        }
-    }
+    // Extract description
+    let desc = extractText(html, /<div[^>]*itemprop=["']description["'][^>]*data-show=["']true["'][^>]*>(.*?)<\/div>/is)
+    if (!desc) desc = extractText(html, /<div[^>]*itemprop=["']description["'][^>]*data-show=["']false["'][^>]*>(.*?)<\/div>/is)
+    desc = desc.replace(/<[^>]*>/g, '').trim()
 
     return App.createSourceManga({
         id: mangaId,
         mangaInfo: App.createMangaInfo({
-            titles,
-            image,
-            status,
-            author,
-            artist: author,
-            tags: tagSections,
+            titles, image, status, author, artist: author, tags: tagSections,
             desc: decodeHTMLEntity(desc)
         })
     })
 }
 
-export const parseChapterList = (doc: Document, mangaId: string): Chapter[] => {
+export const parseChapterList = (html: string, mangaId: string): Chapter[] => {
     const chapters: Chapter[] = []
     let sortingIndex = 0
 
-    $$(doc, 'div[data-chapter-number]').forEach((elem: Element) => {
-        const link = elem.querySelector('a')
-        const chapterUrl = attr(link, 'href')
-        const chapterId = chapterUrl.split('/').filter((x: string) => x).pop() ?? ''
-        
-        if (!chapterId) return
+    // Match chapter divs
+    const chapterMatches = html.matchAll(/<div[^>]*data-chapter-number=["']([^"']+)["'][^>]*>(.*?)<\/div>\s*<\/div>/gis)
 
-        const chapNumStr = attr(elem, 'data-chapter-number') ?? '0'
+    for (const match of chapterMatches) {
+        const chapNumStr = match[1]
         const chapNum = parseFloat(chapNumStr) || 0
+        const chapterHtml = match[2]
 
-        const title = text(elem.querySelector('.font-medium.text-base span'))
-        const name = title || `Chapter ${chapNumStr}`
+        // Extract chapter link
+        const linkMatch = chapterHtml.match(/<a[^>]*href=["'][^"']*\/chapter\/([^"\/]+)["']/i)
+        const chapterId = linkMatch?.[1] ?? ''
+        if (!chapterId) continue
 
-        const timeStr = attr(elem.querySelector('time'), 'datetime') ?? text(elem.querySelector('time'))
+        // Extract title
+        const title = extractText(chapterHtml, /<[^>]*class=["'][^"']*font-medium\.text-base[^"']*["'][^>]*>.*?<span[^>]*>(.*?)<\/span>/is)
+        const name = title ? decodeHTMLEntity(title.replace(/<[^>]*>/g, '')) : `Chapter ${chapNumStr}`
+
+        // Extract time
+        const timeStr = chapterHtml.match(/<time[^>]*datetime=["']([^"']+)["']/)?.[1] ?? extractText(chapterHtml, /<time[^>]*>(.*?)<\/time>/is)
         const time = timeStr ? (timeStr.includes('T') ? new Date(timeStr) : convertTime(timeStr)) : new Date()
 
         chapters.push(App.createChapter({
-            id: chapterId,
-            chapNum,
-            name: decodeHTMLEntity(name),
-            time,
-            langCode: '🇮🇩',
-            sortingIndex: sortingIndex--
+            id: chapterId, chapNum, name, time, langCode: '🇮🇩', sortingIndex: sortingIndex--
         }))
-    })
+    }
 
     return chapters
 }
 
-export const parseChapterDetails = (doc: Document, mangaId: string, chapterId: string): ChapterDetails => {
+export const parseChapterDetails = (html: string, mangaId: string, chapterId: string): ChapterDetails => {
     const pages: string[] = []
 
-    $$(doc, 'section[data-image-data] img').forEach((elem: Element) => {
-        const src = attr(elem, 'src')
-        if (src) {
-            pages.push(normalizeUrl(src))
+    // Extract images from section with data-image-data
+    const sectionMatch = html.match(/<section[^>]*data-image-data[^>]*>(.*?)<\/section>/is)
+    if (sectionMatch) {
+        const sectionHtml = sectionMatch[1]
+        const imgMatches = sectionHtml.matchAll(/<img[^>]*src=["']([^"']+)["'][^>]*>/gi)
+        for (const match of imgMatches) {
+            const src = match[1]
+            if (src && !src.includes('data:image')) pages.push(normalizeUrl(src))
         }
-    })
+    }
 
     if (pages.length === 0) {
         throw new Error(`Failed to find any pages for chapter ${chapterId} of manga ${mangaId}`)
     }
 
-    return App.createChapterDetails({ 
-        id: chapterId, 
-        mangaId, 
-        pages 
-    })
+    return App.createChapterDetails({ id: chapterId, mangaId, pages })
 }
 
-export const parseMangaList = (doc: Document): PartialSourceManga[] => {
+export const parseMangaList = (html: string): PartialSourceManga[] => {
     const results: PartialSourceManga[] = []
 
-    $$(doc, '.swiper-slide.manga-swipe, .swiper-slide').forEach((elem: Element) => {
-        const link = elem.querySelector('a')
-        const href = attr(link, 'href')
-        const mangaId = href.split('/').filter((x: string) => x).pop() ?? ''
-        
-        if (!mangaId) return
+    // Parse swiper slides
+    const slideMatches = html.matchAll(/<div[^>]*class=["'][^"']*swiper-slide[^"']*["'][^>]*>(.*?)<\/div>\s*<\/div>/gis)
+    for (const match of slideMatches) {
+        const slideHtml = match[1]
+        const linkMatch = slideHtml.match(/<a[^>]*href=["'][^"']*\/manga\/([^"\/]+)["'][^>]*title=["']([^"']+)["']/i)
+        if (!linkMatch) continue
 
-        const title = attr(link, 'title') ?? attr(elem.querySelector('a'), 'title') ?? ''
-        const image = normalizeUrl(attr(elem.querySelector('img'), 'src'))
-        
-        let subtitle = ''
-        const chapterText = text(elem.querySelector('.text-sm.text-gray-300'))
-        if (chapterText) {
-            subtitle = chapterText
-        }
+        const mangaId = linkMatch[1]
+        const title = linkMatch[2]
+        const imgMatch = slideHtml.match(/<img[^>]*src=["']([^"']+)["']/i)
+        const image = imgMatch ? normalizeUrl(imgMatch[1]) : ''
+        const subtitle = extractText(slideHtml, /<[^>]*class=["'][^"']*text-sm\.text-gray-300[^"']*["'][^>]*>(.*?)<\/[^>]*>/is)
 
         if (title) {
             results.push(App.createPartialSourceManga({
-                mangaId,
-                image,
-                title: decodeHTMLEntity(title),
-                subtitle
+                mangaId, image, title: decodeHTMLEntity(title),
+                subtitle: subtitle ? decodeHTMLEntity(subtitle.replace(/<[^>]*>/g, '')) : ''
             }))
         }
-    })
-
-    $$(doc, '#searchResults a').forEach((elem: Element) => {
-        const href = attr(elem, 'href')
-        const mangaId = href.split('/').filter((x: string) => x).pop() ?? ''
-        if (!mangaId) return
-
-        const title = text(elem.querySelector('h3')) || attr(elem, 'title') || ''
-        const image = normalizeUrl(attr(elem.querySelector('img'), 'src'))
-        const subtitle = text(elem.querySelector('p')) || ''
-
-        if (title) {
-            results.push(App.createPartialSourceManga({
-                mangaId,
-                image,
-                title: decodeHTMLEntity(title),
-                subtitle: decodeHTMLEntity(subtitle)
-            }))
-        }
-    })
-
-    $$(doc, '.flex.flex-col.justify-between.px-4.py-1\\.5').forEach((elem: Element) => {
-        const link = elem.querySelector('a.text-base')
-        const href = attr(link, 'href')
-        const mangaId = href.split('/').filter((x: string) => x).pop() ?? ''
-        
-        if (!mangaId) return
-
-        const title = text(link)
-        const parent = elem.parentElement
-        const image = parent ? normalizeUrl(attr(parent.querySelector('img'), 'src')) : ''
-        
-        const chapterText = text(elem.querySelector('.text-sm.text-gray-300'))
-        const subtitle = chapterText
-
-        if (title) {
-            results.push(App.createPartialSourceManga({
-                mangaId,
-                image,
-                title: decodeHTMLEntity(title),
-                subtitle
-            }))
-        }
-    })
+    }
 
     return results
 }
 
-export const parseSearchTags = (doc: Document): TagSection[] => {
+export const parseSearchTags = (html: string): TagSection[] => {
     const genres: Tag[] = []
     const types: Tag[] = []
-    const statuses: Tag[] = []
 
-    $$(doc, 'button[data-genre]').forEach((elem: Element) => {
-        const id = attr(elem, 'data-genre')
-        const label = text(elem)
-        if (id && label) {
-            genres.push({ id, label: decodeHTMLEntity(label) })
-        }
-    })
+    // Extract genres from buttons
+    const genreMatches = html.matchAll(/<button[^>]*data-genre=["']([^"']+)["'][^>]*>(.*?)<\/button>/gis)
+    for (const match of genreMatches) {
+        const id = match[1]
+        const label = match[2].replace(/<[^>]*>/g, '').trim()
+        if (id && label) genres.push({ id, label: decodeHTMLEntity(label) })
+    }
 
+    // Fallback genres
     if (genres.length === 0) {
         genres.push(
-            { id: 'action', label: 'Action' },
-            { id: 'adventure', label: 'Adventure' },
-            { id: 'comedy', label: 'Comedy' },
-            { id: 'drama', label: 'Drama' },
-            { id: 'ecchi', label: 'Ecchi' },
-            { id: 'fantasy', label: 'Fantasy' },
-            { id: 'harem', label: 'Harem' },
-            { id: 'isekai', label: 'Isekai' },
-            { id: 'martial-arts', label: 'Martial Arts' },
-            { id: 'mature', label: 'Mature' },
-            { id: 'mecha', label: 'Mecha' },
-            { id: 'mystery', label: 'Mystery' },
-            { id: 'psychological', label: 'Psychological' },
-            { id: 'romance', label: 'Romance' },
-            { id: 'school-life', label: 'School Life' },
-            { id: 'sci-fi', label: 'Sci-Fi' },
-            { id: 'seinen', label: 'Seinen' },
-            { id: 'shoujo', label: 'Shoujo' },
-            { id: 'shounen', label: 'Shounen' },
-            { id: 'slice-of-life', label: 'Slice of Life' },
-            { id: 'sports', label: 'Sports' },
-            { id: 'supernatural', label: 'Supernatural' },
-            { id: 'thriller', label: 'Thriller' }
+            { id: 'action', label: 'Action' }, { id: 'adventure', label: 'Adventure' },
+            { id: 'comedy', label: 'Comedy' }, { id: 'drama', label: 'Drama' },
+            { id: 'fantasy', label: 'Fantasy' }, { id: 'isekai', label: 'Isekai' },
+            { id: 'romance', label: 'Romance' }, { id: 'shounen', label: 'Shounen' }
         )
     }
 
-    $$(doc, 'button[data-type]').forEach((elem: Element) => {
-        const id = attr(elem, 'data-type')
-        const label = text(elem)
-        if (id && label) {
-            if (!types.find((t: Tag) => t.id === id)) {
-                types.push({ id, label: decodeHTMLEntity(label) })
-            }
-        }
-    })
+    // Extract types
+    const typeMatches = html.matchAll(/<button[^>]*data-type=["']([^"']+)["'][^>]*>(.*?)<\/button>/gis)
+    for (const match of typeMatches) {
+        const id = match[1]
+        const label = match[2].replace(/<[^>]*>/g, '').trim()
+        if (id && label && !types.find((t: Tag) => t.id === id)) types.push({ id, label: decodeHTMLEntity(label) })
+    }
 
     if (types.length === 0) {
-        types.push(
-            { id: 'manga', label: 'Manga' },
-            { id: 'manhwa', label: 'Manhwa' },
-            { id: 'manhua', label: 'Manhua' }
-        )
+        types.push({ id: 'manga', label: 'Manga' }, { id: 'manhwa', label: 'Manhwa' }, { id: 'manhua', label: 'Manhua' })
     }
-
-    statuses.push({ id: 'ongoing', label: 'Ongoing' })
-    statuses.push({ id: 'completed', label: 'Completed' })
 
     const sections: TagSection[] = []
-
-    if (genres.length > 0) {
-        sections.push(App.createTagSection({
-            id: 'genre',
-            label: 'Genres',
-            tags: genres.map((x: Tag) => App.createTag(x))
-        }))
-    }
-
-    if (types.length > 0) {
-        sections.push(App.createTagSection({
-            id: 'type',
-            label: 'Type',
-            tags: types.map((x: Tag) => App.createTag(x))
-        }))
-    }
-
-    if (statuses.length > 0) {
-        sections.push(App.createTagSection({
-            id: 'status',
-            label: 'Status',
-            tags: statuses.map((x: Tag) => App.createTag(x))
-        }))
-    }
+    if (genres.length > 0) sections.push(App.createTagSection({ id: 'genre', label: 'Genres', tags: genres.map((x: Tag) => App.createTag(x)) }))
+    if (types.length > 0) sections.push(App.createTagSection({ id: 'type', label: 'Type', tags: types.map((x: Tag) => App.createTag(x)) }))
+    sections.push(App.createTagSection({ id: 'status', label: 'Status', tags: [{ id: 'ongoing', label: 'Ongoing' }, { id: 'completed', label: 'Completed' }].map((x) => App.createTag(x)) }))
 
     return sections
 }

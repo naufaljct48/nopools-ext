@@ -26,14 +26,8 @@ import {
 
 const WEBSITE_BASE = 'https://kiryuu03.com'
 
-// Parse HTML using DOMParser (no cheerio)
-const parseHTML = (html: string): Document => {
-    const parser = new DOMParser()
-    return parser.parseFromString(html, 'text/html')
-}
-
 export const KiryuuInfo: SourceInfo = {
-    version: '2.1.6',
+    version: '2.1.7',
     name: 'Kiryuu',
     icon: 'icon.png',
     author: 'NaufalJCT48',
@@ -78,8 +72,7 @@ export class Kiryuu extends Source {
             url: `${WEBSITE_BASE}/manga/${mangaId}/`
         })
         const response = await this.requestManager.schedule(request, 1)
-        const doc = parseHTML(response.data as string)
-        return parseMangaDetails(doc, mangaId)
+        return parseMangaDetails(response.data as string, mangaId)
     }
 
     override async getChapters(mangaId: string): Promise<Chapter[]> {
@@ -99,9 +92,7 @@ export class Kiryuu extends Source {
             url: ajaxUrl
         })
         const response = await this.requestManager.schedule(request, 1)
-        const doc = parseHTML(response.data as string)
-        
-        return parseChapterList(doc, mangaId)
+        return parseChapterList(response.data as string, mangaId)
     }
 
     override async getChapterDetails(mangaId: string, chapterId: string): Promise<ChapterDetails> {
@@ -109,8 +100,7 @@ export class Kiryuu extends Source {
             url: `${WEBSITE_BASE}/manga/${mangaId}/${chapterId}/`
         })
         const response = await this.requestManager.schedule(request, 1)
-        const doc = parseHTML(response.data as string)
-        return parseChapterDetails(doc, mangaId, chapterId)
+        return parseChapterDetails(response.data as string, mangaId, chapterId)
     }
 
     override async getHomePageSections(sectionCallback: (section: HomeSection) => void): Promise<void> {
@@ -150,8 +140,7 @@ export class Kiryuu extends Source {
         for (const item of sections) {
             sectionCallback(item.section)
             const response = await this.requestManager.schedule(item.request, 1)
-            const doc = parseHTML(response.data as string)
-            item.section.items = parseMangaList(doc)
+            item.section.items = parseMangaList(response.data as string)
             sectionCallback(item.section)
         }
     }
@@ -161,8 +150,7 @@ export class Kiryuu extends Source {
             url: `${WEBSITE_BASE}/advanced-search/`
         })
         const response = await this.requestManager.schedule(request, 1)
-        const doc = parseHTML(response.data as string)
-        return parseSearchTags(doc)
+        return parseSearchTags(response.data as string)
     }
 
     override async getSearchResults(query: SearchRequest, metadata: any): Promise<PagedResults> {
@@ -205,8 +193,7 @@ export class Kiryuu extends Source {
         }
 
         const response = await this.requestManager.schedule(request, 1)
-        const doc = parseHTML(response.data as string)
-        const results = parseMangaList(doc)
+        const results = parseMangaList(response.data as string)
         const hasMore = results.length >= 20
 
         return App.createPagedResults({
@@ -235,8 +222,7 @@ export class Kiryuu extends Source {
         })
         
         const response = await this.requestManager.schedule(request, 1)
-        const doc = parseHTML(response.data as string)
-        const results = parseMangaList(doc)
+        const results = parseMangaList(response.data as string)
         const hasMore = results.length >= 20
 
         return App.createPagedResults({
