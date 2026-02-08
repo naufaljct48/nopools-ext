@@ -21,7 +21,10 @@ export const parseMangaDetails = (json: any, mangaId: string): SourceManga => {
     })).filter((t: Tag) => t.id && t.label)
 
     const tagSections: TagSection[] = [App.createTagSection({ id: '0', label: 'genres', tags: arrayTags.map((x) => App.createTag(x)) })]
-    const desc: string = data?.sinopsis ?? ''
+    
+    // Strip HTML tags from description
+    const rawDesc: string = data?.sinopsis ?? ''
+    const desc: string = rawDesc.replace(/<[^>]*>/g, '').trim()
 
     return App.createSourceManga({
         id: mangaId,

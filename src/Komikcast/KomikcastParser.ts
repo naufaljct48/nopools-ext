@@ -99,14 +99,16 @@ export const parseMangaList = (data: any[]): PartialSourceManga[] => {
 
 export const parseSearchTags = (data: any[]): TagSection[] => {
     const genres: Tag[] = []
-    
+
     for (const genre of data || []) {
+        const genreName = genre.data?.name || ''
+        // Use genre name as ID since API expects genreIds=Action&genreIds=Fantasy
         genres.push(App.createTag({
-            id: `genre_${genre.id}`,
-            label: genre.data?.name || ''
+            id: `genre_${genreName}`,
+            label: genreName
         }))
     }
-    
+
     return [
         App.createTagSection({
             id: 'genres',
