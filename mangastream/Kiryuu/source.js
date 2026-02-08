@@ -907,55 +907,35 @@ var _Sources = (() => {
   };
   var parseMangaList = (html) => {
     const results = [];
-    const itemMatches = html.matchAll(/<div[^>]*overflow-hidden[^>]*>.*?<a[^>]*href=["'](?:https?:\/\/[^\/]+)?\/manga\/([^"\/]+)["'][^>]*>.*?<img[^>]*class=["'][^"']*wp-post-image[^"']*["'][^>]*src=["']([^"']+)["'][^>]*alt=["']([^"']*)["'][^>]*>.*?<\/a>.*?<h1[^>]*class=["'][^"']*text-\[[^"']*\][^"']*["'][^>]*>([^<]+)<\/h1>/gis);
-    for (const match of itemMatches) {
-      const mangaId = match[1] ?? "";
-      const image = match[2] ?? "";
-      const titleFromAlt = match[3] ?? "";
-      const titleFromH1 = match[4] ?? "";
-      if (mangaId) {
-        results.push(App.createPartialSourceManga({
-          mangaId,
-          image: normalizeUrl(image),
-          title: decodeHTMLEntity(titleFromH1.trim() || titleFromAlt || mangaId),
-          subtitle: ""
-        }));
-      }
-    }
-    if (results.length === 0) {
-      const imgMatches = html.matchAll(/<img[^>]*class=["'][^"']*wp-post-image[^"']*["'][^>]*src=["']([^"']+)["'][^>]*alt=["']([^"']*)["'][^>]*>/gi);
-      for (const imgMatch of imgMatches) {
-        const image = imgMatch[1] ?? "";
-        const titleFromAlt = imgMatch[2] ?? "";
-        if (image) {
-          const nearbyContext = html.substring(
-            Math.max(0, html.lastIndexOf(image) - 1e3),
-            html.indexOf(image) + image.length + 500
-          );
-          const linkMatch = nearbyContext.match(/<a[^>]*href=["'](?:https?:\/\/[^\/]+)?\/manga\/([^"\/]+)["']/i);
-          const mangaId = linkMatch?.[1] ?? "";
-          if (mangaId) {
-            results.push(App.createPartialSourceManga({
-              mangaId,
-              image: normalizeUrl(image),
-              title: decodeHTMLEntity(titleFromAlt || mangaId),
-              subtitle: ""
-            }));
+    const seen = /* @__PURE__ */ new Set();
+    const imgMatches = html.matchAll(/<img[^>]*class=["'][^"']*wp-post-image[^"']*["'][^>]*src=["']([^"']+)["'][^>]*alt=["']([^"']*)["'][^>]*>/gi);
+    for (const imgMatch of imgMatches) {
+      const image = imgMatch[1] ?? "";
+      const titleFromAlt = imgMatch[2] ?? "";
+      if (image) {
+        const imgPosition = html.indexOf(imgMatch[0]);
+        const nearbyContext = html.substring(
+          Math.max(0, imgPosition - 500),
+          Math.min(html.length, imgPosition + imgMatch[0].length + 1e3)
+        );
+        const linkMatch = nearbyContext.match(/<a[^>]*href=["'](?:https?:\/\/[^\/]+)?\/manga\/([^"\/]+)["']/i);
+        const mangaId = linkMatch?.[1] ?? "";
+        if (mangaId && !seen.has(mangaId)) {
+          seen.add(mangaId);
+          let title = titleFromAlt;
+          const h1Match = nearbyContext.match(/<h1[^>]*class=["'][^"']*text-\[[^"']*\][^"']*["'][^>]*>\s*([^<]+?)\s*<\/h1>/i);
+          if (h1Match?.[1]) {
+            title = h1Match[1].trim();
+          } else {
+            const altTitleMatch = nearbyContext.match(/<a[^>]*href=["'][^"']*\/manga\/[^"']+["'][^>]*class=["'][^"']*text-base[^"']*font-medium[^"']*["'][^>]*>\s*([^<]+?)\s*<\/a>/i);
+            if (altTitleMatch?.[1]) {
+              title = altTitleMatch[1].trim();
+            }
           }
-        }
-      }
-    }
-    if (results.length === 0) {
-      const cardMatches = html.matchAll(/<a[^>]*href=["'](?:https?:\/\/[^\/]+)?\/manga\/([^"\/]+)["'][^>]*>\s*<div[^>]*>\s*<img[^>]*src=["']([^"']+)["'][^>]*class=["'][^"']*wp-post-image[^"']*["'][^>]*alt=["']([^"']*)["'][^>]*>/gis);
-      for (const match of cardMatches) {
-        const mangaId = match[1] ?? "";
-        const image = match[2] ?? "";
-        const titleFromAlt = match[3] ?? "";
-        if (mangaId) {
           results.push(App.createPartialSourceManga({
             mangaId,
             image: normalizeUrl(image),
-            title: decodeHTMLEntity(titleFromAlt || mangaId),
+            title: decodeHTMLEntity(title || mangaId),
             subtitle: ""
           }));
         }
@@ -1003,7 +983,7 @@ var _Sources = (() => {
   // src/Kiryuu/Kiryuu.ts
   var WEBSITE_BASE2 = "https://kiryuu03.com";
   var KiryuuInfo = {
-    version: "2.2.0",
+    version: "2.2.1",
     name: "Kiryuu",
     icon: "icon.png",
     author: "NaufalJCT48",
@@ -1177,23 +1157,18 @@ var _Sources = (() => {
     }
     async getViewMoreItems(homepageSectionId, metadata) {
       const page = metadata?.page ?? 1;
-      if (homepageSectionId !== "latest_update") {
+      let url;
+      if (homepageSectionId === "latest_update") {
+        url = `${WEBSITE_BASE2}/latest/?the_page=${page}`;
+      } else if (homepageSectionId === "project_updates") {
+        url = `${WEBSITE_BASE2}/project/?the_page=${page}`;
+      } else {
         throw new Error(`View more not supported for section: ${homepageSectionId}`);
       }
-      const request = createRequestObject({
-        url: `${WEBSITE_BASE2}/wp-admin/admin-ajax.php?action=advanced_search`,
-        method: "POST",
-        data: `inclusion=OR&exclusion=OR&page=${page}&genre=[]&genre_exclude=[]&author=[]&artist=[]&project=0&type=[]&status=[]&order=desc&orderby=updated&query=`,
-        headers: {
-          "content-type": "application/x-www-form-urlencoded",
-          "origin": WEBSITE_BASE2,
-          "referer": `${WEBSITE_BASE2}/advanced-search/`,
-          "x-requested-with": "XMLHttpRequest"
-        }
-      });
+      const request = createRequestObject({ url });
       const response = await this.requestManager.schedule(request, 1);
       const results = parseMangaList(response.data);
-      const hasMore = results.length >= 20;
+      const hasMore = results.length >= 12;
       return App.createPagedResults({
         results,
         metadata: hasMore ? { page: page + 1 } : void 0
