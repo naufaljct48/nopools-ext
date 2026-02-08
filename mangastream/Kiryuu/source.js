@@ -15416,11 +15416,12 @@ var _Sources = (() => {
 
   // src/Kiryuu/KiryuuHelper.ts
   var WEBSITE_BASE = "https://kiryuu03.com";
-  var createRequestObject = (url, metadata = {}) => {
-    const isImage = /\.(png|jpe?g|webp|gif)$/i.test(url);
+  var createRequestObject = (requestObj) => {
+    const isImage = /\.(png|jpe?g|webp|gif)$/i.test(requestObj.url || "");
     const headers = {
       "Accept": isImage ? "image/avif,image/webp,image/apng,image/*,*/*;q=0.8" : "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
       "Referer": `${WEBSITE_BASE}/`,
+      "Origin": WEBSITE_BASE,
       "DNT": "1",
       "Sec-GPC": "1",
       "Accept-Encoding": "gzip, deflate, br",
@@ -15428,58 +15429,12 @@ var _Sources = (() => {
       "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
     };
     return App.createRequest({
-      url,
-      method: "GET",
-      headers,
-      ...metadata
+      ...requestObj,
+      headers: {
+        ...headers,
+        ...requestObj.headers ?? {}
+      }
     });
-  };
-  var convertTime = (timeStr) => {
-    timeStr = timeStr.toLowerCase().trim();
-    const now = /* @__PURE__ */ new Date();
-    if (/just now|sekarang|baru saja/i.test(timeStr)) {
-      return now;
-    }
-    const minutesMatch = timeStr.match(/(\d+)\s*(minute|menit|min)/i);
-    if (minutesMatch && minutesMatch[1]) {
-      const minutes = parseInt(minutesMatch[1]);
-      return new Date(now.getTime() - minutes * 60 * 1e3);
-    }
-    const hoursMatch = timeStr.match(/(\d+)\s*(hour|jam|hr)/i);
-    if (hoursMatch && hoursMatch[1]) {
-      const hours = parseInt(hoursMatch[1]);
-      return new Date(now.getTime() - hours * 60 * 60 * 1e3);
-    }
-    const daysMatch = timeStr.match(/(\d+)\s*(day|hari|hr)/i);
-    if (daysMatch && daysMatch[1]) {
-      const days = parseInt(daysMatch[1]);
-      return new Date(now.getTime() - days * 24 * 60 * 60 * 1e3);
-    }
-    const weeksMatch = timeStr.match(/(\d+)\s*(week|minggu|wk)/i);
-    if (weeksMatch && weeksMatch[1]) {
-      const weeks = parseInt(weeksMatch[1]);
-      return new Date(now.getTime() - weeks * 7 * 24 * 60 * 60 * 1e3);
-    }
-    const monthsMatch = timeStr.match(/(\d+)\s*(month|bulan|bln)/i);
-    if (monthsMatch && monthsMatch[1]) {
-      const months = parseInt(monthsMatch[1]);
-      return new Date(now.getTime() - months * 30 * 24 * 60 * 60 * 1e3);
-    }
-    const yearsMatch = timeStr.match(/(\d+)\s*(year|tahun|yr)/i);
-    if (yearsMatch && yearsMatch[1]) {
-      const years = parseInt(yearsMatch[1]);
-      return new Date(now.getTime() - years * 365 * 24 * 60 * 60 * 1e3);
-    }
-    return now;
-  };
-  var extractMangaId = (html3) => {
-    const ajaxMatch = html3.match(/manga_id[=:](\d+)/i);
-    if (ajaxMatch && ajaxMatch[1]) return ajaxMatch[1];
-    const dataMatch = html3.match(/data-manga-id=["'](\d+)["']/i);
-    if (dataMatch && dataMatch[1]) return dataMatch[1];
-    const inputMatch = html3.match(/<input[^>]*name=["']manga_id["'][^>]*value=["'](\d+)["']/i);
-    if (inputMatch && inputMatch[1]) return inputMatch[1];
-    return null;
   };
   var normalizeUrl = (url, baseUrl = WEBSITE_BASE) => {
     if (!url) return "";
@@ -15490,6 +15445,47 @@ var _Sources = (() => {
   };
   var decodeHTMLEntity = (str) => {
     return str.replace(/&#(\d+);/g, (match, dec) => String.fromCharCode(parseInt(dec))).replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&#x27;/g, "'").replace(/&#x2F;/g, "/");
+  };
+  var convertTime = (timeStr) => {
+    timeStr = timeStr.toLowerCase().trim();
+    const now = /* @__PURE__ */ new Date();
+    if (/just now|sekarang|baru saja/i.test(timeStr)) {
+      return now;
+    }
+    const minutesMatch = timeStr.match(/(\d+)\s*(minute|menit|min)/i);
+    if (minutesMatch?.[1]) {
+      return new Date(now.getTime() - parseInt(minutesMatch[1]) * 60 * 1e3);
+    }
+    const hoursMatch = timeStr.match(/(\d+)\s*(hour|jam|hr)/i);
+    if (hoursMatch?.[1]) {
+      return new Date(now.getTime() - parseInt(hoursMatch[1]) * 60 * 60 * 1e3);
+    }
+    const daysMatch = timeStr.match(/(\d+)\s*(day|hari|hr)/i);
+    if (daysMatch?.[1]) {
+      return new Date(now.getTime() - parseInt(daysMatch[1]) * 24 * 60 * 60 * 1e3);
+    }
+    const weeksMatch = timeStr.match(/(\d+)\s*(week|minggu|wk)/i);
+    if (weeksMatch?.[1]) {
+      return new Date(now.getTime() - parseInt(weeksMatch[1]) * 7 * 24 * 60 * 60 * 1e3);
+    }
+    const monthsMatch = timeStr.match(/(\d+)\s*(month|bulan|bln)/i);
+    if (monthsMatch?.[1]) {
+      return new Date(now.getTime() - parseInt(monthsMatch[1]) * 30 * 24 * 60 * 60 * 1e3);
+    }
+    const yearsMatch = timeStr.match(/(\d+)\s*(year|tahun|yr)/i);
+    if (yearsMatch?.[1]) {
+      return new Date(now.getTime() - parseInt(yearsMatch[1]) * 365 * 24 * 60 * 60 * 1e3);
+    }
+    return now;
+  };
+  var extractMangaId = (html3) => {
+    const ajaxMatch = html3.match(/manga_id[=:](\d+)/i);
+    if (ajaxMatch?.[1]) return ajaxMatch[1];
+    const dataMatch = html3.match(/data-manga-id=["'](\d+)["']/i);
+    if (dataMatch?.[1]) return dataMatch[1];
+    const inputMatch = html3.match(/<input[^>]*name=["']manga_id["'][^>]*value=["'](\d+)["']/i);
+    if (inputMatch?.[1]) return inputMatch[1];
+    return null;
   };
 
   // src/Kiryuu/KiryuuParser.ts
@@ -15608,7 +15604,6 @@ ${additionalInfo.join(" \u2022 ")}`;
       const time = timeStr ? timeStr.includes("T") ? new Date(timeStr) : convertTime(timeStr) : /* @__PURE__ */ new Date();
       chapters.push(App.createChapter({
         id: chapterId,
-        mangaId,
         chapNum,
         name: decodeHTMLEntity(name),
         time,
@@ -15874,12 +15869,12 @@ ${additionalInfo.join(" \u2022 ")}`;
   // src/Kiryuu/Kiryuu.ts
   var WEBSITE_BASE2 = "https://kiryuu03.com";
   var KiryuuInfo = {
-    version: "2.1.3",
+    version: "2.1.4",
     name: "Kiryuu",
     icon: "icon.png",
     author: "NaufalJCT48",
     authorWebsite: "https://github.com/naufaljct48",
-    description: "Extension that pulls manga from Kiryuu (Custom Template)",
+    description: "Extension that pulls manga from Kiryuu",
     contentRating: import_types2.ContentRating.MATURE,
     websiteBaseURL: WEBSITE_BASE2,
     sourceTags: [{ text: "Indonesian", type: import_types2.BadgeColor.GREY }],
@@ -15914,13 +15909,17 @@ ${additionalInfo.join(" \u2022 ")}`;
       });
     }
     async getMangaDetails(mangaId) {
-      const request = createRequestObject(`${WEBSITE_BASE2}/manga/${mangaId}/`);
+      const request = createRequestObject({
+        url: `${WEBSITE_BASE2}/manga/${mangaId}/`
+      });
       const response = await this.requestManager.schedule(request, 1);
       const $2 = load(response.data);
       return parseMangaDetails($2, mangaId);
     }
     async getChapters(mangaId) {
-      const detailsRequest = createRequestObject(`${WEBSITE_BASE2}/manga/${mangaId}/`);
+      const detailsRequest = createRequestObject({
+        url: `${WEBSITE_BASE2}/manga/${mangaId}/`
+      });
       const detailsResponse = await this.requestManager.schedule(detailsRequest, 1);
       const html3 = detailsResponse.data;
       const numericMangaId = extractMangaId(html3);
@@ -15928,13 +15927,17 @@ ${additionalInfo.join(" \u2022 ")}`;
         throw new Error(`Failed to extract manga_id from ${mangaId}`);
       }
       const ajaxUrl = `${WEBSITE_BASE2}/wp-admin/admin-ajax.php?manga_id=${numericMangaId}&page=1&action=chapter_list`;
-      const request = createRequestObject(ajaxUrl);
+      const request = createRequestObject({
+        url: ajaxUrl
+      });
       const response = await this.requestManager.schedule(request, 1);
       const $2 = load(response.data);
       return parseChapterList($2, mangaId);
     }
     async getChapterDetails(mangaId, chapterId) {
-      const request = createRequestObject(`${WEBSITE_BASE2}/manga/${mangaId}/${chapterId}/`);
+      const request = createRequestObject({
+        url: `${WEBSITE_BASE2}/manga/${mangaId}/${chapterId}/`
+      });
       const response = await this.requestManager.schedule(request, 1);
       const $2 = load(response.data);
       return parseChapterDetails($2, mangaId, chapterId);
@@ -15942,52 +15945,48 @@ ${additionalInfo.join(" \u2022 ")}`;
     async getHomePageSections(sectionCallback) {
       const sections = [
         {
-          id: "popular_today",
-          title: "Popular Today",
-          url: WEBSITE_BASE2,
-          type: "get"
+          request: createRequestObject({
+            url: WEBSITE_BASE2
+          }),
+          section: App.createHomeSection({
+            id: "popular_today",
+            title: "Popular Today",
+            type: import_types2.HomeSectionType.singleRowNormal,
+            containsMoreItems: false
+          })
         },
         {
-          id: "latest_update",
-          title: "Latest Update",
-          url: `${WEBSITE_BASE2}/wp-admin/admin-ajax.php?action=advanced_search`,
-          type: "post"
-        }
-      ];
-      for (const s of sections) {
-        const section = App.createHomeSection({
-          id: s.id,
-          title: s.title,
-          type: import_types2.HomeSectionType.singleRowNormal,
-          containsMoreItems: s.id === "latest_update"
-        });
-        sectionCallback(section);
-        let $2;
-        if (s.type === "post") {
-          const body = "inclusion=OR&exclusion=OR&page=1&genre=[]&genre_exclude=[]&author=[]&artist=[]&project=0&type=[]&status=[]&order=desc&orderby=updated&query=";
-          const request = createRequestObject(s.url, {
+          request: createRequestObject({
+            url: `${WEBSITE_BASE2}/wp-admin/admin-ajax.php?action=advanced_search`,
             method: "POST",
-            data: body,
+            data: "inclusion=OR&exclusion=OR&page=1&genre=[]&genre_exclude=[]&author=[]&artist=[]&project=0&type=[]&status=[]&order=desc&orderby=updated&query=",
             headers: {
               "content-type": "application/x-www-form-urlencoded",
               "origin": WEBSITE_BASE2,
               "referer": `${WEBSITE_BASE2}/advanced-search/`,
               "x-requested-with": "XMLHttpRequest"
             }
-          });
-          const response = await this.requestManager.schedule(request, 1);
-          $2 = load(response.data);
-        } else {
-          const request = createRequestObject(s.url);
-          const response = await this.requestManager.schedule(request, 1);
-          $2 = load(response.data);
+          }),
+          section: App.createHomeSection({
+            id: "latest_update",
+            title: "Latest Update",
+            type: import_types2.HomeSectionType.singleRowNormal,
+            containsMoreItems: true
+          })
         }
-        section.items = parseMangaList($2);
-        sectionCallback(section);
+      ];
+      for (const item of sections) {
+        sectionCallback(item.section);
+        const response = await this.requestManager.schedule(item.request, 1);
+        const $2 = load(response.data);
+        item.section.items = parseMangaList($2);
+        sectionCallback(item.section);
       }
     }
     async getSearchTags() {
-      const request = createRequestObject(`${WEBSITE_BASE2}/advanced-search/`);
+      const request = createRequestObject({
+        url: `${WEBSITE_BASE2}/advanced-search/`
+      });
       const response = await this.requestManager.schedule(request, 1);
       const $2 = load(response.data);
       return parseSearchTags($2);
@@ -16000,13 +15999,12 @@ ${additionalInfo.join(" \u2022 ")}`;
       if (Array.isArray(includedTags) && includedTags.length > 0) {
         genreList = includedTags.map((tag) => tag.id);
       }
-      let $2;
+      let request;
       if (searchTerm && genreList.length === 0) {
-        const ajaxUrl = `${WEBSITE_BASE2}/wp-admin/admin-ajax.php?action=search`;
-        const body = `query=${encodeURIComponent(searchTerm)}`;
-        const request = createRequestObject(ajaxUrl, {
+        request = createRequestObject({
+          url: `${WEBSITE_BASE2}/wp-admin/admin-ajax.php?action=search`,
           method: "POST",
-          data: body,
+          data: `query=${encodeURIComponent(searchTerm)}`,
           headers: {
             "content-type": "application/x-www-form-urlencoded",
             "hx-request": "true",
@@ -16014,16 +16012,13 @@ ${additionalInfo.join(" \u2022 ")}`;
             "referer": WEBSITE_BASE2
           }
         });
-        const response = await this.requestManager.schedule(request, 1);
-        $2 = load(response.data);
       } else {
-        const ajaxUrl = `${WEBSITE_BASE2}/wp-admin/admin-ajax.php?action=advanced_search`;
         const genreParam = genreList.length > 0 ? JSON.stringify(genreList) : "[]";
         const queryParam = searchTerm ? encodeURIComponent(searchTerm) : "";
-        const body = `inclusion=OR&exclusion=OR&page=${page}&genre=${genreParam}&genre_exclude=[]&author=[]&artist=[]&project=0&type=[]&status=[]&order=desc&orderby=updated&query=${queryParam}`;
-        const request = createRequestObject(ajaxUrl, {
+        request = createRequestObject({
+          url: `${WEBSITE_BASE2}/wp-admin/admin-ajax.php?action=advanced_search`,
           method: "POST",
-          data: body,
+          data: `inclusion=OR&exclusion=OR&page=${page}&genre=${genreParam}&genre_exclude=[]&author=[]&artist=[]&project=0&type=[]&status=[]&order=desc&orderby=updated&query=${queryParam}`,
           headers: {
             "content-type": "application/x-www-form-urlencoded",
             "origin": WEBSITE_BASE2,
@@ -16031,9 +16026,9 @@ ${additionalInfo.join(" \u2022 ")}`;
             "x-requested-with": "XMLHttpRequest"
           }
         });
-        const response = await this.requestManager.schedule(request, 1);
-        $2 = load(response.data);
       }
+      const response = await this.requestManager.schedule(request, 1);
+      const $2 = load(response.data);
       const results = parseMangaList($2);
       const hasMore = results.length >= 20;
       return App.createPagedResults({
@@ -16046,11 +16041,10 @@ ${additionalInfo.join(" \u2022 ")}`;
       if (homepageSectionId !== "latest_update") {
         throw new Error(`View more not supported for section: ${homepageSectionId}`);
       }
-      const url = `${WEBSITE_BASE2}/wp-admin/admin-ajax.php?action=advanced_search`;
-      const body = `inclusion=OR&exclusion=OR&page=${page}&genre=[]&genre_exclude=[]&author=[]&artist=[]&project=0&type=[]&status=[]&order=desc&orderby=updated&query=`;
-      const request = createRequestObject(url, {
+      const request = createRequestObject({
+        url: `${WEBSITE_BASE2}/wp-admin/admin-ajax.php?action=advanced_search`,
         method: "POST",
-        data: body,
+        data: `inclusion=OR&exclusion=OR&page=${page}&genre=[]&genre_exclude=[]&author=[]&artist=[]&project=0&type=[]&status=[]&order=desc&orderby=updated&query=`,
         headers: {
           "content-type": "application/x-www-form-urlencoded",
           "origin": WEBSITE_BASE2,
