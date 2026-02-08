@@ -28,7 +28,7 @@ import {
 const WEBSITE_BASE = 'https://kiryuu03.com'
 
 export const KiryuuInfo: SourceInfo = {
-    version: '2.1.2',
+    version: '2.1.3',
     name: 'Kiryuu',
     icon: 'icon.png',
     author: 'NaufalJCT48',
@@ -102,7 +102,7 @@ export class Kiryuu extends Source {
         return parseChapterDetails($, mangaId, chapterId)
     }
 
-    async getHomePageSections(sectionCallback: (section: HomeSection) => void): Promise<void> {
+    override async getHomePageSections(sectionCallback: (section: HomeSection) => void): Promise<void> {
         const sections = [
             {
                 id: 'popular_today',
@@ -155,7 +155,7 @@ export class Kiryuu extends Source {
         }
     }
 
-    async getSearchTags(): Promise<TagSection[]> {
+    override async getSearchTags(): Promise<TagSection[]> {
         const request = createRequestObject(`${WEBSITE_BASE}/advanced-search/`)
         const response = await this.requestManager.schedule(request, 1)
         const $ = cheerioLoad(response.data as string)
@@ -223,7 +223,7 @@ export class Kiryuu extends Source {
         })
     }
 
-    async getViewMoreItems(homepageSectionId: string, metadata: any): Promise<PagedResults> {
+    override async getViewMoreItems(homepageSectionId: string, metadata: any): Promise<PagedResults> {
         const page = metadata?.page ?? 1
         
         if (homepageSectionId !== 'latest_update') {
@@ -253,6 +253,22 @@ export class Kiryuu extends Source {
             results,
             metadata: hasMore ? { page: page + 1 } : undefined
         })
+    }
+
+    override async getCloudflareBypassRequestAsync(): Promise<Request> {
+        return App.createRequest({
+            url: `${WEBSITE_BASE}/`,
+            method: 'GET',
+            headers: {
+                'referer': `${WEBSITE_BASE}/`,
+                'origin': `${WEBSITE_BASE}/`,
+                'user-agent': await this.requestManager.getDefaultUserAgent()
+            }
+        })
+    }
+
+    override getMangaShareUrl(mangaId: string): string {
+        return `${WEBSITE_BASE}/manga/${mangaId}`
     }
 }
 
