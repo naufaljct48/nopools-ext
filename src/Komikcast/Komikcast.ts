@@ -31,7 +31,7 @@ const BASE_URL = 'https://v1.komikcast.fit'
 const AUTH_TOKEN = 'oat_NTQwNjU.eVU0Tjc4aEhpNmlwcDJkNWlDSU9GT0w2VXJxR25UdFc5UnV0dHRGdzY1MDY1NjYyNw'
 
 export const KomikcastInfo: SourceInfo = {
-    version: '4.0.4',
+    version: '4.0.5',
     name: 'Komikcast',
     icon: 'icon.png',
     author: 'NaufalJCT48',
@@ -202,10 +202,10 @@ export class Komikcast extends Source {
     override async getSearchResults(query: SearchRequest, metadata: any): Promise<PagedResults> {
         const page = metadata?.page ?? 1
         const params: string[] = []
-        
+
         params.push(`page=${page}`)
         params.push('take=24')
-        
+
         // Handle text search with filter parameter
         // Format: filter=title=like="solo",nativeTitle=like="solo"
         if (query.title) {
@@ -213,27 +213,38 @@ export class Komikcast extends Source {
             const filterParam = `title=like="${searchTerm}",nativeTitle=like="${searchTerm}"`
             params.push(`filter=${filterParam}`)
         }
-        
-        // Handle genre filters - API expects genre name (not ID)
-        // Format: genreIds=Action&genreIds=Fantasy
+
+        // Handle filters from tags
+        // We need to determine which section each tag belongs to
         if (query.includedTags?.length) {
-            const genreNames = query.includedTags
-                .filter(tag => tag.id && tag.label)
-                .map(tag => tag.id) // id is the genre name
-            
-            // Append each genre name separately
-            for (const genreName of genreNames) {
-                params.push(`genreIds=${encodeURIComponent(genreName)}`)
+            // Get all available tags to determine sections
+            const tagsResponse = await this.getSearchTags()
+
+            for (const tag of query.includedTags) {
+                // Find which section this tag belongs to
+                for (const section of tagsResponse) {
+                    const foundTag = section.tags.find(t => t.id === tag.id)
+                    if (foundTag) {
+                        if (section.id === 'genres') {
+                            params.push(`genreIds=${encodeURIComponent(tag.id)}`)
+                        } else if (section.id === 'status') {
+                            params.push(`status=${encodeURIComponent(tag.id)}`)
+                        } else if (section.id === 'format') {
+                            params.push(`format=${encodeURIComponent(tag.id)}`)
+                        }
+                        break
+                    }
+                }
             }
         }
-        
+
         // Add parameters for better results
         params.push('includeMeta=true')
         params.push('sort=latest')
         params.push('sortOrder=desc')
-        
+
         const queryString = params.join('&')
-        
+
         const request = createRequestObject({
             url: `${API_URL}/series?${queryString}`,
             method: 'GET'

@@ -98,22 +98,51 @@ export const parseMangaList = (data: any[]): PartialSourceManga[] => {
 }
 
 export const parseSearchTags = (data: any[]): TagSection[] => {
-    const genres: Tag[] = []
+    const tagSections: TagSection[] = []
 
+    // Parse genres from API
+    const genres: Tag[] = []
     for (const genre of data || []) {
         const genreName = genre.data?.name || ''
-        // Use genre name directly as ID since API expects genreIds=Action&genreIds=Fantasy
         genres.push(App.createTag({
             id: genreName,
             label: genreName
         }))
     }
 
-    return [
-        App.createTagSection({
+    if (genres.length > 0) {
+        tagSections.push(App.createTagSection({
             id: 'genres',
             label: 'Genres',
             tags: genres
-        })
+        }))
+    }
+
+    // Add status filter
+    const statuses: Tag[] = [
+        { id: 'ongoing', label: 'Ongoing' },
+        { id: 'completed', label: 'Completed' },
+        { id: 'hiatus', label: 'Hiatus' },
+        { id: 'cancelled', label: 'Cancelled' }
     ]
+    tagSections.push(App.createTagSection({
+        id: 'status',
+        label: 'Status',
+        tags: statuses.map(s => App.createTag(s))
+    }))
+
+    // Add format/type filter
+    const formats: Tag[] = [
+        { id: 'manga', label: 'Manga' },
+        { id: 'manhwa', label: 'Manhwa' },
+        { id: 'manhua', label: 'Manhua' },
+        { id: 'webtoon', label: 'Webtoon' }
+    ]
+    tagSections.push(App.createTagSection({
+        id: 'format',
+        label: 'Format',
+        tags: formats.map(f => App.createTag(f))
+    }))
+
+    return tagSections
 }
