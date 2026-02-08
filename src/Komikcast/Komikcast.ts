@@ -1,206 +1,299 @@
 import {
-    BadgeColor,
-    ContentRating,
-    SourceInfo,
-    SourceIntents,
+    Source,
+    Chapter,
     ChapterDetails,
-    PagedResults,
-    PartialSourceManga,
+    HomeSection,
     SearchRequest,
-    Request,
+    PagedResults,
+    HomeSectionType,
+    SourceInfo,
+    ContentRating,
+    BadgeColor,
+    SourceIntents,
     TagSection,
+    Request,
+    Response,
+    SourceManga
 } from '@paperback/types'
+import { createRequestObject } from './KomikcastHelper'
 import {
-    load as cheerioLoad,
-    CheerioAPI,
-    BasicAcceptedElems
-} from 'cheerio'
-import { AnyNode } from 'domhandler'
-import {
-    getExportVersion,
-    MangaStream
-} from '../MangaStream'
+    parseMangaDetails,
+    parseChapterList,
+    parseChapterDetails,
+    parseMangaList,
+    parseSearchTags
+} from './KomikcastParser'
 
-import {
-    getFilterTagsBySection,
-    getIncludedTagBySection
-} from '../MangaStreamHelper'
+const API_URL = 'https://be.komikcast.fit'
+const BASE_URL = 'https://v1.komikcast.fit'
 
-import { KomikcastParser } from './KomikcastParser'
-import { URLBuilder } from '../UrlBuilder'
-
-const DOMAIN = 'https://komikcast03.com'
+// Token from your curl request - might need to be dynamic/rotated
+const AUTH_TOKEN = 'oat_NTQwNjU.eVU0Tjc4aEhpNmlwcDJkNWlDSU9GT0w2VXJxR25UdFc5UnV0dHRGdzY1MDY1NjYyNw'
 
 export const KomikcastInfo: SourceInfo = {
-    version: getExportVersion('0.2.9'),
+    version: '4.0.0',
     name: 'Komikcast',
-    description: `Extension that pulls manga from ${DOMAIN}`,
-    author: 'NaufalJCT48',
-    authorWebsite: 'http://github.com/NaufalJCT48',
     icon: 'icon.png',
+    author: 'NaufalJCT48',
+    authorWebsite: 'https://github.com/naufaljct48',
+    description: 'Extension that pulls manga from Komikcast (API-based)',
     contentRating: ContentRating.MATURE,
-    websiteBaseURL: DOMAIN,
+    websiteBaseURL: BASE_URL,
+    sourceTags: [{ text: 'Indonesian', type: BadgeColor.GREY }],
     intents: SourceIntents.MANGA_CHAPTERS | SourceIntents.HOMEPAGE_SECTIONS | SourceIntents.CLOUDFLARE_BYPASS_REQUIRED | SourceIntents.SETTINGS_UI,
-    sourceTags: [
-        {
-            text: "Indonesia",
-            type: BadgeColor.GREY
-        },
-    ]
 }
 
-export class Komikcast extends MangaStream {
-    baseUrl: string = DOMAIN
-    override directoryPath = 'komik'
-    override usePostIds = false
-    override parser = new KomikcastParser()
+export class Komikcast extends Source {
+    requestManager = App.createRequestManager({
+        requestsPerSecond: 4,
+        requestTimeout: 15000,
+        interceptor: {
+            interceptRequest: async (request: Request): Promise<Request> => {
+                const isImage = /\.(png|jpe?g|webp|gif)$/i.test(request.url)
+                
+                if (isImage) {
+                    request.headers = {
+                        ...(request.headers ?? {}),
+                        'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+                        'Referer': `${BASE_URL}/`,
+                    }
+                } else {
+                    // API requests
+                    request.headers = {
+                        ...(request.headers ?? {}),
+                        'Accept': 'application/json, text/plain, */*',
+                        'Authorization': `Bearer ${AUTH_TOKEN}`,
+                        'Origin': BASE_URL,
+                        'Referer': `${BASE_URL}/`,
+                        'Sec-GPC': '1',
+                    }
+                }
+                return request
+            },
+            interceptResponse: async (response: Response): Promise<Response> => {
+                return response
+            }
+        }
+    })
 
-    override configureSections() {
-        this.homescreen_sections['latest_update'].selectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('div.utao')
-        this.homescreen_sections['latest_update'].titleSelectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('div.luf h3', element).text().trim()
-        this.homescreen_sections['latest_update'].subtitleSelectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('div.luf ul li:first-child a', element).text().trim().replace(/\s+/g, ' ')
-        this.homescreen_sections['latest_update'].getViewMoreItemsFunc = (page: string) => `daftar-komik/page/${page}/?sortby=update`
-    
-        // Enable and configure popular today section
-        this.homescreen_sections['popular_today'].enabled = true
-        this.homescreen_sections['popular_today'].selectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('.swiper-slide')
-        this.homescreen_sections['popular_today'].titleSelectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('div.title', element).text().trim()
-        this.homescreen_sections['popular_today'].subtitleSelectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('div.chapter', element).text().trim().replace(/\s+/g, ' ')
-        this.homescreen_sections['popular_today'].getViewMoreItemsFunc = (page: string) => `daftar-komik/page/${page}/?order=popular`
-    
-        // Disable other unused sections
-        this.homescreen_sections['new_titles'].enabled = false
-        this.homescreen_sections['top_alltime'].enabled = false
-        this.homescreen_sections['top_monthly'].enabled = false
-        this.homescreen_sections['top_weekly'].enabled = false
+    override async getMangaDetails(mangaId: string): Promise<SourceManga> {
+        const request = createRequestObject({
+            url: `${API_URL}/series/${mangaId}?includeMeta=true`,
+            method: 'GET'
+        })
+        
+        const response = await this.requestManager.schedule(request, 1)
+        const data = JSON.parse(response.data)
+        
+        if (data.status !== 200) {
+            throw new Error(`Failed to get manga details: ${data.message}`)
+        }
+        
+        return parseMangaDetails(data.data, mangaId)
+    }
+
+    override async getChapters(mangaId: string): Promise<Chapter[]> {
+        // Get chapters from separate endpoint
+        const request = createRequestObject({
+            url: `${API_URL}/series/${mangaId}/chapters`,
+            method: 'GET'
+        })
+        
+        const response = await this.requestManager.schedule(request, 1)
+        const data = JSON.parse(response.data)
+        
+        if (data.status !== 200) {
+            return []
+        }
+        
+        return parseChapterList(data.data, mangaId)
     }
 
     override async getChapterDetails(mangaId: string, chapterId: string): Promise<ChapterDetails> {
-        // First request to get chapter URL
-        const request = App.createRequest({
-            url: await this.getUsePostIds()
-                ? `${this.baseUrl}/?p=${mangaId}/`
-                : `${this.baseUrl}/${this.directoryPath}/${mangaId}/`,
-            method: 'GET'
-        });
-    
-        const response = await this.requestManager.schedule(request, 1);
-        this.checkResponseError(response);
-    
-        const $: CheerioAPI = cheerioLoad(response.data as string);
-        const chapterElement = $('.komik_info-chapters-item').filter((_, el) => {
-            return $('a.chapter-link-item', el).attr('href')?.includes(chapterId);
-        });
-    
-        if (!chapterElement.length) {
-            throw new Error(`Unable to fetch chapter: ${chapterId}`);
-        }
-    
-        const id = $('a.chapter-link-item', chapterElement).attr('href') ?? '';
-        if (!id) {
-            throw new Error(`Unable to fetch id for chapter: ${chapterId}`);
-        }
-    
-        // Second request to get chapter images
-        const _request = App.createRequest({
-            url: id,
-            method: 'GET'
-        });
-    
-        const _response = await this.requestManager.schedule(_request, 1);
-        this.checkResponseError(_response);
-    
-        const _$: CheerioAPI = cheerioLoad(_response.data as string);  // Fix this line
-        return this.parser.parseChapterDetails(_$, mangaId, chapterId);
-    }    
-
-    override async getSearchTags(): Promise<TagSection[]> {
-        const request = App.createRequest({
-            url: `${this.baseUrl}/daftar-komik/`,  // Updated URL
+        // chapterId is the chapter index (e.g., "148")
+        const request = createRequestObject({
+            url: `${API_URL}/series/${mangaId}/chapters/${chapterId}`,
             method: 'GET'
         })
-    
+        
         const response = await this.requestManager.schedule(request, 1)
-        this.checkResponseError(response)
-        const $ = cheerioLoad(response.data as string)
-    
-        return this.parser.parseTags($)
+        const data = JSON.parse(response.data)
+        
+        if (data.status !== 200) {
+            throw new Error(`Failed to get chapter details: ${data.message}`)
+        }
+        
+        return parseChapterDetails(data.data, mangaId, chapterId)
+    }
+
+    override async getHomePageSections(sectionCallback: (section: HomeSection) => void): Promise<void> {
+        const sections = [
+            {
+                request: createRequestObject({
+                    url: `${API_URL}/series?preset=banner&includeMeta=true`,
+                    method: 'GET'
+                }),
+                section: App.createHomeSection({
+                    id: 'featured',
+                    title: 'Featured',
+                    type: HomeSectionType.featured,
+                    containsMoreItems: false
+                })
+            },
+            {
+                request: createRequestObject({
+                    url: `${API_URL}/series?takeChapter=2&includeMeta=true&sort=latest&sortOrder=desc&take=12&page=1`,
+                    method: 'GET'
+                }),
+                section: App.createHomeSection({
+                    id: 'latest_update',
+                    title: 'Latest Update',
+                    type: HomeSectionType.singleRowNormal,
+                    containsMoreItems: true
+                })
+            },
+            {
+                request: createRequestObject({
+                    url: `${API_URL}/series/recommendations?take=10&page=1&method=all`,
+                    method: 'GET'
+                }),
+                section: App.createHomeSection({
+                    id: 'recommendations',
+                    title: 'Recommendations',
+                    type: HomeSectionType.singleRowNormal,
+                    containsMoreItems: true
+                })
+            }
+        ]
+
+        for (const item of sections) {
+            sectionCallback(item.section)
+            
+            try {
+                const response = await this.requestManager.schedule(item.request, 1)
+                const data = JSON.parse(response.data)
+                
+                if (data.status === 200 && data.data) {
+                    item.section.items = parseMangaList(data.data)
+                    sectionCallback(item.section)
+                }
+            } catch (error) {
+                console.log(`Error loading section ${item.section.id}:`, error)
+            }
+        }
+    }
+
+    override async getSearchTags(): Promise<TagSection[]> {
+        const request = createRequestObject({
+            url: `${API_URL}/genres`,
+            method: 'GET'
+        })
+        
+        const response = await this.requestManager.schedule(request, 1)
+        const data = JSON.parse(response.data)
+        
+        if (data.status !== 200) {
+            return []
+        }
+        
+        return parseSearchTags(data.data)
     }
 
     override async getSearchResults(query: SearchRequest, metadata: any): Promise<PagedResults> {
-        const page: number = metadata?.page ?? 1
-    
-        const request = await this.constructSearchRequest(page, query)
-        const response = await this.requestManager.schedule(request, 1)
-        this.checkResponseError(response)
-        const $ = cheerioLoad(response.data as string)
-        const results = await this.parser.parseSearchResults($, this)
-    
-        const manga: PartialSourceManga[] = []
-        for (const result of results) {
-            let mangaId: string = result.slug
-            if (await this.getUsePostIds()) {
-                mangaId = await this.slugToPostId(result.slug, result.path)
+        const page = metadata?.page ?? 1
+        const params = new URLSearchParams()
+        
+        params.append('page', page.toString())
+        params.append('take', '24')
+        
+        if (query.title) {
+            params.append('q', query.title)
+        }
+        
+        if (query.includedTags?.length) {
+            const genreIds = query.includedTags
+                .filter(tag => tag.id.startsWith('genre_'))
+                .map(tag => tag.id.replace('genre_', ''))
+            
+            if (genreIds.length) {
+                params.append('genreIds', genreIds.join(','))
             }
-    
-            manga.push(App.createPartialSourceManga({
-                mangaId,
-                image: result.image,
-                title: result.title,
-                subtitle: result.subtitle
-            }))
         }
-    
-        metadata = !this.parser.isLastPage($, 'view_more') ? { page: page + 1 } : undefined
-        return App.createPagedResults({
-            results: manga,
-            metadata
-        })
-    }
-    
-    override async constructSearchRequest(page: number, query: SearchRequest): Promise<Request> {
-        let urlBuilder: URLBuilder = new URLBuilder(this.baseUrl)
-            .addPathComponent(this.directoryPath)
-            .addQueryParameter('page', page.toString())
-    
-        if (query?.title) {
-            urlBuilder = urlBuilder.addQueryParameter('s', encodeURIComponent(query?.title.replace(/[’–][a-z]*/g, '') ?? ''))
-        } else {
-            urlBuilder = urlBuilder
-                .addQueryParameter('genre', getFilterTagsBySection('genres', query?.includedTags, true))
-                .addQueryParameter('genre', getFilterTagsBySection('genres', query?.excludedTags, false, await this.supportsTagExclusion()))
-                .addQueryParameter('status', getIncludedTagBySection('status', query?.includedTags))
-                .addQueryParameter('type', getIncludedTagBySection('type', query?.includedTags))
-                .addQueryParameter('order', getIncludedTagBySection('order', query?.includedTags))
-        }
-    
-        return App.createRequest({
-            url: urlBuilder.buildUrl({ addTrailingSlash: true, includeUndefinedParameters: false }),
+        
+        const request = createRequestObject({
+            url: `${API_URL}/series?${params.toString()}`,
             method: 'GET'
         })
-    }
-    convertTime(time: string): Date {
-        if (time.includes('ago') || time.includes('yang lalu')) {
-            const number = Number(time.replace(/[^0-9]/g, ''))
-            const date = new Date()
-            
-            if (time.includes('minutes') || time.includes('menit')) {
-                date.setMinutes(date.getMinutes() - number)
-            } else if (time.includes('hours') || time.includes('jam')) {
-                date.setHours(date.getHours() - number)
-            } else if (time.includes('days') || time.includes('hari')) {
-                date.setDate(date.getDate() - number)
-            } else if (time.includes('weeks') || time.includes('minggu')) {
-                date.setDate(date.getDate() - (number * 7))
-            } else if (time.includes('months') || time.includes('bulan')) {
-                date.setMonth(date.getMonth() - number)
-            } else if (time.includes('years') || time.includes('tahun')) {
-                date.setFullYear(date.getFullYear() - number)
-            }
-    
-            return date
+        
+        const response = await this.requestManager.schedule(request, 1)
+        const data = JSON.parse(response.data)
+        
+        if (data.status !== 200) {
+            return App.createPagedResults({
+                results: []
+            })
         }
-    
-        return new Date(time)
+        
+        const results = parseMangaList(data.data)
+        const hasMore = data.data.length >= 24
+        
+        return App.createPagedResults({
+            results,
+            metadata: hasMore ? { page: page + 1 } : undefined
+        })
+    }
+
+    override async getViewMoreItems(homepageSectionId: string, metadata: any): Promise<PagedResults> {
+        const page = metadata?.page ?? 1
+        let url = ''
+        
+        switch (homepageSectionId) {
+            case 'latest_update':
+                url = `${API_URL}/series?takeChapter=2&includeMeta=true&sort=latest&sortOrder=desc&take=24&page=${page}`
+                break
+            case 'recommendations':
+                url = `${API_URL}/series/recommendations?take=24&page=${page}&method=all`
+                break
+            default:
+                throw new Error(`View more not supported for section: ${homepageSectionId}`)
+        }
+        
+        const request = createRequestObject({
+            url,
+            method: 'GET'
+        })
+        
+        const response = await this.requestManager.schedule(request, 1)
+        const data = JSON.parse(response.data)
+        
+        if (data.status !== 200) {
+            return App.createPagedResults({
+                results: []
+            })
+        }
+        
+        const results = parseMangaList(data.data)
+        const hasMore = data.data.length >= 24
+        
+        return App.createPagedResults({
+            results,
+            metadata: hasMore ? { page: page + 1 } : undefined
+        })
+    }
+
+    override async getCloudflareBypassRequestAsync(): Promise<Request> {
+        return App.createRequest({
+            url: `${BASE_URL}/`,
+            method: 'GET',
+            headers: {
+                'referer': `${BASE_URL}/`,
+                'origin': `${BASE_URL}/`,
+                'user-agent': await this.requestManager.getDefaultUserAgent()
+            }
+        })
+    }
+
+    override getMangaShareUrl(mangaId: string): string {
+        return `${BASE_URL}/series/${mangaId}`
     }
 }
