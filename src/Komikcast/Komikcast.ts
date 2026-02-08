@@ -31,7 +31,7 @@ const BASE_URL = 'https://v1.komikcast.fit'
 const AUTH_TOKEN = 'oat_NTQwNjU.eVU0Tjc4aEhpNmlwcDJkNWlDSU9GT0w2VXJxR25UdFc5UnV0dHRGdzY1MDY1NjYyNw'
 
 export const KomikcastInfo: SourceInfo = {
-    version: '4.0.3',
+    version: '4.0.4',
     name: 'Komikcast',
     icon: 'icon.png',
     author: 'NaufalJCT48',
@@ -201,17 +201,17 @@ export class Komikcast extends Source {
 
     override async getSearchResults(query: SearchRequest, metadata: any): Promise<PagedResults> {
         const page = metadata?.page ?? 1
-        const params = new URLSearchParams()
+        const params: string[] = []
         
-        params.append('page', page.toString())
-        params.append('take', '24')
+        params.push(`page=${page}`)
+        params.push('take=24')
         
         // Handle text search with filter parameter
         // Format: filter=title=like="solo",nativeTitle=like="solo"
         if (query.title) {
-            const searchTerm = query.title
+            const searchTerm = encodeURIComponent(query.title)
             const filterParam = `title=like="${searchTerm}",nativeTitle=like="${searchTerm}"`
-            params.append('filter', filterParam)
+            params.push(`filter=${filterParam}`)
         }
         
         // Handle genre filters - API expects genre name (not ID)
@@ -223,17 +223,19 @@ export class Komikcast extends Source {
             
             // Append each genre name separately
             for (const genreName of genreNames) {
-                params.append('genreIds', genreName)
+                params.push(`genreIds=${encodeURIComponent(genreName)}`)
             }
         }
         
         // Add parameters for better results
-        params.append('includeMeta', 'true')
-        params.append('sort', 'latest')
-        params.append('sortOrder', 'desc')
+        params.push('includeMeta=true')
+        params.push('sort=latest')
+        params.push('sortOrder=desc')
+        
+        const queryString = params.join('&')
         
         const request = createRequestObject({
-            url: `${API_URL}/series?${params.toString()}`,
+            url: `${API_URL}/series?${queryString}`,
             method: 'GET'
         })
         
