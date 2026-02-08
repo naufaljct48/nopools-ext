@@ -820,19 +820,23 @@ var _Sources = (() => {
     }
     let image = "";
     const imageMatch = html.match(/<[^>]*itemprop=["']image["'][^>]*>.*?<img[^>]*src=["']([^"']+)["'][^>]*>/is);
-    if (imageMatch) image = imageMatch[1];
-    if (!image) image = extractText(html, /<img[^>]*class=["'][^"']*wp-post-image[^"']*["'][^>]*src=["']([^"']+)["']/i);
+    if (imageMatch?.[1]) image = imageMatch[1];
+    if (!image) {
+      const wpImageMatch = html.match(/<img[^>]*class=["'][^"']*wp-post-image[^"']*["'][^>]*src=["']([^"']+)["']/i);
+      if (wpImageMatch?.[1]) image = wpImageMatch[1];
+    }
     image = normalizeUrl(image);
-    const statusText = extractText(html, /<[^>]*class=["'][^"']*bg-accent[^"']*["'][^>]*>(.*?)<\/[^>]*>/i).toLowerCase();
+    const statusMatch = html.match(/<[^>]*class=["'][^"']*bg-accent[^"']*["'][^>]*>(.*?)<\/[^>]*>/i);
+    const statusText = (statusMatch?.[1] ?? "").toLowerCase();
     const status = statusText.includes("ongoing") ? "Ongoing" : statusText.includes("completed") ? "Completed" : "Unknown";
     let author = "Unknown";
     const authorMatch = html.match(/<h4[^>]*>(.*?)author(.*?)<\/h4>.*?<[^>]*class=["'][^"']*inline[^"']*["'][^>]*>(.*?)<\/[^>]*>/is);
-    if (authorMatch) author = authorMatch[3].replace(/<[^>]*>/g, "").trim() || "Unknown";
+    if (authorMatch?.[3]) author = authorMatch[3].replace(/<[^>]*>/g, "").trim() || "Unknown";
     const arrayTags = [];
     const genreMatches = html.matchAll(/<a[^>]*itemprop=["']genre["'][^>]*>.*?<span[^>]*>(.*?)<\/span>.*?href=["'][^"']*\/genre\/([^"']+)["']/gis);
     for (const match of genreMatches) {
-      const label = match[1].replace(/<[^>]*>/g, "").trim();
-      const id = match[2];
+      const label = (match[1] ?? "").replace(/<[^>]*>/g, "").trim();
+      const id = match[2] ?? "";
       if (id && label) arrayTags.push({ id, label: decodeHTMLEntity(label) });
     }
     const tagSections = [];
@@ -864,9 +868,9 @@ var _Sources = (() => {
     let sortingIndex = 0;
     const chapterMatches = html.matchAll(/<div[^>]*data-chapter-number=["']([^"']+)["'][^>]*>(.*?)<\/div>\s*<\/div>/gis);
     for (const match of chapterMatches) {
-      const chapNumStr = match[1];
+      const chapNumStr = match[1] ?? "0";
       const chapNum = parseFloat(chapNumStr) || 0;
-      const chapterHtml = match[2];
+      const chapterHtml = match[2] ?? "";
       const linkMatch = chapterHtml.match(/<a[^>]*href=["'][^"']*\/chapter\/([^"\/]+)["']/i);
       const chapterId = linkMatch?.[1] ?? "";
       if (!chapterId) continue;
@@ -889,7 +893,7 @@ var _Sources = (() => {
     const pages = [];
     const sectionMatch = html.match(/<section[^>]*data-image-data[^>]*>(.*?)<\/section>/is);
     if (sectionMatch) {
-      const sectionHtml = sectionMatch[1];
+      const sectionHtml = sectionMatch[1] ?? "";
       const imgMatches = sectionHtml.matchAll(/<img[^>]*src=["']([^"']+)["'][^>]*>/gi);
       for (const match of imgMatches) {
         const src = match[1];
@@ -903,23 +907,58 @@ var _Sources = (() => {
   };
   var parseMangaList = (html) => {
     const results = [];
-    const slideMatches = html.matchAll(/<div[^>]*class=["'][^"']*swiper-slide[^"']*["'][^>]*>(.*?)<\/div>\s*<\/div>/gis);
-    for (const match of slideMatches) {
-      const slideHtml = match[1];
-      const linkMatch = slideHtml.match(/<a[^>]*href=["'][^"']*\/manga\/([^"\/]+)["'][^>]*title=["']([^"']+)["']/i);
-      if (!linkMatch) continue;
-      const mangaId = linkMatch[1];
-      const title = linkMatch[2];
-      const imgMatch = slideHtml.match(/<img[^>]*src=["']([^"']+)["']/i);
-      const image = imgMatch ? normalizeUrl(imgMatch[1]) : "";
-      const subtitle = extractText(slideHtml, /<[^>]*class=["'][^"']*text-sm\.text-gray-300[^"']*["'][^>]*>(.*?)<\/[^>]*>/is);
-      if (title) {
+    const itemMatches = html.matchAll(/<div[^>]*overflow-hidden[^>]*>.*?<a[^>]*href=["'](?:https?:\/\/[^\/]+)?\/manga\/([^"\/]+)["'][^>]*>.*?<img[^>]*class=["'][^"']*wp-post-image[^"']*["'][^>]*src=["']([^"']+)["'][^>]*alt=["']([^"']*)["'][^>]*>.*?<\/a>.*?<h1[^>]*class=["'][^"']*text-\[[^"']*\][^"']*["'][^>]*>([^<]+)<\/h1>/gis);
+    for (const match of itemMatches) {
+      const mangaId = match[1] ?? "";
+      const image = match[2] ?? "";
+      const titleFromAlt = match[3] ?? "";
+      const titleFromH1 = match[4] ?? "";
+      if (mangaId) {
         results.push(App.createPartialSourceManga({
           mangaId,
-          image,
-          title: decodeHTMLEntity(title),
-          subtitle: subtitle ? decodeHTMLEntity(subtitle.replace(/<[^>]*>/g, "")) : ""
+          image: normalizeUrl(image),
+          title: decodeHTMLEntity(titleFromH1.trim() || titleFromAlt || mangaId),
+          subtitle: ""
         }));
+      }
+    }
+    if (results.length === 0) {
+      const imgMatches = html.matchAll(/<img[^>]*class=["'][^"']*wp-post-image[^"']*["'][^>]*src=["']([^"']+)["'][^>]*alt=["']([^"']*)["'][^>]*>/gi);
+      for (const imgMatch of imgMatches) {
+        const image = imgMatch[1] ?? "";
+        const titleFromAlt = imgMatch[2] ?? "";
+        if (image) {
+          const nearbyContext = html.substring(
+            Math.max(0, html.lastIndexOf(image) - 1e3),
+            html.indexOf(image) + image.length + 500
+          );
+          const linkMatch = nearbyContext.match(/<a[^>]*href=["'](?:https?:\/\/[^\/]+)?\/manga\/([^"\/]+)["']/i);
+          const mangaId = linkMatch?.[1] ?? "";
+          if (mangaId) {
+            results.push(App.createPartialSourceManga({
+              mangaId,
+              image: normalizeUrl(image),
+              title: decodeHTMLEntity(titleFromAlt || mangaId),
+              subtitle: ""
+            }));
+          }
+        }
+      }
+    }
+    if (results.length === 0) {
+      const cardMatches = html.matchAll(/<a[^>]*href=["'](?:https?:\/\/[^\/]+)?\/manga\/([^"\/]+)["'][^>]*>\s*<div[^>]*>\s*<img[^>]*src=["']([^"']+)["'][^>]*class=["'][^"']*wp-post-image[^"']*["'][^>]*alt=["']([^"']*)["'][^>]*>/gis);
+      for (const match of cardMatches) {
+        const mangaId = match[1] ?? "";
+        const image = match[2] ?? "";
+        const titleFromAlt = match[3] ?? "";
+        if (mangaId) {
+          results.push(App.createPartialSourceManga({
+            mangaId,
+            image: normalizeUrl(image),
+            title: decodeHTMLEntity(titleFromAlt || mangaId),
+            subtitle: ""
+          }));
+        }
       }
     }
     return results;
@@ -929,8 +968,8 @@ var _Sources = (() => {
     const types = [];
     const genreMatches = html.matchAll(/<button[^>]*data-genre=["']([^"']+)["'][^>]*>(.*?)<\/button>/gis);
     for (const match of genreMatches) {
-      const id = match[1];
-      const label = match[2].replace(/<[^>]*>/g, "").trim();
+      const id = match[1] ?? "";
+      const label = (match[2] ?? "").replace(/<[^>]*>/g, "").trim();
       if (id && label) genres.push({ id, label: decodeHTMLEntity(label) });
     }
     if (genres.length === 0) {
@@ -947,8 +986,8 @@ var _Sources = (() => {
     }
     const typeMatches = html.matchAll(/<button[^>]*data-type=["']([^"']+)["'][^>]*>(.*?)<\/button>/gis);
     for (const match of typeMatches) {
-      const id = match[1];
-      const label = match[2].replace(/<[^>]*>/g, "").trim();
+      const id = match[1] ?? "";
+      const label = (match[2] ?? "").replace(/<[^>]*>/g, "").trim();
       if (id && label && !types.find((t) => t.id === id)) types.push({ id, label: decodeHTMLEntity(label) });
     }
     if (types.length === 0) {
@@ -964,7 +1003,7 @@ var _Sources = (() => {
   // src/Kiryuu/Kiryuu.ts
   var WEBSITE_BASE2 = "https://kiryuu03.com";
   var KiryuuInfo = {
-    version: "2.1.7",
+    version: "2.2.0",
     name: "Kiryuu",
     icon: "icon.png",
     author: "NaufalJCT48",
@@ -1038,26 +1077,37 @@ var _Sources = (() => {
       const sections = [
         {
           request: createRequestObject({
-            url: WEBSITE_BASE2
-          }),
-          section: App.createHomeSection({
-            id: "popular_today",
-            title: "Popular Today",
-            type: import_types.HomeSectionType.singleRowNormal,
-            containsMoreItems: false
-          })
-        },
-        {
-          request: createRequestObject({
             url: `${WEBSITE_BASE2}/wp-admin/admin-ajax.php?action=advanced_search`,
             method: "POST",
-            data: "inclusion=OR&exclusion=OR&page=1&genre=[]&genre_exclude=[]&author=[]&artist=[]&project=0&type=[]&status=[]&order=desc&orderby=updated&query=",
+            data: "inclusion=OR&exclusion=OR&page=1&genre=[]&genre_exclude=[]&author=[]&artist=[]&project=0&type=[]&status=[]&order=desc&orderby=popular&query=",
             headers: {
               "content-type": "application/x-www-form-urlencoded",
               "origin": WEBSITE_BASE2,
               "referer": `${WEBSITE_BASE2}/advanced-search/`,
               "x-requested-with": "XMLHttpRequest"
             }
+          }),
+          section: App.createHomeSection({
+            id: "featured",
+            title: "Featured",
+            type: import_types.HomeSectionType.featured,
+            containsMoreItems: false
+          })
+        },
+        {
+          request: createRequestObject({
+            url: `${WEBSITE_BASE2}/project/`
+          }),
+          section: App.createHomeSection({
+            id: "project_updates",
+            title: "Project Updates",
+            type: import_types.HomeSectionType.singleRowNormal,
+            containsMoreItems: true
+          })
+        },
+        {
+          request: createRequestObject({
+            url: `${WEBSITE_BASE2}/latest/`
           }),
           section: App.createHomeSection({
             id: "latest_update",
