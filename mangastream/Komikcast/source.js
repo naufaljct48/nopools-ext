@@ -853,7 +853,7 @@ var _Sources = (() => {
     for (const genre of data || []) {
       const genreName = genre.data?.name || "";
       genres.push(App.createTag({
-        id: `genre_${genreName}`,
+        id: genreName,
         label: genreName
       }));
     }
@@ -871,7 +871,7 @@ var _Sources = (() => {
   var BASE_URL2 = "https://v1.komikcast.fit";
   var AUTH_TOKEN2 = "oat_NTQwNjU.eVU0Tjc4aEhpNmlwcDJkNWlDSU9GT0w2VXJxR25UdFc5UnV0dHRGdzY1MDY1NjYyNw";
   var KomikcastInfo = {
-    version: "4.0.2",
+    version: "4.0.3",
     name: "Komikcast",
     icon: "icon.png",
     author: "NaufalJCT48",
@@ -1022,12 +1022,14 @@ var _Sources = (() => {
       params.append("page", page.toString());
       params.append("take", "24");
       if (query.title) {
-        params.append("q", query.title);
+        const searchTerm = query.title;
+        const filterParam = `title=like="${searchTerm}",nativeTitle=like="${searchTerm}"`;
+        params.append("filter", filterParam);
       }
       if (query.includedTags?.length) {
-        const genreIds = query.includedTags.filter((tag) => tag.id.startsWith("genre_")).map((tag) => tag.id.replace("genre_", ""));
-        for (const genreId of genreIds) {
-          params.append("genreIds", genreId);
+        const genreNames = query.includedTags.filter((tag) => tag.id && tag.label).map((tag) => tag.id);
+        for (const genreName of genreNames) {
+          params.append("genreIds", genreName);
         }
       }
       params.append("includeMeta", "true");
