@@ -31,7 +31,7 @@ const BASE_URL = 'https://v1.komikcast.fit'
 const AUTH_TOKEN = 'oat_NTQwNjU.eVU0Tjc4aEhpNmlwcDJkNWlDSU9GT0w2VXJxR25UdFc5UnV0dHRGdzY1MDY1NjYyNw'
 
 export const KomikcastInfo: SourceInfo = {
-    version: '4.0.2',
+    version: '4.0.3',
     name: 'Komikcast',
     icon: 'icon.png',
     author: 'NaufalJCT48',
@@ -206,19 +206,24 @@ export class Komikcast extends Source {
         params.append('page', page.toString())
         params.append('take', '24')
         
+        // Handle text search with filter parameter
+        // Format: filter=title=like="solo",nativeTitle=like="solo"
         if (query.title) {
-            params.append('q', query.title)
+            const searchTerm = query.title
+            const filterParam = `title=like="${searchTerm}",nativeTitle=like="${searchTerm}"`
+            params.append('filter', filterParam)
         }
         
-        // Handle genre filters - API expects multiple genreIds parameters
+        // Handle genre filters - API expects genre name (not ID)
+        // Format: genreIds=Action&genreIds=Fantasy
         if (query.includedTags?.length) {
-            const genreIds = query.includedTags
-                .filter(tag => tag.id.startsWith('genre_'))
-                .map(tag => tag.id.replace('genre_', ''))
+            const genreNames = query.includedTags
+                .filter(tag => tag.id && tag.label)
+                .map(tag => tag.id) // id is the genre name
             
-            // Append each genreId separately (API expects genreIds=Action&genreIds=Fantasy)
-            for (const genreId of genreIds) {
-                params.append('genreIds', genreId)
+            // Append each genre name separately
+            for (const genreName of genreNames) {
+                params.append('genreIds', genreName)
             }
         }
         

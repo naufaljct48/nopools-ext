@@ -102,9 +102,9 @@ export const parseSearchTags = (data: any[]): TagSection[] => {
 
     for (const genre of data || []) {
         const genreName = genre.data?.name || ''
-        // Use genre name as ID since API expects genreIds=Action&genreIds=Fantasy
+        // Use genre name directly as ID since API expects genreIds=Action&genreIds=Fantasy
         genres.push(App.createTag({
-            id: `genre_${genreName}`,
+            id: genreName,
             label: genreName
         }))
     }
