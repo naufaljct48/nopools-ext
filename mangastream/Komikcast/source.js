@@ -849,6 +849,7 @@ var _Sources = (() => {
     return results;
   };
   var parseSearchTags = (data) => {
+    const tagSections = [];
     const genres = [];
     for (const genre of data || []) {
       const genreName = genre.data?.name || "";
@@ -857,13 +858,36 @@ var _Sources = (() => {
         label: genreName
       }));
     }
-    return [
-      App.createTagSection({
+    if (genres.length > 0) {
+      tagSections.push(App.createTagSection({
         id: "genres",
         label: "Genres",
         tags: genres
-      })
+      }));
+    }
+    const statuses = [
+      { id: "ongoing", label: "Ongoing" },
+      { id: "completed", label: "Completed" },
+      { id: "hiatus", label: "Hiatus" },
+      { id: "cancelled", label: "Cancelled" }
     ];
+    tagSections.push(App.createTagSection({
+      id: "status",
+      label: "Status",
+      tags: statuses.map((s) => App.createTag(s))
+    }));
+    const formats = [
+      { id: "manga", label: "Manga" },
+      { id: "manhwa", label: "Manhwa" },
+      { id: "manhua", label: "Manhua" },
+      { id: "webtoon", label: "Webtoon" }
+    ];
+    tagSections.push(App.createTagSection({
+      id: "format",
+      label: "Format",
+      tags: formats.map((f) => App.createTag(f))
+    }));
+    return tagSections;
   };
 
   // src/Komikcast/Komikcast.ts
@@ -871,7 +895,7 @@ var _Sources = (() => {
   var BASE_URL2 = "https://v1.komikcast.fit";
   var AUTH_TOKEN2 = "oat_NTQwNjU.eVU0Tjc4aEhpNmlwcDJkNWlDSU9GT0w2VXJxR25UdFc5UnV0dHRGdzY1MDY1NjYyNw";
   var KomikcastInfo = {
-    version: "4.0.4",
+    version: "4.0.5",
     name: "Komikcast",
     icon: "icon.png",
     author: "NaufalJCT48",
@@ -1027,9 +1051,21 @@ var _Sources = (() => {
         params.push(`filter=${filterParam}`);
       }
       if (query.includedTags?.length) {
-        const genreNames = query.includedTags.filter((tag) => tag.id && tag.label).map((tag) => tag.id);
-        for (const genreName of genreNames) {
-          params.push(`genreIds=${encodeURIComponent(genreName)}`);
+        const tagsResponse = await this.getSearchTags();
+        for (const tag of query.includedTags) {
+          for (const section of tagsResponse) {
+            const foundTag = section.tags.find((t) => t.id === tag.id);
+            if (foundTag) {
+              if (section.id === "genres") {
+                params.push(`genreIds=${encodeURIComponent(tag.id)}`);
+              } else if (section.id === "status") {
+                params.push(`status=${encodeURIComponent(tag.id)}`);
+              } else if (section.id === "format") {
+                params.push(`format=${encodeURIComponent(tag.id)}`);
+              }
+              break;
+            }
+          }
         }
       }
       params.push("includeMeta=true");
