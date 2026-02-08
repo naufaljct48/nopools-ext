@@ -78,11 +78,19 @@ export const parseMangaList = (data: any[]): PartialSourceManga[] => {
         const chapters = item.chapters || []
         const latestChapter = chapters[0]
         
+        // Use latest chapter number if available, otherwise show total chapters
+        let subtitle = ''
+        if (latestChapter?.data?.index) {
+            subtitle = `Ch. ${latestChapter.data.index}`
+        } else if (mangaData.totalChapters) {
+            subtitle = `${mangaData.totalChapters} Chapters`
+        }
+        
         results.push(App.createPartialSourceManga({
             mangaId: mangaData.slug || item.id.toString(),
             image: mangaData.coverImage || '',
             title: mangaData.title || '',
-            subtitle: latestChapter?.data?.index ? `Ch. ${latestChapter.data.index}` : ''
+            subtitle
         }))
     }
     

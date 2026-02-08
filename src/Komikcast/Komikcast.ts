@@ -31,7 +31,7 @@ const BASE_URL = 'https://v1.komikcast.fit'
 const AUTH_TOKEN = 'oat_NTQwNjU.eVU0Tjc4aEhpNmlwcDJkNWlDSU9GT0w2VXJxR25UdFc5UnV0dHRGdzY1MDY1NjYyNw'
 
 export const KomikcastInfo: SourceInfo = {
-    version: '4.0.0',
+    version: '4.0.1',
     name: 'Komikcast',
     icon: 'icon.png',
     author: 'NaufalJCT48',
@@ -210,15 +210,22 @@ export class Komikcast extends Source {
             params.append('q', query.title)
         }
         
+        // Handle genre filters - API expects multiple genreIds parameters
         if (query.includedTags?.length) {
             const genreIds = query.includedTags
                 .filter(tag => tag.id.startsWith('genre_'))
                 .map(tag => tag.id.replace('genre_', ''))
             
-            if (genreIds.length) {
-                params.append('genreIds', genreIds.join(','))
+            // Append each genreId separately (API expects genreIds=Action&genreIds=Fantasy)
+            for (const genreId of genreIds) {
+                params.append('genreIds', genreId)
             }
         }
+        
+        // Add parameters for better results
+        params.append('includeMeta', 'true')
+        params.append('sort', 'latest')
+        params.append('sortOrder', 'desc')
         
         const request = createRequestObject({
             url: `${API_URL}/series?${params.toString()}`,
