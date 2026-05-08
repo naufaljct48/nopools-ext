@@ -738,15 +738,16 @@ var _Sources = (() => {
   // src/WestManga/WestMangaHelper.ts
   var WEBSITE_BASE = "https://westmanga.co";
   var isApiUrl = (url) => /data\.mantweh\.online\/api/i.test(url);
-  var generateSignature = () => {
+  var generateSignature = (urlPath, method, timestamp) => {
     try {
       const crypto = __require("crypto");
-      return crypto.randomBytes(32).toString("hex");
+      const ACCESS_KEY = "WM_WEB_FRONT_END";
+      const SECRET_KEY = "xxxoidj";
+      const message = "wm-api-request";
+      const key = timestamp + method + urlPath + ACCESS_KEY + SECRET_KEY;
+      return crypto.createHmac("sha256", key).update(message).digest("hex");
     } catch (e) {
-      const chars = "abcdef0123456789";
-      let out = "";
-      for (let i = 0; i < 64; i++) out += chars[Math.floor(Math.random() * chars.length)];
-      return out;
+      return "";
     }
   };
   var createRequestObject = (requestObj) => {
@@ -766,9 +767,12 @@ var _Sources = (() => {
     };
     if (api) {
       const now = Math.floor(Date.now() / 1e3).toString();
+      const method = requestObj.method?.toUpperCase() || "GET";
+      const urlObj = new URL(url);
+      const urlPath = urlObj.pathname;
       defaultHeaders["x-wm-accses-key"] = "WM_WEB_FRONT_END";
       defaultHeaders["x-wm-request-time"] = now;
-      defaultHeaders["x-wm-request-signature"] = generateSignature();
+      defaultHeaders["x-wm-request-signature"] = generateSignature(urlPath, method, now);
     }
     const extraHeadersObj = requestObj.headers ?? {};
     const extraHeaders = {};
