@@ -26,8 +26,41 @@ import {
 
 const WEBSITE_BASE = 'https://v5.kiryuu.to'
 
+const getSearchNonce = async (requestManager: any): Promise<string> => {
+    const request = createRequestObject({
+        url: `${WEBSITE_BASE}/wp-admin/admin-ajax.php?type=search_form&action=get_nonce`,
+        headers: {
+            'hx-request': 'true',
+            'referer': `${WEBSITE_BASE}/advanced-search/`
+        }
+    })
+    const response = await requestManager.schedule(request, 1)
+    const nonce = String(response.data ?? '').match(/name=['"]search_nonce['"]\s+value=['"]([^'"]+)['"]/)?.[1] ?? ''
+    if (!nonce) throw new Error('Failed to get Kiryuu search nonce')
+    return nonce
+}
+
+const createAdvancedSearchBody = (nonce: string, page: number, query: string, genres: string[], types: string[], statuses: string[], orderBy: string): string => {
+    return [
+        `search_nonce=${encodeURIComponent(nonce)}`,
+        'inclusion=OR',
+        'exclusion=OR',
+        `page=${page}`,
+        `genre=${encodeURIComponent(JSON.stringify(genres))}`,
+        `genre_exclude=${encodeURIComponent(JSON.stringify([]))}`,
+        `author=${encodeURIComponent(JSON.stringify([]))}`,
+        `artist=${encodeURIComponent(JSON.stringify([]))}`,
+        'project=0',
+        `type=${encodeURIComponent(JSON.stringify(types))}`,
+        `status=${encodeURIComponent(JSON.stringify(statuses))}`,
+        'order=desc',
+        `orderby=${encodeURIComponent(orderBy)}`,
+        `query=${encodeURIComponent(query)}`
+    ].join('&')
+}
+
 export const KiryuuInfo: SourceInfo = {
-    version: '2.2.2',
+    version: '2.2.3',
     name: 'Kiryuu',
     icon: 'icon.png',
     author: 'NaufalJCT48',
@@ -75,39 +108,6 @@ export class Kiryuu extends Source {
         return parseMangaDetails(response.data as string, mangaId)
     }
 
-    private async getSearchNonce(): Promise<string> {
-        const request = createRequestObject({
-            url: `${WEBSITE_BASE}/wp-admin/admin-ajax.php?type=search_form&action=get_nonce`,
-            headers: {
-                'hx-request': 'true',
-                'referer': `${WEBSITE_BASE}/advanced-search/`
-            }
-        })
-        const response = await this.requestManager.schedule(request, 1)
-        const nonce = String(response.data ?? '').match(/name=['"]search_nonce['"]\s+value=['"]([^'"]+)['"]/)?.[1] ?? ''
-        if (!nonce) throw new Error('Failed to get Kiryuu search nonce')
-        return nonce
-    }
-
-    private createAdvancedSearchBody(nonce: string, page: number, query: string, genres: string[], types: string[], statuses: string[], orderBy: string): string {
-        return [
-            `search_nonce=${encodeURIComponent(nonce)}`,
-            'inclusion=OR',
-            'exclusion=OR',
-            `page=${page}`,
-            `genre=${encodeURIComponent(JSON.stringify(genres))}`,
-            `genre_exclude=${encodeURIComponent(JSON.stringify([]))}`,
-            `author=${encodeURIComponent(JSON.stringify([]))}`,
-            `artist=${encodeURIComponent(JSON.stringify([]))}`,
-            'project=0',
-            `type=${encodeURIComponent(JSON.stringify(types))}`,
-            `status=${encodeURIComponent(JSON.stringify(statuses))}`,
-            'order=desc',
-            `orderby=${encodeURIComponent(orderBy)}`,
-            `query=${encodeURIComponent(query)}`
-        ].join('&')
-    }
-
     override async getChapters(mangaId: string): Promise<Chapter[]> {
         const detailsRequest = createRequestObject({
             url: `${WEBSITE_BASE}/manga/${mangaId}/`
@@ -136,13 +136,13 @@ export class Kiryuu extends Source {
     }
 
     override async getHomePageSections(sectionCallback: (section: HomeSection) => void): Promise<void> {
-        const nonce = await this.getSearchNonce()
+        const nonce = await getSearchNonce(this.requestManager)
         const sections = [
             {
                 request: createRequestObject({
                     url: `${WEBSITE_BASE}/wp-admin/admin-ajax.php?action=advanced_search`,
                     method: 'POST',
-                    data: this.createAdvancedSearchBody(nonce, 1, '', [], [], [], 'popular'),
+                    data: createAdvancedSearchBody(nonce, 1, '', [], [], [], 'popular'),
                     headers: {
                         'content-type': 'application/x-www-form-urlencoded',
                         'origin': WEBSITE_BASE,
@@ -213,11 +213,11 @@ export class Kiryuu extends Source {
             }
         }
 
-        const nonce = await this.getSearchNonce()
+        const nonce = await getSearchNonce(this.requestManager)
         const request = createRequestObject({
             url: `${WEBSITE_BASE}/wp-admin/admin-ajax.php?action=advanced_search`,
             method: 'POST',
-            data: this.createAdvancedSearchBody(nonce, page, searchTerm, genreList, typeList, statusList, 'updated'),
+            data: createAdvancedSearchBody(nonce, page, searchTerm, genreList, typeList, statusList, 'updated'),
             headers: {
                 'content-type': 'application/x-www-form-urlencoded',
                 'origin': WEBSITE_BASE,
