@@ -16232,8 +16232,18 @@ var _Sources = (() => {
       `query=${encodeURIComponent(query)}`
     ].join("&");
   };
+  var getIncludedTagsByPrefix = (query, prefix) => {
+    const tags = query?.includedTags;
+    if (!Array.isArray(tags)) return [];
+    const results = [];
+    for (const tag of tags) {
+      const value = String(tag?.id ?? "");
+      if (value.startsWith(prefix)) results.push(value.replace(prefix, ""));
+    }
+    return results;
+  };
   var KiryuuInfo = {
-    version: "2.2.5",
+    version: "2.2.6",
     name: "Kiryuu",
     icon: "icon.png",
     author: "NaufalJCT48",
@@ -16312,6 +16322,17 @@ var _Sources = (() => {
       const sections = [
         {
           request: createRequestObject({
+            url: `${WEBSITE_BASE2}/latest/`
+          }),
+          section: App.createHomeSection({
+            id: "featured",
+            title: "Featured",
+            type: import_types2.HomeSectionType.featured,
+            containsMoreItems: false
+          })
+        },
+        {
+          request: createRequestObject({
             url: `${WEBSITE_BASE2}/project/`
           }),
           section: App.createHomeSection({
@@ -16333,65 +16354,27 @@ var _Sources = (() => {
           })
         }
       ];
-      try {
-        const nonce = await getSearchNonce(this.requestManager);
-        sections.unshift({
-          request: createRequestObject({
-            url: `${WEBSITE_BASE2}/wp-admin/admin-ajax.php?action=advanced_search`,
-            method: "POST",
-            data: createAdvancedSearchBody(nonce, 1, "", [], [], [], "popular"),
-            headers: {
-              "content-type": "application/x-www-form-urlencoded",
-              "origin": WEBSITE_BASE2,
-              "referer": `${WEBSITE_BASE2}/advanced-search/`,
-              "x-requested-with": "XMLHttpRequest"
-            }
-          }),
-          section: App.createHomeSection({
-            id: "featured",
-            title: "Featured",
-            type: import_types2.HomeSectionType.featured,
-            containsMoreItems: false
-          })
-        });
-      } catch (e) {
-      }
       for (const item of sections) {
         sectionCallback(item.section);
-        try {
-          const response = await this.requestManager.schedule(item.request, 1);
-          item.section.items = parseMangaList(response.data);
-          sectionCallback(item.section);
-        } catch (e) {
-        }
+        const response = await this.requestManager.schedule(item.request, 1);
+        const parsedItems = parseMangaList(response.data);
+        item.section.items = item.section.id === "featured" ? parsedItems.slice(0, 12) : parsedItems;
+        sectionCallback(item.section);
       }
     }
     async getSearchTags() {
-      try {
-        const request = createRequestObject({
-          url: `${WEBSITE_BASE2}/advanced-search/`
-        });
-        const response = await this.requestManager.schedule(request, 1);
-        return parseSearchTags(response.data);
-      } catch (e) {
-        return parseSearchTags("");
-      }
+      const request = createRequestObject({
+        url: `${WEBSITE_BASE2}/advanced-search/`
+      });
+      const response = await this.requestManager.schedule(request, 1);
+      return parseSearchTags(response.data);
     }
     async getSearchResults(query, metadata) {
       const page = metadata?.page ?? 1;
       const searchTerm = query.title?.trim() ?? "";
-      const includedTags = query?.includedTags;
-      const genreList = [];
-      const typeList = [];
-      const statusList = [];
-      if (Array.isArray(includedTags) && includedTags.length > 0) {
-        for (const tag of includedTags) {
-          const value = String(tag?.id ?? "");
-          if (value.startsWith("genre:")) genreList.push(value.replace(/^genre:/, ""));
-          else if (value.startsWith("type:")) typeList.push(value.replace(/^type:/, ""));
-          else if (value.startsWith("status:")) statusList.push(value.replace(/^status:/, ""));
-        }
-      }
+      const genreList = getIncludedTagsByPrefix(query, "genre:");
+      const typeList = getIncludedTagsByPrefix(query, "type:");
+      const statusList = getIncludedTagsByPrefix(query, "status:");
       const nonce = await getSearchNonce(this.requestManager);
       const request = createRequestObject({
         url: `${WEBSITE_BASE2}/wp-admin/admin-ajax.php?action=advanced_search`,
