@@ -24,10 +24,10 @@ import {
     parseSearchTags
 } from './KiryuuParser'
 
-const WEBSITE_BASE = 'https://kiryuu03.com'
+const WEBSITE_BASE = 'https://v5.kiryuu.to'
 
 export const KiryuuInfo: SourceInfo = {
-    version: '2.2.1',
+    version: '2.2.2',
     name: 'Kiryuu',
     icon: 'icon.png',
     author: 'NaufalJCT48',
@@ -75,21 +75,53 @@ export class Kiryuu extends Source {
         return parseMangaDetails(response.data as string, mangaId)
     }
 
+    private async getSearchNonce(): Promise<string> {
+        const request = createRequestObject({
+            url: `${WEBSITE_BASE}/wp-admin/admin-ajax.php?type=search_form&action=get_nonce`,
+            headers: {
+                'hx-request': 'true',
+                'referer': `${WEBSITE_BASE}/advanced-search/`
+            }
+        })
+        const response = await this.requestManager.schedule(request, 1)
+        const nonce = String(response.data ?? '').match(/name=['"]search_nonce['"]\s+value=['"]([^'"]+)['"]/)?.[1] ?? ''
+        if (!nonce) throw new Error('Failed to get Kiryuu search nonce')
+        return nonce
+    }
+
+    private createAdvancedSearchBody(nonce: string, page: number, query: string, genres: string[], types: string[], statuses: string[], orderBy: string): string {
+        return [
+            `search_nonce=${encodeURIComponent(nonce)}`,
+            'inclusion=OR',
+            'exclusion=OR',
+            `page=${page}`,
+            `genre=${encodeURIComponent(JSON.stringify(genres))}`,
+            `genre_exclude=${encodeURIComponent(JSON.stringify([]))}`,
+            `author=${encodeURIComponent(JSON.stringify([]))}`,
+            `artist=${encodeURIComponent(JSON.stringify([]))}`,
+            'project=0',
+            `type=${encodeURIComponent(JSON.stringify(types))}`,
+            `status=${encodeURIComponent(JSON.stringify(statuses))}`,
+            'order=desc',
+            `orderby=${encodeURIComponent(orderBy)}`,
+            `query=${encodeURIComponent(query)}`
+        ].join('&')
+    }
+
     override async getChapters(mangaId: string): Promise<Chapter[]> {
         const detailsRequest = createRequestObject({
             url: `${WEBSITE_BASE}/manga/${mangaId}/`
         })
         const detailsResponse = await this.requestManager.schedule(detailsRequest, 1)
-        const html = detailsResponse.data as string
-        
-        const numericMangaId = extractMangaId(html)
-        if (!numericMangaId) {
-            throw new Error(`Failed to extract manga_id from ${mangaId}`)
-        }
+        const numericMangaId = extractMangaId(detailsResponse.data as string)
+        if (!numericMangaId) throw new Error(`Failed to extract manga_id from ${mangaId}`)
 
-        const ajaxUrl = `${WEBSITE_BASE}/wp-admin/admin-ajax.php?manga_id=${numericMangaId}&page=1&action=chapter_list`
         const request = createRequestObject({
-            url: ajaxUrl
+            url: `${WEBSITE_BASE}/wp-admin/admin-ajax.php?manga_id=${numericMangaId}&page=1&action=chapter_list`,
+            headers: {
+                'hx-request': 'true',
+                'referer': `${WEBSITE_BASE}/manga/${mangaId}/`
+            }
         })
         const response = await this.requestManager.schedule(request, 1)
         return parseChapterList(response.data as string, mangaId)
@@ -104,12 +136,13 @@ export class Kiryuu extends Source {
     }
 
     override async getHomePageSections(sectionCallback: (section: HomeSection) => void): Promise<void> {
+        const nonce = await this.getSearchNonce()
         const sections = [
             {
                 request: createRequestObject({
                     url: `${WEBSITE_BASE}/wp-admin/admin-ajax.php?action=advanced_search`,
                     method: 'POST',
-                    data: 'inclusion=OR&exclusion=OR&page=1&genre=[]&genre_exclude=[]&author=[]&artist=[]&project=0&type=[]&status=[]&order=desc&orderby=popular&query=',
+                    data: this.createAdvancedSearchBody(nonce, 1, '', [], [], [], 'popular'),
                     headers: {
                         'content-type': 'application/x-www-form-urlencoded',
                         'origin': WEBSITE_BASE,
@@ -167,41 +200,31 @@ export class Kiryuu extends Source {
     override async getSearchResults(query: SearchRequest, metadata: any): Promise<PagedResults> {
         const page = metadata?.page ?? 1
         const searchTerm = query.title?.trim() ?? ''
-        
         const includedTags = (query as any)?.includedTags as Array<{ id: string }>
-        let genreList: string[] = []
+        const genreList: string[] = []
+        const typeList: string[] = []
+        const statusList: string[] = []
         if (Array.isArray(includedTags) && includedTags.length > 0) {
-            genreList = includedTags.map((tag: any) => tag.id)
+            for (const tag of includedTags) {
+                const value = String(tag?.id ?? '')
+                if (value.startsWith('genre:')) genreList.push(value.replace(/^genre:/, ''))
+                else if (value.startsWith('type:')) typeList.push(value.replace(/^type:/, ''))
+                else if (value.startsWith('status:')) statusList.push(value.replace(/^status:/, ''))
+            }
         }
 
-        let request
-        if (searchTerm && genreList.length === 0) {
-            request = createRequestObject({
-                url: `${WEBSITE_BASE}/wp-admin/admin-ajax.php?action=search`,
-                method: 'POST',
-                data: `query=${encodeURIComponent(searchTerm)}`,
-                headers: {
-                    'content-type': 'application/x-www-form-urlencoded',
-                    'hx-request': 'true',
-                    'origin': WEBSITE_BASE,
-                    'referer': WEBSITE_BASE
-                }
-            })
-        } else {
-            const genreParam = genreList.length > 0 ? JSON.stringify(genreList) : '[]'
-            const queryParam = searchTerm ? encodeURIComponent(searchTerm) : ''
-            request = createRequestObject({
-                url: `${WEBSITE_BASE}/wp-admin/admin-ajax.php?action=advanced_search`,
-                method: 'POST',
-                data: `inclusion=OR&exclusion=OR&page=${page}&genre=${genreParam}&genre_exclude=[]&author=[]&artist=[]&project=0&type=[]&status=[]&order=desc&orderby=updated&query=${queryParam}`,
-                headers: {
-                    'content-type': 'application/x-www-form-urlencoded',
-                    'origin': WEBSITE_BASE,
-                    'referer': `${WEBSITE_BASE}/advanced-search/`,
-                    'x-requested-with': 'XMLHttpRequest'
-                }
-            })
-        }
+        const nonce = await this.getSearchNonce()
+        const request = createRequestObject({
+            url: `${WEBSITE_BASE}/wp-admin/admin-ajax.php?action=advanced_search`,
+            method: 'POST',
+            data: this.createAdvancedSearchBody(nonce, page, searchTerm, genreList, typeList, statusList, 'updated'),
+            headers: {
+                'content-type': 'application/x-www-form-urlencoded',
+                'origin': WEBSITE_BASE,
+                'referer': `${WEBSITE_BASE}/advanced-search/`,
+                'x-requested-with': 'XMLHttpRequest'
+            }
+        })
 
         const response = await this.requestManager.schedule(request, 1)
         const results = parseMangaList(response.data as string)
