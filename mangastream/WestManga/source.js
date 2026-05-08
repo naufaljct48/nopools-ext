@@ -768,8 +768,9 @@ var _Sources = (() => {
     if (api) {
       const now = Math.floor(Date.now() / 1e3).toString();
       const method = requestObj.method?.toUpperCase() || "GET";
-      const urlObj = new URL(url);
-      const urlPath = urlObj.pathname;
+      const withoutProtocol = url.replace(/^https?:\/\//, "");
+      const pathStart = withoutProtocol.indexOf("/");
+      const urlPath = pathStart !== -1 ? withoutProtocol.substring(pathStart).split("?")[0].split("#")[0] : "/";
       defaultHeaders["x-wm-accses-key"] = "WM_WEB_FRONT_END";
       defaultHeaders["x-wm-request-time"] = now;
       defaultHeaders["x-wm-request-signature"] = generateSignature(urlPath, method, now);
@@ -1036,7 +1037,7 @@ var _Sources = (() => {
   var WEBSITE_BASE2 = "https://westmanga.co";
   var API_BASE = "https://data.mantweh.online";
   var WestMangaInfo = {
-    version: "1.1.9",
+    version: "1.1.10",
     name: "WestManga",
     icon: "icon.png",
     author: "NaufalJCT48",
