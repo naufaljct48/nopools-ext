@@ -6,13 +6,7 @@ var _Sources = (() => {
   var __getOwnPropNames = Object.getOwnPropertyNames;
   var __getProtoOf = Object.getPrototypeOf;
   var __hasOwnProp = Object.prototype.hasOwnProperty;
-  var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, {
-    get: (a, b) => (typeof require !== "undefined" ? require : a)[b]
-  }) : x)(function(x) {
-    if (typeof require !== "undefined") return require.apply(this, arguments);
-    throw Error('Dynamic require of "' + x + '" is not supported');
-  });
-  var __commonJS = (cb, mod) => function __require2() {
+  var __commonJS = (cb, mod) => function __require() {
     return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
   };
   var __export = (target, all) => {
@@ -738,17 +732,157 @@ var _Sources = (() => {
   // src/WestManga/WestMangaHelper.ts
   var WEBSITE_BASE = "https://westmanga.co";
   var isApiUrl = (url) => /data\.mantweh\.online\/api/i.test(url);
-  var generateSignature = (urlPath, method, timestamp) => {
-    try {
-      const crypto = __require("crypto");
-      const ACCESS_KEY = "WM_WEB_FRONT_END";
-      const SECRET_KEY = "xxxoidj";
-      const message = "wm-api-request";
-      const key = timestamp + method + urlPath + ACCESS_KEY + SECRET_KEY;
-      return crypto.createHmac("sha256", key).update(message).digest("hex");
-    } catch (e) {
-      return "";
+  var ACCESS_KEY = "WM_WEB_FRONT_END";
+  var SECRET_KEY = "xxxoidj";
+  var SIGNATURE_MESSAGE = "wm-api-request";
+  var SHA256_K = [
+    1116352408,
+    1899447441,
+    3049323471,
+    3921009573,
+    961987163,
+    1508970993,
+    2453635748,
+    2870763221,
+    3624381080,
+    310598401,
+    607225278,
+    1426881987,
+    1925078388,
+    2162078206,
+    2614888103,
+    3248222580,
+    3835390401,
+    4022224774,
+    264347078,
+    604807628,
+    770255983,
+    1249150122,
+    1555081692,
+    1996064986,
+    2554220882,
+    2821834349,
+    2952996808,
+    3210313671,
+    3336571891,
+    3584528711,
+    113926993,
+    338241895,
+    666307205,
+    773529912,
+    1294757372,
+    1396182291,
+    1695183700,
+    1986661051,
+    2177026350,
+    2456956037,
+    2730485921,
+    2820302411,
+    3259730800,
+    3345764771,
+    3516065817,
+    3600352804,
+    4094571909,
+    275423344,
+    430227734,
+    506948616,
+    659060556,
+    883997877,
+    958139571,
+    1322822218,
+    1537002063,
+    1747873779,
+    1955562222,
+    2024104815,
+    2227730452,
+    2361852424,
+    2428436474,
+    2756734187,
+    3204031479,
+    3329325298
+  ];
+  var rightRotate = (value, amount) => value >>> amount | value << 32 - amount;
+  var utf8ToBytes = (text) => {
+    const bytes = [];
+    for (let i = 0; i < text.length; i++) {
+      const code = text.charCodeAt(i);
+      if (code < 128) bytes.push(code);
+      else if (code < 2048) bytes.push(192 | code >> 6, 128 | code & 63);
+      else bytes.push(224 | code >> 12, 128 | code >> 6 & 63, 128 | code & 63);
     }
+    return bytes;
+  };
+  var sha256 = (input) => {
+    const bytes = input.slice();
+    const bitLength = bytes.length * 8;
+    const hash = [1779033703, 3144134277, 1013904242, 2773480762, 1359893119, 2600822924, 528734635, 1541459225];
+    bytes.push(128);
+    while (bytes.length % 64 !== 56) bytes.push(0);
+    const high = Math.floor(bitLength / 4294967296);
+    const low = bitLength >>> 0;
+    bytes.push(high >>> 24 & 255, high >>> 16 & 255, high >>> 8 & 255, high & 255);
+    bytes.push(low >>> 24 & 255, low >>> 16 & 255, low >>> 8 & 255, low & 255);
+    for (let offset = 0; offset < bytes.length; offset += 64) {
+      const w = new Array(64);
+      for (let i = 0; i < 16; i++) {
+        const j = offset + i * 4;
+        w[i] = (bytes[j] << 24 | bytes[j + 1] << 16 | bytes[j + 2] << 8 | bytes[j + 3]) >>> 0;
+      }
+      for (let i = 16; i < 64; i++) {
+        const s0 = rightRotate(w[i - 15], 7) ^ rightRotate(w[i - 15], 18) ^ w[i - 15] >>> 3;
+        const s1 = rightRotate(w[i - 2], 17) ^ rightRotate(w[i - 2], 19) ^ w[i - 2] >>> 10;
+        w[i] = w[i - 16] + s0 + w[i - 7] + s1 >>> 0;
+      }
+      let a = hash[0];
+      let b = hash[1];
+      let c = hash[2];
+      let d = hash[3];
+      let e = hash[4];
+      let f = hash[5];
+      let g = hash[6];
+      let h = hash[7];
+      for (let i = 0; i < 64; i++) {
+        const s1 = rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25);
+        const ch = e & f ^ ~e & g;
+        const temp1 = h + s1 + ch + SHA256_K[i] + w[i] >>> 0;
+        const s0 = rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22);
+        const maj = a & b ^ a & c ^ b & c;
+        const temp2 = s0 + maj >>> 0;
+        h = g;
+        g = f;
+        f = e;
+        e = d + temp1 >>> 0;
+        d = c;
+        c = b;
+        b = a;
+        a = temp1 + temp2 >>> 0;
+      }
+      hash[0] = hash[0] + a >>> 0;
+      hash[1] = hash[1] + b >>> 0;
+      hash[2] = hash[2] + c >>> 0;
+      hash[3] = hash[3] + d >>> 0;
+      hash[4] = hash[4] + e >>> 0;
+      hash[5] = hash[5] + f >>> 0;
+      hash[6] = hash[6] + g >>> 0;
+      hash[7] = hash[7] + h >>> 0;
+    }
+    const output = [];
+    for (const value of hash) output.push(value >>> 24 & 255, value >>> 16 & 255, value >>> 8 & 255, value & 255);
+    return output;
+  };
+  var bytesToHex = (bytes) => bytes.map((byte) => `0${byte.toString(16)}`.slice(-2)).join("");
+  var hmacSha256 = (message, key) => {
+    let keyBytes = utf8ToBytes(key);
+    if (keyBytes.length > 64) keyBytes = sha256(keyBytes);
+    while (keyBytes.length < 64) keyBytes.push(0);
+    const innerKey = keyBytes.map((byte) => byte ^ 54);
+    const outerKey = keyBytes.map((byte) => byte ^ 92);
+    const innerHash = sha256(innerKey.concat(utf8ToBytes(message)));
+    return bytesToHex(sha256(outerKey.concat(innerHash)));
+  };
+  var generateSignature = (urlPath, method, timestamp) => {
+    const key = timestamp + method + urlPath + ACCESS_KEY + SECRET_KEY;
+    return hmacSha256(SIGNATURE_MESSAGE, key);
   };
   var createRequestObject = (requestObj) => {
     const url = requestObj?.url ?? "";
@@ -771,7 +905,7 @@ var _Sources = (() => {
       const withoutProtocol = url.replace(/^https?:\/\//, "");
       const pathStart = withoutProtocol.indexOf("/");
       const urlPath = pathStart !== -1 ? withoutProtocol.substring(pathStart).split("?")[0].split("#")[0] : "/";
-      defaultHeaders["x-wm-accses-key"] = "WM_WEB_FRONT_END";
+      defaultHeaders["x-wm-accses-key"] = ACCESS_KEY;
       defaultHeaders["x-wm-request-time"] = now;
       defaultHeaders["x-wm-request-signature"] = generateSignature(urlPath, method, now);
     }
@@ -1037,7 +1171,7 @@ var _Sources = (() => {
   var WEBSITE_BASE2 = "https://westmanga.co";
   var API_BASE = "https://data.mantweh.online";
   var WestMangaInfo = {
-    version: "1.1.10",
+    version: "1.1.11",
     name: "WestManga",
     icon: "icon.png",
     author: "NaufalJCT48",
