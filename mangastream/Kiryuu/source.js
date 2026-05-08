@@ -15950,9 +15950,6 @@ var _Sources = (() => {
       "Accept": isImage ? "image/avif,image/webp,image/apng,image/*,*/*;q=0.8" : "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
       "Referer": `${WEBSITE_BASE}/`,
       "Origin": WEBSITE_BASE,
-      "DNT": "1",
-      "Sec-GPC": "1",
-      "Accept-Encoding": "gzip, deflate, br",
       "Accept-Language": "en-US,en;q=0.9,id;q=0.8",
       "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
     };
@@ -16236,7 +16233,7 @@ var _Sources = (() => {
     ].join("&");
   };
   var KiryuuInfo = {
-    version: "2.2.4",
+    version: "2.2.5",
     name: "Kiryuu",
     icon: "icon.png",
     author: "NaufalJCT48",
@@ -16256,17 +16253,22 @@ var _Sources = (() => {
         interceptor: {
           interceptRequest: async (request) => {
             const isImage = /\.(png|jpe?g|webp|gif)$/i.test(request.url);
-            request.headers = {
-              ...request.headers ?? {},
-              "Accept": isImage ? "image/avif,image/webp,image/apng,image/*,*/*;q=0.8" : "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-              "Origin": WEBSITE_BASE2,
-              "Referer": `${WEBSITE_BASE2}/`,
-              "DNT": "1",
-              "Sec-GPC": "1",
-              "Accept-Encoding": "gzip, deflate, br",
-              "Accept-Language": "en-US,en;q=0.9,id;q=0.8",
-              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
-            };
+            if (isImage) {
+              request.headers = {
+                ...request.headers ?? {},
+                "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+                "Referer": `${WEBSITE_BASE2}/`
+              };
+            } else {
+              request.headers = {
+                ...request.headers ?? {},
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "Origin": WEBSITE_BASE2,
+                "Referer": `${WEBSITE_BASE2}/`,
+                "Accept-Language": "en-US,en;q=0.9,id;q=0.8",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
+              };
+            }
             return request;
           },
           interceptResponse: async (response) => {
