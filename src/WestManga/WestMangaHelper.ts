@@ -1,8 +1,8 @@
 import { Request } from '@paperback/types'
 
-const WEBSITE_BASE = 'https://westmanga.me'
+const WEBSITE_BASE = 'https://westmanga.co'
 // Removed unused API_BASE
-const isApiUrl = (url: string): boolean => /data\.westmanga\.me\/api/i.test(url)
+const isApiUrl = (url: string): boolean => /data\.mantweh\.online\/api/i.test(url)
 
 const generateSignature = (): string => {
     try {

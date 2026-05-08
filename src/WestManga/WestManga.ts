@@ -2,11 +2,11 @@ import { Source, Chapter, ChapterDetails, HomeSection, SearchRequest, PagedResul
 import { createRequestObject } from './WestMangaHelper'
 import { parseMangaDetails, parseChapterList, parseChapterDetails, parseMangaList, parseSearchTags } from './WestMangaParser'
 
-const WEBSITE_BASE = 'https://westmanga.me'
-const API_BASE = 'https://data.westmanga.me'
+const WEBSITE_BASE = 'https://westmanga.co'
+const API_BASE = 'https://data.mantweh.online'
 
 export const WestMangaInfo: SourceInfo = {
-    version: '1.1.7',
+    version: '1.1.8',
     name: 'WestManga',
     icon: 'icon.png',
     author: 'NaufalJCT48',
@@ -25,7 +25,7 @@ export class WestManga extends Source {
         interceptor: {
             interceptRequest: async (request: Request): Promise<Request> => {
                 const isImage = /(\.(png|jpe?g|webp|gif)$)|storage\./i.test(request.url)
-                const isApi = /data\.westmanga\.me\/api/i.test(request.url)
+                const isApi = /data\.mantweh\.online\/api/i.test(request.url)
                 request.headers = {
                     ...(request.headers ?? {} as Record<string, string>),
                     'Accept': isApi
