@@ -43,8 +43,10 @@ export const createRequestObject = (requestObj: any): Request => {
     if (api) {
         const now = Math.floor(Date.now() / 1000).toString()
         const method = requestObj.method?.toUpperCase() || 'GET'
-        const urlObj = new URL(url)
-        const urlPath = urlObj.pathname
+        
+        const withoutProtocol = url.replace(/^https?:\/\//, '')
+        const pathStart = withoutProtocol.indexOf('/')
+        const urlPath = pathStart !== -1 ? withoutProtocol.substring(pathStart).split('?')[0].split('#')[0] : '/'
         
         defaultHeaders['x-wm-accses-key'] = 'WM_WEB_FRONT_END'
         defaultHeaders['x-wm-request-time'] = now
