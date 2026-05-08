@@ -16140,11 +16140,8 @@ var _Sources = (() => {
   };
   var parseSearchTags = (html3) => {
     const genres = [];
-    const types = [
-      { id: "type:manga", label: "Manga" },
-      { id: "type:manhwa", label: "Manhwa" },
-      { id: "type:manhua", label: "Manhua" }
-    ];
+    const types = [];
+    const statuses = [];
     const start = html3.indexOf("var searchTerms = ");
     const end2 = start >= 0 ? html3.indexOf("};", start) : -1;
     if (start >= 0 && end2 > start) {
@@ -16152,10 +16149,22 @@ var _Sources = (() => {
         const rawJson = html3.slice(start + "var searchTerms = ".length, end2 + 1);
         const searchTerms = JSON.parse(rawJson);
         const rawGenres = Array.isArray(searchTerms?.genre) ? searchTerms.genre : [];
+        const rawTypes = Array.isArray(searchTerms?.type) ? searchTerms.type : [];
+        const rawStatuses = Array.isArray(searchTerms?.status) ? searchTerms.status : [];
         for (const genre of rawGenres) {
           const slug = String(genre?.slug ?? "").trim();
           const label = String(genre?.name ?? "").trim();
           if (slug && label) genres.push({ id: `genre:${slug}`, label: decodeHTMLEntity(label) });
+        }
+        for (const type of rawTypes) {
+          const slug = String(type?.slug ?? "").trim();
+          const label = String(type?.name ?? "").trim();
+          if (slug && label) types.push({ id: `type:${slug}`, label: decodeHTMLEntity(label) });
+        }
+        for (const status of rawStatuses) {
+          const slug = String(status?.slug ?? "").trim();
+          const label = String(status?.name ?? "").trim();
+          if (slug && label) statuses.push({ id: `status:${slug}`, label: decodeHTMLEntity(label) });
         }
       } catch (e) {
       }
@@ -16172,10 +16181,24 @@ var _Sources = (() => {
         { id: "genre:shounen", label: "Shounen" }
       );
     }
+    if (types.length === 0) {
+      types.push(
+        { id: "type:manga", label: "Manga" },
+        { id: "type:manhwa", label: "Manhwa" },
+        { id: "type:manhua", label: "Manhua" }
+      );
+    }
+    if (statuses.length === 0) {
+      statuses.push(
+        { id: "status:ongoing", label: "Ongoing" },
+        { id: "status:completed", label: "Completed" },
+        { id: "status:on-hiatus", label: "On Hiatus" }
+      );
+    }
     const sections = [];
     if (genres.length > 0) sections.push(App.createTagSection({ id: "genre", label: "Genres", tags: genres.map((x) => App.createTag(x)) }));
     if (types.length > 0) sections.push(App.createTagSection({ id: "type", label: "Type", tags: types.map((x) => App.createTag(x)) }));
-    sections.push(App.createTagSection({ id: "status", label: "Status", tags: [{ id: "status:ongoing", label: "Ongoing" }, { id: "status:completed", label: "Completed" }].map((x) => App.createTag(x)) }));
+    if (statuses.length > 0) sections.push(App.createTagSection({ id: "status", label: "Status", tags: statuses.map((x) => App.createTag(x)) }));
     return sections;
   };
 
@@ -16213,7 +16236,7 @@ var _Sources = (() => {
     ].join("&");
   };
   var KiryuuInfo = {
-    version: "2.2.3",
+    version: "2.2.4",
     name: "Kiryuu",
     icon: "icon.png",
     author: "NaufalJCT48",
@@ -16284,27 +16307,7 @@ var _Sources = (() => {
       return parseChapterDetails(response.data, mangaId, chapterId);
     }
     async getHomePageSections(sectionCallback) {
-      const nonce = await getSearchNonce(this.requestManager);
       const sections = [
-        {
-          request: createRequestObject({
-            url: `${WEBSITE_BASE2}/wp-admin/admin-ajax.php?action=advanced_search`,
-            method: "POST",
-            data: createAdvancedSearchBody(nonce, 1, "", [], [], [], "popular"),
-            headers: {
-              "content-type": "application/x-www-form-urlencoded",
-              "origin": WEBSITE_BASE2,
-              "referer": `${WEBSITE_BASE2}/advanced-search/`,
-              "x-requested-with": "XMLHttpRequest"
-            }
-          }),
-          section: App.createHomeSection({
-            id: "featured",
-            title: "Featured",
-            type: import_types2.HomeSectionType.featured,
-            containsMoreItems: false
-          })
-        },
         {
           request: createRequestObject({
             url: `${WEBSITE_BASE2}/project/`
@@ -16328,19 +16331,49 @@ var _Sources = (() => {
           })
         }
       ];
+      try {
+        const nonce = await getSearchNonce(this.requestManager);
+        sections.unshift({
+          request: createRequestObject({
+            url: `${WEBSITE_BASE2}/wp-admin/admin-ajax.php?action=advanced_search`,
+            method: "POST",
+            data: createAdvancedSearchBody(nonce, 1, "", [], [], [], "popular"),
+            headers: {
+              "content-type": "application/x-www-form-urlencoded",
+              "origin": WEBSITE_BASE2,
+              "referer": `${WEBSITE_BASE2}/advanced-search/`,
+              "x-requested-with": "XMLHttpRequest"
+            }
+          }),
+          section: App.createHomeSection({
+            id: "featured",
+            title: "Featured",
+            type: import_types2.HomeSectionType.featured,
+            containsMoreItems: false
+          })
+        });
+      } catch (e) {
+      }
       for (const item of sections) {
         sectionCallback(item.section);
-        const response = await this.requestManager.schedule(item.request, 1);
-        item.section.items = parseMangaList(response.data);
-        sectionCallback(item.section);
+        try {
+          const response = await this.requestManager.schedule(item.request, 1);
+          item.section.items = parseMangaList(response.data);
+          sectionCallback(item.section);
+        } catch (e) {
+        }
       }
     }
     async getSearchTags() {
-      const request = createRequestObject({
-        url: `${WEBSITE_BASE2}/advanced-search/`
-      });
-      const response = await this.requestManager.schedule(request, 1);
-      return parseSearchTags(response.data);
+      try {
+        const request = createRequestObject({
+          url: `${WEBSITE_BASE2}/advanced-search/`
+        });
+        const response = await this.requestManager.schedule(request, 1);
+        return parseSearchTags(response.data);
+      } catch (e) {
+        return parseSearchTags("");
+      }
     }
     async getSearchResults(query, metadata) {
       const page = metadata?.page ?? 1;
