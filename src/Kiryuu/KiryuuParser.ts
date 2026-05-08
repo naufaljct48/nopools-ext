@@ -140,11 +140,8 @@ export const parseMangaList = (html: string): PartialSourceManga[] => {
 
 export const parseSearchTags = (html: string): TagSection[] => {
     const genres: Tag[] = []
-    const types: Tag[] = [
-        { id: 'type:manga', label: 'Manga' },
-        { id: 'type:manhwa', label: 'Manhwa' },
-        { id: 'type:manhua', label: 'Manhua' }
-    ]
+    const types: Tag[] = []
+    const statuses: Tag[] = []
 
     const start = html.indexOf('var searchTerms = ')
     const end = start >= 0 ? html.indexOf('};', start) : -1
@@ -153,10 +150,22 @@ export const parseSearchTags = (html: string): TagSection[] => {
             const rawJson = html.slice(start + 'var searchTerms = '.length, end + 1)
             const searchTerms = JSON.parse(rawJson)
             const rawGenres = Array.isArray(searchTerms?.genre) ? searchTerms.genre : []
+            const rawTypes = Array.isArray(searchTerms?.type) ? searchTerms.type : []
+            const rawStatuses = Array.isArray(searchTerms?.status) ? searchTerms.status : []
             for (const genre of rawGenres) {
                 const slug = String(genre?.slug ?? '').trim()
                 const label = String(genre?.name ?? '').trim()
                 if (slug && label) genres.push({ id: `genre:${slug}`, label: decodeHTMLEntity(label) })
+            }
+            for (const type of rawTypes) {
+                const slug = String(type?.slug ?? '').trim()
+                const label = String(type?.name ?? '').trim()
+                if (slug && label) types.push({ id: `type:${slug}`, label: decodeHTMLEntity(label) })
+            }
+            for (const status of rawStatuses) {
+                const slug = String(status?.slug ?? '').trim()
+                const label = String(status?.name ?? '').trim()
+                if (slug && label) statuses.push({ id: `status:${slug}`, label: decodeHTMLEntity(label) })
             }
         } catch (e) {
         }
@@ -171,10 +180,26 @@ export const parseSearchTags = (html: string): TagSection[] => {
         )
     }
 
+    if (types.length === 0) {
+        types.push(
+            { id: 'type:manga', label: 'Manga' },
+            { id: 'type:manhwa', label: 'Manhwa' },
+            { id: 'type:manhua', label: 'Manhua' }
+        )
+    }
+
+    if (statuses.length === 0) {
+        statuses.push(
+            { id: 'status:ongoing', label: 'Ongoing' },
+            { id: 'status:completed', label: 'Completed' },
+            { id: 'status:on-hiatus', label: 'On Hiatus' }
+        )
+    }
+
     const sections: TagSection[] = []
     if (genres.length > 0) sections.push(App.createTagSection({ id: 'genre', label: 'Genres', tags: genres.map((x: Tag) => App.createTag(x)) }))
     if (types.length > 0) sections.push(App.createTagSection({ id: 'type', label: 'Type', tags: types.map((x: Tag) => App.createTag(x)) }))
-    sections.push(App.createTagSection({ id: 'status', label: 'Status', tags: [{ id: 'status:ongoing', label: 'Ongoing' }, { id: 'status:completed', label: 'Completed' }].map((x) => App.createTag(x)) }))
+    if (statuses.length > 0) sections.push(App.createTagSection({ id: 'status', label: 'Status', tags: statuses.map((x: Tag) => App.createTag(x)) }))
 
     return sections
 }

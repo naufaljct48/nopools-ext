@@ -60,7 +60,7 @@ const createAdvancedSearchBody = (nonce: string, page: number, query: string, ge
 }
 
 export const KiryuuInfo: SourceInfo = {
-    version: '2.2.3',
+    version: '2.2.4',
     name: 'Kiryuu',
     icon: 'icon.png',
     author: 'NaufalJCT48',
@@ -136,27 +136,7 @@ export class Kiryuu extends Source {
     }
 
     override async getHomePageSections(sectionCallback: (section: HomeSection) => void): Promise<void> {
-        const nonce = await getSearchNonce(this.requestManager)
         const sections = [
-            {
-                request: createRequestObject({
-                    url: `${WEBSITE_BASE}/wp-admin/admin-ajax.php?action=advanced_search`,
-                    method: 'POST',
-                    data: createAdvancedSearchBody(nonce, 1, '', [], [], [], 'popular'),
-                    headers: {
-                        'content-type': 'application/x-www-form-urlencoded',
-                        'origin': WEBSITE_BASE,
-                        'referer': `${WEBSITE_BASE}/advanced-search/`,
-                        'x-requested-with': 'XMLHttpRequest'
-                    }
-                }),
-                section: App.createHomeSection({
-                    id: 'featured',
-                    title: 'Featured',
-                    type: HomeSectionType.featured,
-                    containsMoreItems: false
-                })
-            },
             {
                 request: createRequestObject({
                     url: `${WEBSITE_BASE}/project/`
@@ -181,20 +161,51 @@ export class Kiryuu extends Source {
             }
         ]
 
+        try {
+            const nonce = await getSearchNonce(this.requestManager)
+            sections.unshift({
+                request: createRequestObject({
+                    url: `${WEBSITE_BASE}/wp-admin/admin-ajax.php?action=advanced_search`,
+                    method: 'POST',
+                    data: createAdvancedSearchBody(nonce, 1, '', [], [], [], 'popular'),
+                    headers: {
+                        'content-type': 'application/x-www-form-urlencoded',
+                        'origin': WEBSITE_BASE,
+                        'referer': `${WEBSITE_BASE}/advanced-search/`,
+                        'x-requested-with': 'XMLHttpRequest'
+                    }
+                }),
+                section: App.createHomeSection({
+                    id: 'featured',
+                    title: 'Featured',
+                    type: HomeSectionType.featured,
+                    containsMoreItems: false
+                })
+            })
+        } catch (e) {
+        }
+
         for (const item of sections) {
             sectionCallback(item.section)
-            const response = await this.requestManager.schedule(item.request, 1)
-            item.section.items = parseMangaList(response.data as string)
-            sectionCallback(item.section)
+            try {
+                const response = await this.requestManager.schedule(item.request, 1)
+                item.section.items = parseMangaList(response.data as string)
+                sectionCallback(item.section)
+            } catch (e) {
+            }
         }
     }
 
     override async getSearchTags(): Promise<TagSection[]> {
-        const request = createRequestObject({
-            url: `${WEBSITE_BASE}/advanced-search/`
-        })
-        const response = await this.requestManager.schedule(request, 1)
-        return parseSearchTags(response.data as string)
+        try {
+            const request = createRequestObject({
+                url: `${WEBSITE_BASE}/advanced-search/`
+            })
+            const response = await this.requestManager.schedule(request, 1)
+            return parseSearchTags(response.data as string)
+        } catch (e) {
+            return parseSearchTags('')
+        }
     }
 
     override async getSearchResults(query: SearchRequest, metadata: any): Promise<PagedResults> {
