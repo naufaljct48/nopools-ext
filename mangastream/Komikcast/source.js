@@ -891,11 +891,11 @@ var _Sources = (() => {
   };
 
   // src/Komikcast/Komikcast.ts
-  var API_URL2 = "https://be.komikcast.fit";
-  var BASE_URL2 = "https://v1.komikcast.fit";
+  var API_URL2 = "https://be.komikcast.cc";
+  var BASE_URL2 = "https://v2.komikcast.fit";
   var AUTH_TOKEN2 = "oat_NTQwNjU.eVU0Tjc4aEhpNmlwcDJkNWlDSU9GT0w2VXJxR25UdFc5UnV0dHRGdzY1MDY1NjYyNw";
   var KomikcastInfo = {
-    version: "4.0.5",
+    version: "4.0.6",
     name: "Komikcast",
     icon: "icon.png",
     author: "NaufalJCT48",

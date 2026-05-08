@@ -736,8 +736,8 @@ var _Sources = (() => {
   var import_types = __toESM(require_lib());
 
   // src/WestManga/WestMangaHelper.ts
-  var WEBSITE_BASE = "https://westmanga.me";
-  var isApiUrl = (url) => /data\.westmanga\.me\/api/i.test(url);
+  var WEBSITE_BASE = "https://westmanga.co";
+  var isApiUrl = (url) => /data\.mantweh\.online\/api/i.test(url);
   var generateSignature = () => {
     try {
       const crypto = __require("crypto");
@@ -1029,10 +1029,10 @@ var _Sources = (() => {
   };
 
   // src/WestManga/WestManga.ts
-  var WEBSITE_BASE2 = "https://westmanga.me";
-  var API_BASE = "https://data.westmanga.me";
+  var WEBSITE_BASE2 = "https://westmanga.co";
+  var API_BASE = "https://data.mantweh.online";
   var WestMangaInfo = {
-    version: "1.1.7",
+    version: "1.1.8",
     name: "WestManga",
     icon: "icon.png",
     author: "NaufalJCT48",
@@ -1052,7 +1052,7 @@ var _Sources = (() => {
         interceptor: {
           interceptRequest: async (request) => {
             const isImage = /(\.(png|jpe?g|webp|gif)$)|storage\./i.test(request.url);
-            const isApi = /data\.westmanga\.me\/api/i.test(request.url);
+            const isApi = /data\.mantweh\.online\/api/i.test(request.url);
             request.headers = {
               ...request.headers ?? {},
               "Accept": isApi ? "application/json,*/*;q=0.8" : isImage ? "image/avif,image/webp,image/apng,image/*,*/*;q=0.8" : "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
