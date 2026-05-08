@@ -1,103 +1,130 @@
 import { Chapter, ChapterDetails, PartialSourceManga, SourceManga, Tag, TagSection } from '@paperback/types'
 import { decodeHTMLEntity, convertTime, normalizeUrl } from './KiryuuHelper'
 
-const cheerio = require('cheerio') as any
+const stripTags = (value: string): string => value.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
 
-// Regex-based HTML parsing helpers
 const extractText = (html: string, regex: RegExp): string => {
     const match = html.match(regex)
     return match?.[1]?.trim() ?? ''
 }
 
-export const parseMangaDetails = (html: string, mangaId: string): SourceManga => {
-    const $ = cheerio.load(html)
-    const titles: string[] = []
+const extractBlocks = (html: string, pattern: RegExp): Array<{ match: RegExpExecArray, html: string }> => {
+    const matches = Array.from(html.matchAll(pattern))
+    const blocks: Array<{ match: RegExpExecArray, html: string }> = []
 
-    const mainTitle = $('h1[itemprop="name"]').first().text().trim() || extractText(html, /<h1[^>]*itemprop=["']name["'][^>]*>(.*?)<\/h1>/is)
-    if (mainTitle) titles.push(decodeHTMLEntity(mainTitle.replace(/<[^>]*>/g, '')))
-
-    const altTitle = $('h1[itemprop="name"]').first().next('div').text().trim()
-    if (altTitle) {
-        const altTitles = altTitle.split(',').map((t: string) => t.trim()).filter((t: string) => t)
-        titles.push(...altTitles.map((t: string) => decodeHTMLEntity(t.replace(/<[^>]*>/g, ''))))
+    for (let i = 0; i < matches.length; i++) {
+        const current = matches[i]
+        const start = current.index ?? 0
+        const end = matches[i + 1]?.index ?? html.length
+        blocks.push({ match: current, html: html.slice(start, end) })
     }
 
-    const image = normalizeUrl($('[itemprop="image"] img').first().attr('src') ?? $('img.wp-post-image').first().attr('src') ?? '')
+    return blocks
+}
 
-    const statusText = html.toLowerCase()
-    const status = statusText.includes('ongoing') ? 'Ongoing' : statusText.includes('completed') ? 'Completed' : 'Unknown'
+const decodeAndClean = (value: string): string => decodeHTMLEntity(stripTags(value))
+
+const escapeRegex = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+export const parseMangaDetails = (html: string, mangaId: string): SourceManga => {
+    const titles: string[] = []
+
+    const mainTitle = decodeAndClean(extractText(html, /<h1[^>]*itemprop=["']name["'][^>]*>([\s\S]*?)<\/h1>/i))
+    if (mainTitle) titles.push(mainTitle)
+
+    const altTitle = decodeAndClean(extractText(html, /<div[^>]*class=["'][^"']*text-sm[^"']*line-clamp-1[^"']*["'][^>]*>([\s\S]*?)<\/div>/i))
+    if (altTitle) {
+        for (const title of altTitle.split(',').map((item) => item.trim()).filter(Boolean)) {
+            if (!titles.includes(title)) titles.push(title)
+        }
+    }
+
+    let image = extractText(html, /itemprop=["']image["'][^>]*>[\s\S]*?<img[^>]*src=["']([^"']+)["']/i)
+    if (!image) image = extractText(html, /<img[^>]*src=["']([^"']+)["'][^>]*class=["'][^"']*wp-post-image/i)
+    if (!image) image = extractText(html, /<img[^>]*class=["'][^"']*wp-post-image[^"']*["'][^>]*src=["']([^"']+)["']/i)
+
+    const lowerHtml = html.toLowerCase()
+    let status = 'Unknown'
+    if (lowerHtml.includes('ongoing')) status = 'Ongoing'
+    else if (lowerHtml.includes('completed')) status = 'Completed'
+    else if (lowerHtml.includes('hiatus')) status = 'Hiatus'
 
     let author = 'Unknown'
-    $('h4').each((_: number, element: any) => {
-        const label = $(element).text().toLowerCase()
-        if (label.includes('author') || label.includes('artist')) {
-            const value = $(element).parent().find('p').first().text().trim()
-            if (value) author = value
-        }
-    })
+    const authorRow = html.match(/<h4[^>]*>[\s\S]*?(author|artist)[\s\S]*?<\/h4>[\s\S]*?<p[^>]*>([\s\S]*?)<\/p>/i)
+    if (authorRow?.[2]) author = decodeAndClean(authorRow[2]) || 'Unknown'
 
-    const arrayTags: Tag[] = []
-    $('a[itemprop="genre"]').each((_: number, element: any) => {
-        const label = $(element).text().trim()
-        const id = ($(element).attr('href') ?? '').match(/\/genre\/([^/]+)\/?/)?.[1] ?? ''
-        if (id && label) arrayTags.push({ id, label: decodeHTMLEntity(label) })
-    })
+    const tags: Tag[] = []
+    const genreMatches = html.matchAll(/<a[^>]*itemprop=["']genre["'][^>]*href=["'][^"']*\/genre\/([^/"']+)\/?["'][^>]*>([\s\S]*?)<\/a>/gi)
+    for (const match of genreMatches) {
+        const id = String(match[1] ?? '').trim()
+        const label = decodeAndClean(match[2] ?? '')
+        if (id && label) tags.push({ id, label })
+    }
 
     const tagSections: TagSection[] = []
-    if (arrayTags.length > 0) {
+    if (tags.length > 0) {
         tagSections.push(App.createTagSection({
-            id: '0', label: 'genres', tags: arrayTags.map((x: Tag) => App.createTag(x))
+            id: '0',
+            label: 'genres',
+            tags: tags.map((tag) => App.createTag(tag))
         }))
     }
 
-    let desc = $('[itemprop="description"][data-show="true"]').first().text().trim()
-    if (!desc) desc = $('[itemprop="description"]').last().text().trim()
-    desc = desc.replace(/<[^>]*>/g, '').trim()
+    let desc = extractText(html, /<div[^>]*itemprop=["']description["'][^>]*data-show=["']true["'][^>]*>([\s\S]*?)<\/div>/i)
+    if (!desc) desc = extractText(html, /<div[^>]*itemprop=["']description["'][^>]*>([\s\S]*?)<\/div>/i)
 
     return App.createSourceManga({
         id: mangaId,
         mangaInfo: App.createMangaInfo({
-            titles, image, status, author, artist: author, tags: tagSections,
-            desc: decodeHTMLEntity(desc)
+            titles,
+            image: normalizeUrl(image),
+            status,
+            author,
+            artist: author,
+            tags: tagSections,
+            desc: decodeAndClean(desc)
         })
     })
 }
 
 export const parseChapterList = (html: string, mangaId: string): Chapter[] => {
-    const $ = cheerio.load(html)
     const chapters: Chapter[] = []
     let sortingIndex = 0
 
-    $('#chapter-list div[data-chapter-number]').each((_: number, element: any) => {
-        const $chapter = $(element)
-        const chapNumStr = $chapter.attr('data-chapter-number') ?? '0'
+    const blocks = extractBlocks(html, /<div[^>]*data-chapter-number=["']([^"']+)["'][^>]*>/gi)
+    for (const block of blocks) {
+        const chapNumStr = String(block.match[1] ?? '0')
         const chapNum = parseFloat(chapNumStr) || 0
-        const href = $chapter.find('a[href*="/chapter-"]').first().attr('href') ?? ''
+        const href = extractText(block.html, /<a[^>]*href=["']([^"']*\/manga\/[^"']+\/chapter-[^"']+)["']/i)
         const chapterId = href.match(/\/manga\/[^/]+\/([^/]+)\/?/)?.[1] ?? ''
-        if (!chapterId) return
+        if (!chapterId) continue
 
-        const title = $chapter.find('span').first().text().trim()
-        const name = title ? decodeHTMLEntity(title.replace(/<[^>]*>/g, '')) : `Chapter ${chapNumStr}`
-
-        const timeStr = $chapter.find('time').first().attr('datetime') ?? $chapter.find('time').first().text().trim()
+        const title = decodeAndClean(extractText(block.html, /<span>([\s\S]*?)<\/span>/i)) || `Chapter ${chapNumStr}`
+        const timeStr = extractText(block.html, /<time[^>]*datetime=["']([^"']+)["']/i) || decodeAndClean(extractText(block.html, /<time[^>]*>([\s\S]*?)<\/time>/i))
         const time = timeStr ? (timeStr.includes('T') ? new Date(timeStr) : convertTime(timeStr)) : new Date()
 
         chapters.push(App.createChapter({
-            id: chapterId, chapNum, name, time, langCode: '🇮🇩', sortingIndex: sortingIndex--
+            id: chapterId,
+            chapNum,
+            name: title,
+            time,
+            langCode: '🇮🇩',
+            sortingIndex: sortingIndex--
         }))
-    })
+    }
 
     return chapters
 }
 
 export const parseChapterDetails = (html: string, mangaId: string, chapterId: string): ChapterDetails => {
-    const $ = cheerio.load(html)
     const pages: string[] = []
+    const sectionHtml = extractText(html, /<section[^>]*data-image-data[^>]*>([\s\S]*?)<\/section>/i)
+    const imgMatches = sectionHtml.matchAll(/<img[^>]*src=["']([^"']+)["'][^>]*>/gi)
 
-    $('section[data-image-data] img').each((_: number, element: any) => {
-        const src = $(element).attr('src') ?? ''
+    for (const match of imgMatches) {
+        const src = String(match[1] ?? '').trim()
         if (src && !src.includes('data:image')) pages.push(normalizeUrl(src))
-    })
+    }
 
     if (pages.length === 0) {
         throw new Error(`Failed to find any pages for chapter ${chapterId} of manga ${mangaId}`)
@@ -107,33 +134,46 @@ export const parseChapterDetails = (html: string, mangaId: string, chapterId: st
 }
 
 export const parseMangaList = (html: string): PartialSourceManga[] => {
-    const $ = cheerio.load(html)
     const results: PartialSourceManga[] = []
     const seen = new Set<string>()
 
-    $('a[href*="/manga/"]').each((_: number, element: any) => {
-        const $link = $(element)
-        const href = $link.attr('href') ?? ''
-        const mangaId = href.match(/\/manga\/([^/]+)\/?$/)?.[1] ?? ''
-        if (!mangaId || seen.has(mangaId)) return
+    const linkMatches = html.matchAll(/<a[^>]*href=["'](?:https?:\/\/[^"']+)?\/manga\/([^/"']+)\/?["'][^>]*>([\s\S]*?)<\/a>/gi)
+    for (const match of linkMatches) {
+        const mangaId = String(match[1] ?? '').trim()
+        const anchorHtml = String(match[2] ?? '')
+        if (!mangaId || seen.has(mangaId) || !/<img\b/i.test(anchorHtml)) continue
 
-        const image = $link.find('img').first().attr('src') ?? ''
-        if (!image) return
+        let image = extractText(anchorHtml, /<img[^>]*src=["']([^"']+)["']/i)
+        let title = decodeHTMLEntity(extractText(anchorHtml, /<img[^>]*alt=["']([^"']*)["']/i)).trim()
 
-        let title = $link.find('img').first().attr('alt') ?? ''
-        const $card = $link.parent().parent()
-        const cardTitle = $card.find(`a[href$="/manga/${mangaId}/"]`).filter((_: number, titleElement: any) => $(titleElement).text().trim().length > 0).first().text().trim()
-        if (cardTitle) title = cardTitle
+        const fullMatch = String(match[0] ?? '')
+        const position = html.indexOf(fullMatch)
+        const nearbyContext = position >= 0
+            ? html.substring(Math.max(0, position - 1200), Math.min(html.length, position + fullMatch.length + 1800))
+            : anchorHtml
 
-        const subtitle = $card.find('a[href*="/chapter-"] p').first().text().trim()
+        const mangaHrefPattern = escapeRegex(`/manga/${mangaId}/`)
+        const titleRegex = new RegExp(`<a[^>]*href=["'][^"']*${mangaHrefPattern}[^"']*["'][^>]*>([\\s\\S]*?)<\\/a>`, 'ig')
+        let titleMatch: RegExpExecArray | null
+        while ((titleMatch = titleRegex.exec(nearbyContext)) !== null) {
+            const candidate = decodeAndClean(titleMatch[1] ?? '')
+            if (candidate && !candidate.toLowerCase().startsWith('chapter ')) {
+                title = candidate
+                break
+            }
+        }
+
+        const subtitle = decodeAndClean(extractText(nearbyContext, /<a[^>]*href=["'][^"']*\/chapter-[^"']+["'][^>]*>[\s\S]*?<p[^>]*>([\s\S]*?)<\/p>/i))
+        if (!image) continue
+
         seen.add(mangaId)
         results.push(App.createPartialSourceManga({
             mangaId,
             image: normalizeUrl(image),
-            title: decodeHTMLEntity(title.trim() || mangaId),
-            subtitle: decodeHTMLEntity(subtitle)
+            title: title || mangaId,
+            subtitle
         }))
-    })
+    }
 
     return results
 }
@@ -152,16 +192,19 @@ export const parseSearchTags = (html: string): TagSection[] => {
             const rawGenres = Array.isArray(searchTerms?.genre) ? searchTerms.genre : []
             const rawTypes = Array.isArray(searchTerms?.type) ? searchTerms.type : []
             const rawStatuses = Array.isArray(searchTerms?.status) ? searchTerms.status : []
+
             for (const genre of rawGenres) {
                 const slug = String(genre?.slug ?? '').trim()
                 const label = String(genre?.name ?? '').trim()
                 if (slug && label) genres.push({ id: `genre:${slug}`, label: decodeHTMLEntity(label) })
             }
+
             for (const type of rawTypes) {
                 const slug = String(type?.slug ?? '').trim()
                 const label = String(type?.name ?? '').trim()
                 if (slug && label) types.push({ id: `type:${slug}`, label: decodeHTMLEntity(label) })
             }
+
             for (const status of rawStatuses) {
                 const slug = String(status?.slug ?? '').trim()
                 const label = String(status?.name ?? '').trim()
@@ -197,9 +240,9 @@ export const parseSearchTags = (html: string): TagSection[] => {
     }
 
     const sections: TagSection[] = []
-    if (genres.length > 0) sections.push(App.createTagSection({ id: 'genre', label: 'Genres', tags: genres.map((x: Tag) => App.createTag(x)) }))
-    if (types.length > 0) sections.push(App.createTagSection({ id: 'type', label: 'Type', tags: types.map((x: Tag) => App.createTag(x)) }))
-    if (statuses.length > 0) sections.push(App.createTagSection({ id: 'status', label: 'Status', tags: statuses.map((x: Tag) => App.createTag(x)) }))
+    if (genres.length > 0) sections.push(App.createTagSection({ id: 'genre', label: 'Genres', tags: genres.map((tag) => App.createTag(tag)) }))
+    if (types.length > 0) sections.push(App.createTagSection({ id: 'type', label: 'Type', tags: types.map((tag) => App.createTag(tag)) }))
+    if (statuses.length > 0) sections.push(App.createTagSection({ id: 'status', label: 'Status', tags: statuses.map((tag) => App.createTag(tag)) }))
 
     return sections
 }
