@@ -59,8 +59,20 @@ const createAdvancedSearchBody = (nonce: string, page: number, query: string, ge
     ].join('&')
 }
 
+const getIncludedTagsByPrefix = (query: SearchRequest, prefix: string): string[] => {
+    const tags = (query as any)?.includedTags as Array<{ id: string }> | undefined
+    if (!Array.isArray(tags)) return []
+
+    const results: string[] = []
+    for (const tag of tags) {
+        const value = String(tag?.id ?? '')
+        if (value.startsWith(prefix)) results.push(value.replace(prefix, ''))
+    }
+    return results
+}
+
 export const KiryuuInfo: SourceInfo = {
-    version: '2.2.5',
+    version: '2.2.6',
     name: 'Kiryuu',
     icon: 'icon.png',
     author: 'NaufalJCT48',
@@ -138,8 +150,19 @@ export class Kiryuu extends Source {
         return parseChapterDetails(response.data as string, mangaId, chapterId)
     }
 
-    override async getHomePageSections(sectionCallback: (section: HomeSection) => void): Promise<void> {
-        const sections = [
+    async getHomePageSections(sectionCallback: (section: HomeSection) => void): Promise<void> {
+        const sections: Array<{ request: Request, section: HomeSection }> = [
+            {
+                request: createRequestObject({
+                    url: `${WEBSITE_BASE}/latest/`
+                }),
+                section: App.createHomeSection({
+                    id: 'featured',
+                    title: 'Featured',
+                    type: HomeSectionType.featured,
+                    containsMoreItems: false
+                })
+            },
             {
                 request: createRequestObject({
                     url: `${WEBSITE_BASE}/project/`
@@ -164,68 +187,29 @@ export class Kiryuu extends Source {
             }
         ]
 
-        try {
-            const nonce = await getSearchNonce(this.requestManager)
-            sections.unshift({
-                request: createRequestObject({
-                    url: `${WEBSITE_BASE}/wp-admin/admin-ajax.php?action=advanced_search`,
-                    method: 'POST',
-                    data: createAdvancedSearchBody(nonce, 1, '', [], [], [], 'popular'),
-                    headers: {
-                        'content-type': 'application/x-www-form-urlencoded',
-                        'origin': WEBSITE_BASE,
-                        'referer': `${WEBSITE_BASE}/advanced-search/`,
-                        'x-requested-with': 'XMLHttpRequest'
-                    }
-                }),
-                section: App.createHomeSection({
-                    id: 'featured',
-                    title: 'Featured',
-                    type: HomeSectionType.featured,
-                    containsMoreItems: false
-                })
-            })
-        } catch (e) {
-        }
-
         for (const item of sections) {
             sectionCallback(item.section)
-            try {
-                const response = await this.requestManager.schedule(item.request, 1)
-                item.section.items = parseMangaList(response.data as string)
-                sectionCallback(item.section)
-            } catch (e) {
-            }
+            const response = await this.requestManager.schedule(item.request, 1)
+            const parsedItems = parseMangaList(response.data as string)
+            item.section.items = item.section.id === 'featured' ? parsedItems.slice(0, 12) : parsedItems
+            sectionCallback(item.section)
         }
     }
 
-    override async getSearchTags(): Promise<TagSection[]> {
-        try {
-            const request = createRequestObject({
-                url: `${WEBSITE_BASE}/advanced-search/`
-            })
-            const response = await this.requestManager.schedule(request, 1)
-            return parseSearchTags(response.data as string)
-        } catch (e) {
-            return parseSearchTags('')
-        }
+    async getSearchTags(): Promise<TagSection[]> {
+        const request = createRequestObject({
+            url: `${WEBSITE_BASE}/advanced-search/`
+        })
+        const response = await this.requestManager.schedule(request, 1)
+        return parseSearchTags(response.data as string)
     }
 
-    override async getSearchResults(query: SearchRequest, metadata: any): Promise<PagedResults> {
+    async getSearchResults(query: SearchRequest, metadata: any): Promise<PagedResults> {
         const page = metadata?.page ?? 1
         const searchTerm = query.title?.trim() ?? ''
-        const includedTags = (query as any)?.includedTags as Array<{ id: string }>
-        const genreList: string[] = []
-        const typeList: string[] = []
-        const statusList: string[] = []
-        if (Array.isArray(includedTags) && includedTags.length > 0) {
-            for (const tag of includedTags) {
-                const value = String(tag?.id ?? '')
-                if (value.startsWith('genre:')) genreList.push(value.replace(/^genre:/, ''))
-                else if (value.startsWith('type:')) typeList.push(value.replace(/^type:/, ''))
-                else if (value.startsWith('status:')) statusList.push(value.replace(/^status:/, ''))
-            }
-        }
+        const genreList = getIncludedTagsByPrefix(query, 'genre:')
+        const typeList = getIncludedTagsByPrefix(query, 'type:')
+        const statusList = getIncludedTagsByPrefix(query, 'status:')
 
         const nonce = await getSearchNonce(this.requestManager)
         const request = createRequestObject({
@@ -250,7 +234,7 @@ export class Kiryuu extends Source {
         })
     }
 
-    override async getViewMoreItems(homepageSectionId: string, metadata: any): Promise<PagedResults> {
+    async getViewMoreItems(homepageSectionId: string, metadata: any): Promise<PagedResults> {
         const page = metadata?.page ?? 1
         
         let url: string
