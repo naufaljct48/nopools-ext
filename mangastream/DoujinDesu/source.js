@@ -15433,7 +15433,7 @@ var _Sources = (() => {
     desember: 11
   };
   var DoujinDesuInfo = {
-    version: "5.0.0",
+    version: "5.0.1",
     name: "DoujinDesu",
     icon: "icon.png",
     author: "NaufalJCT48",
@@ -15669,6 +15669,9 @@ Please open ${BASE_URL} with the cloud icon first.`);
         item.section.items = this.parseMangaList(load(response.data));
         sectionCallback(item.section);
       }
+    }
+    async getHomePageSection(sectionCallback) {
+      return this.getHomePageSections(sectionCallback);
     }
     async getViewMoreItems(homepageSectionId, metadata) {
       const page = metadata?.page ?? 2;

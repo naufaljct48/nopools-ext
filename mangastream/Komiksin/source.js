@@ -16295,6 +16295,9 @@ var _Sources = (() => {
       }
       await Promise.all(promises);
     }
+    async getHomePageSection(sectionCallback) {
+      return this.getHomePageSections(sectionCallback);
+    }
     async getViewMoreItems(homepageSectionId, metadata) {
       const page = metadata?.page ?? 1;
       const param = this.homescreen_sections[homepageSectionId].getViewMoreItemsFunc(page) ?? void 0;
@@ -16399,6 +16402,16 @@ var _Sources = (() => {
           "referer": `${this.baseUrl}/`,
           "origin": `${this.baseUrl}/`,
           "user-agent": await this.requestManager.getDefaultUserAgent()
+        }
+      });
+    }
+    getCloudflareBypassRequest() {
+      return App.createRequest({
+        url: `${this.bypassPage || this.baseUrl}/`,
+        method: "GET",
+        headers: {
+          "referer": `${this.baseUrl}/`,
+          "origin": `${this.baseUrl}/`
         }
       });
     }

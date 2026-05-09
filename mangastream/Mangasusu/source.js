@@ -16295,6 +16295,9 @@ var _Sources = (() => {
       }
       await Promise.all(promises);
     }
+    async getHomePageSection(sectionCallback) {
+      return this.getHomePageSections(sectionCallback);
+    }
     async getViewMoreItems(homepageSectionId, metadata) {
       const page = metadata?.page ?? 1;
       const param = this.homescreen_sections[homepageSectionId].getViewMoreItemsFunc(page) ?? void 0;
@@ -16402,6 +16405,16 @@ var _Sources = (() => {
         }
       });
     }
+    getCloudflareBypassRequest() {
+      return App.createRequest({
+        url: `${this.bypassPage || this.baseUrl}/`,
+        method: "GET",
+        headers: {
+          "referer": `${this.baseUrl}/`,
+          "origin": `${this.baseUrl}/`
+        }
+      });
+    }
     checkResponseError(response) {
       const status = response.status;
       switch (status) {
@@ -16418,7 +16431,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
   // src/Mangasusu/Mangasusu.ts
   var DOMAIN = "https://mangasusuku.com";
   var MangasusuInfo = {
-    version: getExportVersion("0.0.4"),
+    version: getExportVersion("0.0.5"),
     name: "Mangasusu",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",
@@ -16479,6 +16492,9 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
         sectionCallback(section.data.section);
       }
     }
+    async getHomePageSection(sectionCallback) {
+      return this.getHomePageSections(sectionCallback);
+    }
     async getViewMoreItems(homepageSectionId, metadata) {
       const page = metadata?.page ?? 2;
       const path = homepageSectionId === "popular_today" ? `komik/page/${page}/?status=&type=&order=popular` : `komik/page/${page}/?order=update`;
@@ -16512,6 +16528,16 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
           "referer": `${this.baseUrl}/`,
           "origin": `${this.baseUrl}/`,
           "user-agent": await this.requestManager.getDefaultUserAgent()
+        }
+      });
+    }
+    getCloudflareBypassRequest() {
+      return App.createRequest({
+        url: `${this.baseUrl}/komik/?page=1&order=update`,
+        method: "GET",
+        headers: {
+          "referer": `${this.baseUrl}/`,
+          "origin": `${this.baseUrl}/`
         }
       });
     }
