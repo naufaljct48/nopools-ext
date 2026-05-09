@@ -10,7 +10,6 @@ import {
     Request,
     Response,
     SearchRequest,
-    Source,
     SourceInfo,
     SourceIntents,
     SourceManga,
@@ -108,7 +107,7 @@ const getTableValue = ($: cheerio.CheerioAPI, label: string): string => {
 
 const hasNextPage = ($: cheerio.CheerioAPI): boolean => $('nav.pagination li.last a').length > 0 || $('a.next.page-numbers').length > 0
 
-export class DoujinDesu extends Source {
+export class DoujinDesu {
     requestManager = App.createRequestManager({
         requestsPerSecond: 4,
         requestTimeout: 15000,
@@ -173,7 +172,7 @@ export class DoujinDesu extends Source {
         return results
     }
 
-    override async getMangaDetails(mangaId: string): Promise<SourceManga> {
+    async getMangaDetails(mangaId: string): Promise<SourceManga> {
         const response = await this.requestManager.schedule(this.createRequest(`/manga/${mangaId}/`), 1)
         this.checkResponseError(response)
         const $ = cheerio.load(response.data as string)
@@ -224,7 +223,7 @@ export class DoujinDesu extends Source {
         })
     }
 
-    override async getChapters(mangaId: string): Promise<Chapter[]> {
+    async getChapters(mangaId: string): Promise<Chapter[]> {
         const response = await this.requestManager.schedule(this.createRequest(`/manga/${mangaId}/`), 1)
         this.checkResponseError(response)
         const $ = cheerio.load(response.data as string)
@@ -255,7 +254,7 @@ export class DoujinDesu extends Source {
         return chapters
     }
 
-    override async getChapterDetails(mangaId: string, chapterId: string): Promise<ChapterDetails> {
+    async getChapterDetails(mangaId: string, chapterId: string): Promise<ChapterDetails> {
         const chapterResponse = await this.requestManager.schedule(this.createRequest(`/${chapterId}/`), 1)
         this.checkResponseError(chapterResponse)
         const $ = cheerio.load(chapterResponse.data as string)
@@ -283,7 +282,7 @@ export class DoujinDesu extends Source {
         })
     }
 
-    override async getHomePageSections(sectionCallback: (section: HomeSection) => void): Promise<void> {
+    async getHomePageSections(sectionCallback: (section: HomeSection) => void): Promise<void> {
         const sections = [
             {
                 request: this.createRequest('/manga/?type=Manga'),
@@ -318,7 +317,7 @@ export class DoujinDesu extends Source {
         return this.getHomePageSections(sectionCallback)
     }
 
-    override async getViewMoreItems(homepageSectionId: string, metadata: any): Promise<PagedResults> {
+    async getViewMoreItems(homepageSectionId: string, metadata: any): Promise<PagedResults> {
         const page = metadata?.page ?? 2
         const type = homepageSectionId === 'manhwa' ? 'Manhwa' : 'Manga'
         const response = await this.requestManager.schedule(this.createRequest(`/manga/page/${page}/?type=${type}`), 1)
@@ -331,7 +330,7 @@ export class DoujinDesu extends Source {
         })
     }
 
-    override async getSearchTags(): Promise<TagSection[]> {
+    async getSearchTags(): Promise<TagSection[]> {
         const response = await this.requestManager.schedule(this.createRequest('/genre/'), 1)
         this.checkResponseError(response)
         const $ = cheerio.load(response.data as string)
@@ -357,7 +356,7 @@ export class DoujinDesu extends Source {
         ]
     }
 
-    override async getSearchResults(query: SearchRequest, metadata: any): Promise<PagedResults> {
+    async getSearchResults(query: SearchRequest, metadata: any): Promise<PagedResults> {
         const page = metadata?.page ?? 1
         const title = query.title?.trim() ?? ''
         const included = query.includedTags ?? []
@@ -383,7 +382,7 @@ export class DoujinDesu extends Source {
         })
     }
 
-    override async getCloudflareBypassRequestAsync(): Promise<Request> {
+    async getCloudflareBypassRequestAsync(): Promise<Request> {
         return App.createRequest({
             url: `${BASE_URL}/`,
             method: 'GET',
@@ -395,7 +394,7 @@ export class DoujinDesu extends Source {
         })
     }
 
-    override getCloudflareBypassRequest(): Request {
+    getCloudflareBypassRequest(): Request {
         return App.createRequest({
             url: `${BASE_URL}/`,
             method: 'GET',
@@ -407,7 +406,7 @@ export class DoujinDesu extends Source {
         })
     }
 
-    override getMangaShareUrl(mangaId: string): string {
+    getMangaShareUrl(mangaId: string): string {
         return `${BASE_URL}/manga/${mangaId}/`
     }
 }
