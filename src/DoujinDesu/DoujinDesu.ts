@@ -41,7 +41,7 @@ const MONTHS: Record<string, number> = {
 }
 
 export const DoujinDesuInfo: SourceInfo = {
-    version: '0.0.1',
+    version: '0.0.2',
     name: 'DoujinDesu',
     icon: 'icon.png',
     author: 'NaufalJCT48',
@@ -78,10 +78,10 @@ const imageFromElement = ($: cheerio.CheerioAPI, element: cheerio.Cheerio<Elemen
     const srcset = element.attr('srcset') ?? ''
     return absoluteUrl(
         element.attr('data-src')
-        ?? element.attr('data-lazy-src')
-        ?? srcset.split(' ')[0]
-        ?? element.attr('src')
-        ?? ''
+        || element.attr('data-lazy-src')
+        || srcset.split(' ')[0]
+        || element.attr('src')
+        || ''
     )
 }
 
@@ -122,7 +122,8 @@ export class DoujinDesu extends Source {
                     'Referer': `${BASE_URL}/`,
                     'Origin': BASE_URL,
                     'User-Agent': USER_AGENT,
-                    'X-Requested-With': 'XMLHttpRequest'
+                    'DNT': '1',
+                    'Sec-GPC': '1'
                 }
                 return request
             },
@@ -137,6 +138,15 @@ export class DoujinDesu extends Source {
             data,
             headers
         })
+    }
+
+    private checkResponseError(response: Response): void {
+        if (response.status === 403 || response.status === 503) {
+            throw new Error(`CLOUDFLARE BYPASS ERROR:\nPlease open ${BASE_URL} with the cloud icon first.`)
+        }
+        if (response.status === 404) {
+            throw new Error(`The requested page ${response.request.url} was not found.`)
+        }
     }
 
     private parseMangaList($: cheerio.CheerioAPI): PartialSourceManga[] {
@@ -165,6 +175,7 @@ export class DoujinDesu extends Source {
 
     override async getMangaDetails(mangaId: string): Promise<SourceManga> {
         const response = await this.requestManager.schedule(this.createRequest(`/manga/${mangaId}/`), 1)
+        this.checkResponseError(response)
         const $ = cheerio.load(response.data as string)
 
         const titleElement = $('section.metadata h1.title').first().clone()
@@ -215,6 +226,7 @@ export class DoujinDesu extends Source {
 
     override async getChapters(mangaId: string): Promise<Chapter[]> {
         const response = await this.requestManager.schedule(this.createRequest(`/manga/${mangaId}/`), 1)
+        this.checkResponseError(response)
         const $ = cheerio.load(response.data as string)
         const chapters: Chapter[] = []
         let sortingIndex = 0
@@ -245,6 +257,7 @@ export class DoujinDesu extends Source {
 
     override async getChapterDetails(mangaId: string, chapterId: string): Promise<ChapterDetails> {
         const chapterResponse = await this.requestManager.schedule(this.createRequest(`/${chapterId}/`), 1)
+        this.checkResponseError(chapterResponse)
         const $ = cheerio.load(chapterResponse.data as string)
         const readerId = $('#reader').attr('data-id') ?? ''
 
@@ -257,6 +270,7 @@ export class DoujinDesu extends Source {
             'Origin': BASE_URL,
             'X-Requested-With': 'XMLHttpRequest'
         }), 1)
+        this.checkResponseError(pageResponse)
         const _$ = cheerio.load(pageResponse.data as string)
         const pages = _$('img').toArray().map((img) => imageFromElement(_$, _$(img))).filter(Boolean)
 
@@ -294,6 +308,7 @@ export class DoujinDesu extends Source {
         for (const item of sections) {
             sectionCallback(item.section)
             const response = await this.requestManager.schedule(item.request, 1)
+            this.checkResponseError(response)
             item.section.items = this.parseMangaList(cheerio.load(response.data as string))
             sectionCallback(item.section)
         }
@@ -303,6 +318,7 @@ export class DoujinDesu extends Source {
         const page = metadata?.page ?? 2
         const type = homepageSectionId === 'manhwa' ? 'Manhwa' : 'Manga'
         const response = await this.requestManager.schedule(this.createRequest(`/manga/page/${page}/?type=${type}`), 1)
+        this.checkResponseError(response)
         const $ = cheerio.load(response.data as string)
 
         return App.createPagedResults({
@@ -313,6 +329,7 @@ export class DoujinDesu extends Source {
 
     override async getSearchTags(): Promise<TagSection[]> {
         const response = await this.requestManager.schedule(this.createRequest('/genre/'), 1)
+        this.checkResponseError(response)
         const $ = cheerio.load(response.data as string)
         const genres: Tag[] = []
 
@@ -353,6 +370,7 @@ export class DoujinDesu extends Source {
         }
 
         const response = await this.requestManager.schedule(this.createRequest(path), 1)
+        this.checkResponseError(response)
         const $ = cheerio.load(response.data as string)
 
         return App.createPagedResults({
@@ -362,7 +380,27 @@ export class DoujinDesu extends Source {
     }
 
     override async getCloudflareBypassRequestAsync(): Promise<Request> {
-        return this.createRequest('/')
+        return App.createRequest({
+            url: `${BASE_URL}/`,
+            method: 'GET',
+            headers: {
+                'referer': `${BASE_URL}/`,
+                'origin': `${BASE_URL}/`,
+                'user-agent': USER_AGENT
+            }
+        })
+    }
+
+    override getCloudflareBypassRequest(): Request {
+        return App.createRequest({
+            url: `${BASE_URL}/`,
+            method: 'GET',
+            headers: {
+                'referer': `${BASE_URL}/`,
+                'origin': `${BASE_URL}/`,
+                'user-agent': USER_AGENT
+            }
+        })
     }
 
     override getMangaShareUrl(mangaId: string): string {
