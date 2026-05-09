@@ -41,7 +41,7 @@ const MONTHS: Record<string, number> = {
 }
 
 export const DoujinDesuInfo: SourceInfo = {
-    version: '3.0.0',
+    version: '5.0.0',
     name: 'DoujinDesu',
     icon: 'icon.png',
     author: 'NaufalJCT48',
