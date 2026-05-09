@@ -16020,18 +16020,6 @@ var _Sources = (() => {
        */
       this.bypassPage = "";
       /**
-       * Override this to set a custom URL for homepage listing (used by getHomePageSections, getSearchTags, getCloudflareBypassRequest).
-       * Default = undefined (falls back to baseUrl + directoryPath)
-       * Example: 'https://example.com/manga/?page=1&order=update'
-       */
-      this.homepageListingUrl = void 0;
-      /**
-       * For sources with multiple homepage sections fetched from different URLs.
-       * Each entry: { url: string, sectionKey: keyof homescreen_sections }
-       * If set, getHomePageSections will use this instead of homepageListingUrl.
-       */
-      this.homepageSections = [];
-      /**
        * If it's not possible to use postIds for certain reasons, you can disable this here.
        */
       this.usePostIds = true;
@@ -16230,8 +16218,10 @@ var _Sources = (() => {
       return this.parser.parseChapterDetails(_$, mangaId, chapterId);
     }
     async getSearchTags() {
-      const url = this.homepageListingUrl ?? `${this.baseUrl}/${this.directoryPath}/`;
-      const request = App.createRequest({ url, method: "GET" });
+      const request = App.createRequest({
+        url: `${this.baseUrl}/${this.directoryPath}/`,
+        method: "GET"
+      });
       const response = await this.requestManager.schedule(request, 1);
       this.checkResponseError(response);
       const $2 = load(response.data);
@@ -16266,7 +16256,7 @@ var _Sources = (() => {
     async constructSearchRequest(page, query) {
       let urlBuilder = new URLBuilder(this.baseUrl).addPathComponent(this.directoryPath).addQueryParameter("page", page.toString());
       if (query?.title) {
-        urlBuilder = urlBuilder.addQueryParameter("s", encodeURIComponent(query?.title.replace(/[’–][a-z]*/g, "") ?? ""));
+        urlBuilder = urlBuilder.addQueryParameter("s", encodeURIComponent(query?.title.replace(/[ΓÇÖΓÇô][a-z]*/g, "") ?? ""));
       } else {
         urlBuilder = urlBuilder.addQueryParameter("genre", getFilterTagsBySection("genres", query?.includedTags, true)).addQueryParameter("genre", getFilterTagsBySection("genres", query?.excludedTags, false, await this.supportsTagExclusion())).addQueryParameter("status", getIncludedTagBySection("status", query?.includedTags)).addQueryParameter("type", getIncludedTagBySection("type", query?.includedTags)).addQueryParameter("order", getIncludedTagBySection("order", query?.includedTags));
       }
@@ -16279,35 +16269,6 @@ var _Sources = (() => {
       return false;
     }
     async getHomePageSections(sectionCallback) {
-      if (this.homepageSections.length > 0) {
-        const enabledSections = this.homepageSections.filter((s) => this.homescreen_sections[s.sectionKey].enabled !== false);
-        for (const item of enabledSections) {
-          const section = this.homescreen_sections[item.sectionKey];
-          sectionCallback(section.section);
-        }
-        for (const item of enabledSections) {
-          const section = this.homescreen_sections[item.sectionKey];
-          const request2 = App.createRequest({ url: item.url, method: "GET" });
-          const response2 = await this.requestManager.schedule(request2, 1);
-          this.checkResponseError(response2);
-          section.section.items = await this.parser.parseHomeSection(load(response2.data), section, this);
-          sectionCallback(section.section);
-        }
-        return;
-      }
-      if (this.homepageListingUrl) {
-        const request2 = App.createRequest({ url: this.homepageListingUrl, method: "GET" });
-        const response2 = await this.requestManager.schedule(request2, 1);
-        this.checkResponseError(response2);
-        const $3 = load(response2.data);
-        const sectionValues2 = Object.values(this.homescreen_sections).filter((s) => s.enabled !== false).sort((a, b) => a.sortIndex - b.sortIndex);
-        for (const section of sectionValues2) {
-          sectionCallback(section.section);
-          section.section.items = await this.parser.parseHomeSection($3, section, this);
-          sectionCallback(section.section);
-        }
-        return;
-      }
       const request = App.createRequest({
         url: `${this.baseUrl}/`,
         method: "GET"
@@ -16434,9 +16395,8 @@ var _Sources = (() => {
       return postId.toString();
     }
     async getCloudflareBypassRequestAsync() {
-      const url = this.homepageListingUrl ?? `${this.bypassPage || this.baseUrl}/`;
       return App.createRequest({
-        url,
+        url: `${this.bypassPage || this.baseUrl}/`,
         method: "GET",
         headers: {
           "referer": `${this.baseUrl}/`,
@@ -16446,9 +16406,8 @@ var _Sources = (() => {
       });
     }
     getCloudflareBypassRequest() {
-      const url = this.homepageListingUrl ?? `${this.bypassPage || this.baseUrl}/`;
       return App.createRequest({
-        url,
+        url: `${this.bypassPage || this.baseUrl}/`,
         method: "GET",
         headers: {
           "referer": `${this.baseUrl}/`,

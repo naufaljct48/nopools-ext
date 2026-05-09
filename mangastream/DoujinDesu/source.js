@@ -15414,10 +15414,8 @@ var _Sources = (() => {
   var parse5 = getParse((content, options, isDocument2, context) => options._useHtmlParser2 ? parseDocument(content, options) : parseWithParse5(content, options, isDocument2, context));
   var load = getLoad(parse5, (dom, options) => options._useHtmlParser2 ? esm_default(dom, options) : renderWithParse5(dom));
 
-  // src/DoujinDesu/DoujinDesu.ts
+  // src/DoujinDesu/DoujinDesuHelper.ts
   var BASE_URL = "https://doujindesu.tv";
-  var USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36";
-  var TYPES = ["Doujinshi", "Manga", "Manhwa"];
   var MONTHS = {
     januari: 0,
     februari: 1,
@@ -15432,27 +15430,7 @@ var _Sources = (() => {
     november: 10,
     desember: 11
   };
-  var DoujinDesuInfo = {
-    version: "5.0.2",
-    name: "DoujinDesu",
-    icon: "icon.png",
-    author: "NaufalJCT48",
-    authorWebsite: "https://github.com/naufaljct48",
-    description: "Extension that pulls adult manga from DoujinDesu",
-    contentRating: import_types2.ContentRating.ADULT,
-    websiteBaseURL: BASE_URL,
-    sourceTags: [
-      {
-        text: "Indonesian",
-        type: import_types2.BadgeColor.GREY
-      },
-      {
-        text: "18+",
-        type: import_types2.BadgeColor.RED
-      }
-    ],
-    intents: import_types2.SourceIntents.MANGA_CHAPTERS | import_types2.SourceIntents.HOMEPAGE_SECTIONS | import_types2.SourceIntents.CLOUDFLARE_BYPASS_REQUIRED | import_types2.SourceIntents.SETTINGS_UI
-  };
+  var TYPES = ["Doujinshi", "Manga", "Manhwa"];
   var absoluteUrl = (url) => {
     if (!url) return "";
     if (url.startsWith("http")) return url;
@@ -15460,8 +15438,7 @@ var _Sources = (() => {
     if (url.startsWith("/")) return `${BASE_URL}${url}`;
     return `${BASE_URL}/${url}`;
   };
-  var slugFromMangaUrl = (url) => absoluteUrl(url).replace(/\/$/, "").split("/").pop() ?? "";
-  var slugFromChapterUrl = (url) => absoluteUrl(url).replace(/\/$/, "").split("/").pop() ?? "";
+  var slugFromUrl = (url) => absoluteUrl(url).replace(/\/$/, "").split("/").pop() ?? "";
   var imageFromElement = ($2, element) => {
     const srcset = element.attr("srcset") ?? "";
     return absoluteUrl(
@@ -15482,10 +15459,127 @@ var _Sources = (() => {
     if (lower.includes("publishing") || lower.includes("ongoing")) return "Ongoing";
     return "Unknown";
   };
-  var getTableValue = ($2, label) => {
-    return $2(`section.metadata td:contains(${label})`).filter((_, el) => $2(el).text().trim() === label).first().next("td").text().trim().replace(/\s+/g, " ");
-  };
+  var getTableValue = ($2, label) => $2(`section.metadata td:contains(${label})`).filter((_, el) => $2(el).text().trim() === label).first().next("td").text().trim().replace(/\s+/g, " ");
   var hasNextPage = ($2) => $2("nav.pagination li.last a").length > 0 || $2("a.next.page-numbers").length > 0;
+
+  // src/DoujinDesu/DoujinDesuParser.ts
+  var parseMangaDetails = ($2, mangaId) => {
+    const titleElement = $2("section.metadata h1.title").first().clone();
+    const alternativeTitle = titleElement.find("span.alter").text().trim();
+    titleElement.find("span.alter").remove();
+    const title = titleElement.text().trim().replace(/\s+/g, " ");
+    const titles = [title];
+    if (alternativeTitle) titles.push(alternativeTitle);
+    const author = getTableValue($2, "Author") || getTableValue($2, "Group") || "Unknown";
+    const artist = getTableValue($2, "Artist") || author;
+    const status = parseStatus(getTableValue($2, "Status"));
+    const series = getTableValue($2, "Series") || getTableValue($2, "Serialization");
+    const description = $2("section.metadata div.pb-2").text().trim().replace(/\s+/g, " ");
+    const image = imageFromElement($2, $2("figure.thumbnail img").first());
+    const tags = [];
+    for (const tag of $2("section.metadata div.tags a").toArray()) {
+      const label = $2(tag).text().trim();
+      const id = slugFromUrl($2(tag).attr("href") ?? "");
+      if (id && label) tags.push(App.createTag({ id, label }));
+    }
+    const descParts = [];
+    if (description) descParts.push(description);
+    if (alternativeTitle) descParts.push(`Judul Alternatif: ${alternativeTitle}`);
+    if (series) descParts.push(`Seri: ${series}`);
+    return App.createSourceManga({
+      id: mangaId,
+      mangaInfo: App.createMangaInfo({
+        titles,
+        image,
+        status,
+        author,
+        artist,
+        desc: descParts.join("\n\n"),
+        tags: [App.createTagSection({ id: "genres", label: "Genres", tags })]
+      })
+    });
+  };
+  var parseChapterList = ($2, mangaId) => {
+    const chapters = [];
+    let sortingIndex = 0;
+    for (const element of $2("#chapter_list li").toArray()) {
+      const $chapter = $2(element);
+      const href = $chapter.find("span.lchx a").first().attr("href") ?? $chapter.find('a[href*="chapter"]').first().attr("href") ?? "";
+      const id = slugFromUrl(href);
+      const chapterText = $chapter.find("div.epsright chapter").first().text().trim() || $chapter.find("span.eps").first().text().trim();
+      const chapNum = Number(chapterText.match(/\d+(?:\.\d+)?/)?.[0] ?? "0");
+      const name = $chapter.find("span.lchx a").first().text().trim() || `Chapter ${chapterText}`;
+      const time = parseDate($chapter.find("span.date").first().text().trim());
+      if (!id) continue;
+      chapters.push(App.createChapter({
+        id,
+        chapNum,
+        name,
+        time,
+        langCode: "\u{1F1EE}\u{1F1E9}",
+        sortingIndex: sortingIndex--
+      }));
+    }
+    return chapters;
+  };
+  var parseChapterDetails = (_$, mangaId, chapterId) => {
+    const pages = _$("img").toArray().map((img) => imageFromElement(_$, _$(img))).filter(Boolean);
+    if (pages.length === 0) throw new Error(`Unable to find pages for ${chapterId}`);
+    return App.createChapterDetails({ id: chapterId, mangaId, pages });
+  };
+  var parseMangaList = ($2) => {
+    const results = [];
+    for (const element of $2("#archives div.entries article.entry").toArray()) {
+      const $entry = $2(element);
+      const href = $entry.find('a[href*="/manga/"]').first().attr("href") ?? "";
+      const mangaId = slugFromUrl(href);
+      const title = $entry.find("h3.title").first().text().trim() || $entry.find("a").first().attr("title") || "";
+      const image = imageFromElement($2, $entry.find("figure.thumbnail img").first());
+      const subtitle = $entry.find("div.artists span").first().text().trim();
+      if (!mangaId || !title || !image) continue;
+      results.push(App.createPartialSourceManga({ mangaId, image, title, subtitle }));
+    }
+    return results;
+  };
+  var parseSearchTags = ($2) => {
+    const genres = [];
+    for (const element of $2('section#taxonomy div.entry a[href*="/genre/"]').toArray()) {
+      const label = $2(element).find("span.name").text().trim() || $2(element).attr("title") || "";
+      const id = slugFromUrl($2(element).attr("href") ?? "");
+      if (id && label) genres.push(App.createTag({ id: `genre:${id}`, label }));
+    }
+    return [
+      App.createTagSection({
+        id: "type",
+        label: "Type",
+        tags: TYPES.map((type) => App.createTag({ id: `type:${type}`, label: type }))
+      }),
+      App.createTagSection({
+        id: "genre",
+        label: "Genres",
+        tags: genres
+      })
+    ];
+  };
+
+  // src/DoujinDesu/DoujinDesu.ts
+  var BASE_URL2 = "https://doujindesu.tv";
+  var USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36";
+  var DoujinDesuInfo = {
+    version: "5.0.3",
+    name: "DoujinDesu",
+    icon: "icon.png",
+    author: "NaufalJCT48",
+    authorWebsite: "https://github.com/naufaljct48",
+    description: "Extension that pulls adult manga from DoujinDesu",
+    contentRating: import_types2.ContentRating.ADULT,
+    websiteBaseURL: BASE_URL2,
+    sourceTags: [
+      { text: "Indonesian", type: import_types2.BadgeColor.GREY },
+      { text: "18+", type: import_types2.BadgeColor.RED }
+    ],
+    intents: import_types2.SourceIntents.MANGA_CHAPTERS | import_types2.SourceIntents.HOMEPAGE_SECTIONS | import_types2.SourceIntents.CLOUDFLARE_BYPASS_REQUIRED | import_types2.SourceIntents.SETTINGS_UI
+  };
   var DoujinDesu = class {
     constructor() {
       this.requestManager = App.createRequestManager({
@@ -15498,8 +15592,8 @@ var _Sources = (() => {
               ...request.headers ?? {},
               "Accept": isImage ? "image/avif,image/webp,image/apng,image/*,*/*;q=0.8" : "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
               "Accept-Language": "en-US,en;q=0.9,id;q=0.8",
-              "Referer": `${BASE_URL}/`,
-              "Origin": BASE_URL,
+              "Referer": `${BASE_URL2}/`,
+              "Origin": BASE_URL2,
               "User-Agent": USER_AGENT,
               "DNT": "1",
               "Sec-GPC": "1"
@@ -15511,111 +15605,26 @@ var _Sources = (() => {
       });
     }
     createRequest(url, method = "GET", data2, headers) {
-      return App.createRequest({
-        url: absoluteUrl(url),
-        method,
-        data: data2,
-        headers
-      });
+      return App.createRequest({ url: absoluteUrl(url), method, data: data2, headers });
     }
     checkResponseError(response) {
       if (response.status === 403 || response.status === 503) {
         throw new Error(`CLOUDFLARE BYPASS ERROR:
-Please open ${BASE_URL} with the cloud icon first.`);
+Please open ${BASE_URL2} with the cloud icon first.`);
       }
       if (response.status === 404) {
         throw new Error(`The requested page ${response.request.url} was not found.`);
       }
     }
-    parseMangaList($2) {
-      const results = [];
-      for (const element of $2("#archives div.entries article.entry").toArray()) {
-        const $entry = $2(element);
-        const href = $entry.find('a[href*="/manga/"]').first().attr("href") ?? "";
-        const mangaId = slugFromMangaUrl(href);
-        const title = $entry.find("h3.title").first().text().trim() || $entry.find("a").first().attr("title") || "";
-        const image = imageFromElement($2, $entry.find("figure.thumbnail img").first());
-        const subtitle = $entry.find("div.artists span").first().text().trim();
-        if (!mangaId || !title || !image) continue;
-        results.push(App.createPartialSourceManga({
-          mangaId,
-          image,
-          title,
-          subtitle
-        }));
-      }
-      return results;
-    }
     async getMangaDetails(mangaId) {
       const response = await this.requestManager.schedule(this.createRequest(`/manga/${mangaId}/`), 1);
       this.checkResponseError(response);
-      const $2 = load(response.data);
-      const titleElement = $2("section.metadata h1.title").first().clone();
-      const alternativeTitle = titleElement.find("span.alter").text().trim();
-      titleElement.find("span.alter").remove();
-      const title = titleElement.text().trim().replace(/\s+/g, " ");
-      const titles = [title];
-      if (alternativeTitle) titles.push(alternativeTitle);
-      const author = getTableValue($2, "Author") || getTableValue($2, "Group") || "Unknown";
-      const artist = getTableValue($2, "Artist") || author;
-      const status = parseStatus(getTableValue($2, "Status"));
-      const series = getTableValue($2, "Series") || getTableValue($2, "Serialization");
-      const description = $2("section.metadata div.pb-2").text().trim().replace(/\s+/g, " ");
-      const image = imageFromElement($2, $2("figure.thumbnail img").first());
-      const tags = [];
-      for (const tag of $2("section.metadata div.tags a").toArray()) {
-        const label = $2(tag).text().trim();
-        const id = slugFromMangaUrl($2(tag).attr("href") ?? "");
-        if (id && label) tags.push(App.createTag({ id, label }));
-      }
-      const descParts = [];
-      if (description) descParts.push(description);
-      if (alternativeTitle) descParts.push(`Judul Alternatif: ${alternativeTitle}`);
-      if (series) descParts.push(`Seri: ${series}`);
-      return App.createSourceManga({
-        id: mangaId,
-        mangaInfo: App.createMangaInfo({
-          titles,
-          image,
-          status,
-          author,
-          artist,
-          desc: descParts.join("\n\n"),
-          tags: [
-            App.createTagSection({
-              id: "genres",
-              label: "Genres",
-              tags
-            })
-          ]
-        })
-      });
+      return parseMangaDetails(load(response.data), mangaId);
     }
     async getChapters(mangaId) {
       const response = await this.requestManager.schedule(this.createRequest(`/manga/${mangaId}/`), 1);
       this.checkResponseError(response);
-      const $2 = load(response.data);
-      const chapters = [];
-      let sortingIndex = 0;
-      for (const element of $2("#chapter_list li").toArray()) {
-        const $chapter = $2(element);
-        const href = $chapter.find("span.lchx a").first().attr("href") ?? $chapter.find('a[href*="chapter"]').first().attr("href") ?? "";
-        const id = slugFromChapterUrl(href);
-        const chapterText = $chapter.find("div.epsright chapter").first().text().trim() || $chapter.find("span.eps").first().text().trim();
-        const chapNum = Number(chapterText.match(/\d+(?:\.\d+)?/)?.[0] ?? "0");
-        const name = $chapter.find("span.lchx a").first().text().trim() || `Chapter ${chapterText}`;
-        const time = parseDate($chapter.find("span.date").first().text().trim());
-        if (!id) continue;
-        chapters.push(App.createChapter({
-          id,
-          chapNum,
-          name,
-          time,
-          langCode: "\u{1F1EE}\u{1F1E9}",
-          sortingIndex: sortingIndex--
-        }));
-      }
-      return chapters;
+      return parseChapterList(load(response.data), mangaId);
     }
     async getChapterDetails(mangaId, chapterId) {
       const chapterResponse = await this.requestManager.schedule(this.createRequest(`/${chapterId}/`), 1);
@@ -15623,22 +15632,18 @@ Please open ${BASE_URL} with the cloud icon first.`);
       const $2 = load(chapterResponse.data);
       const readerId = $2("#reader").attr("data-id") ?? "";
       if (!readerId) throw new Error(`Unable to find reader id for ${chapterId}`);
-      const pageResponse = await this.requestManager.schedule(this.createRequest("/themes/ajax/ch.php", "POST", `id=${encodeURIComponent(readerId)}`, {
-        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-        "Accept": "*/*",
-        "Referer": `${BASE_URL}/${chapterId}/`,
-        "Origin": BASE_URL,
-        "X-Requested-With": "XMLHttpRequest"
-      }), 1);
+      const pageResponse = await this.requestManager.schedule(
+        this.createRequest("/themes/ajax/ch.php", "POST", `id=${encodeURIComponent(readerId)}`, {
+          "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+          "Accept": "*/*",
+          "Referer": `${BASE_URL2}/${chapterId}/`,
+          "Origin": BASE_URL2,
+          "X-Requested-With": "XMLHttpRequest"
+        }),
+        1
+      );
       this.checkResponseError(pageResponse);
-      const _$ = load(pageResponse.data);
-      const pages = _$("img").toArray().map((img) => imageFromElement(_$, _$(img))).filter(Boolean);
-      if (pages.length === 0) throw new Error(`Unable to find pages for ${chapterId}`);
-      return App.createChapterDetails({
-        id: chapterId,
-        mangaId,
-        pages
-      });
+      return parseChapterDetails(load(pageResponse.data), mangaId, chapterId);
     }
     async getHomePageSections(sectionCallback) {
       const sections = [
@@ -15665,7 +15670,7 @@ Please open ${BASE_URL} with the cloud icon first.`);
         sectionCallback(item.section);
         const response = await this.requestManager.schedule(item.request, 1);
         this.checkResponseError(response);
-        item.section.items = this.parseMangaList(load(response.data));
+        item.section.items = parseMangaList(load(response.data));
         sectionCallback(item.section);
       }
     }
@@ -15675,36 +15680,21 @@ Please open ${BASE_URL} with the cloud icon first.`);
     async getViewMoreItems(homepageSectionId, metadata) {
       const page = metadata?.page ?? 2;
       const type = homepageSectionId === "manhwa" ? "Manhwa" : "Manga";
-      const response = await this.requestManager.schedule(this.createRequest(`/manga/page/${page}/?type=${type}`), 1);
+      const response = await this.requestManager.schedule(
+        this.createRequest(`/manga/page/${page}/?type=${type}`),
+        1
+      );
       this.checkResponseError(response);
       const $2 = load(response.data);
       return App.createPagedResults({
-        results: this.parseMangaList($2),
+        results: parseMangaList($2),
         metadata: hasNextPage($2) ? { page: page + 1 } : void 0
       });
     }
     async getSearchTags() {
       const response = await this.requestManager.schedule(this.createRequest("/genre/"), 1);
       this.checkResponseError(response);
-      const $2 = load(response.data);
-      const genres = [];
-      for (const element of $2('section#taxonomy div.entry a[href*="/genre/"]').toArray()) {
-        const label = $2(element).find("span.name").text().trim() || $2(element).attr("title") || "";
-        const id = slugFromMangaUrl($2(element).attr("href") ?? "");
-        if (id && label) genres.push(App.createTag({ id: `genre:${id}`, label }));
-      }
-      return [
-        App.createTagSection({
-          id: "type",
-          label: "Type",
-          tags: TYPES.map((type) => App.createTag({ id: `type:${type}`, label: type }))
-        }),
-        App.createTagSection({
-          id: "genre",
-          label: "Genres",
-          tags: genres
-        })
-      ];
+      return parseSearchTags(load(response.data));
     }
     async getSearchResults(query, metadata) {
       const page = metadata?.page ?? 1;
@@ -15724,34 +15714,34 @@ Please open ${BASE_URL} with the cloud icon first.`);
       this.checkResponseError(response);
       const $2 = load(response.data);
       return App.createPagedResults({
-        results: this.parseMangaList($2),
+        results: parseMangaList($2),
         metadata: hasNextPage($2) ? { page: page + 1 } : void 0
       });
     }
     async getCloudflareBypassRequestAsync() {
       return App.createRequest({
-        url: `${BASE_URL}/`,
+        url: `${BASE_URL2}/`,
         method: "GET",
         headers: {
-          "referer": `${BASE_URL}/`,
-          "origin": `${BASE_URL}/`,
+          "referer": `${BASE_URL2}/`,
+          "origin": `${BASE_URL2}/`,
           "user-agent": USER_AGENT
         }
       });
     }
     getCloudflareBypassRequest() {
       return App.createRequest({
-        url: `${BASE_URL}/`,
+        url: `${BASE_URL2}/`,
         method: "GET",
         headers: {
-          "referer": `${BASE_URL}/`,
-          "origin": `${BASE_URL}/`,
+          "referer": `${BASE_URL2}/`,
+          "origin": `${BASE_URL2}/`,
           "user-agent": USER_AGENT
         }
       });
     }
     getMangaShareUrl(mangaId) {
-      return `${BASE_URL}/manga/${mangaId}/`;
+      return `${BASE_URL2}/manga/${mangaId}/`;
     }
   };
   return __toCommonJS(DoujinDesu_exports);
