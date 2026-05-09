@@ -822,7 +822,7 @@ var _Sources = (() => {
   var API_URL = "https://api.shngm.io";
   var BASE_URL2 = "https://app.shinigami.asia";
   var ShinigamiInfo = {
-    version: "1.2.3",
+    version: "1.2.4",
     name: "Shinigami",
     icon: "icon.png",
     author: "NaufalJCT48",
@@ -1053,7 +1053,7 @@ var _Sources = (() => {
       let param = "";
       switch (homepageSectionId) {
         case "latest":
-          param = `?type=project&page=${page}&page_size=30&is_featured=true`;
+          param = `?type=project&page=${page}&page_size=24&is_update=true&sort=latest&sort_order=desc`;
           break;
         case "featured":
           param = `?format=manhwa&page=${page}&page_size=30&is_recommended=true`;
