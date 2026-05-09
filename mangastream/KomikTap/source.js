@@ -743,9 +743,6 @@ var _Sources = (() => {
   });
   var import_types4 = __toESM(require_lib());
 
-  // src/MangaStream.ts
-  var import_types3 = __toESM(require_lib());
-
   // node_modules/cheerio/dist/browser/static.js
   var static_exports = {};
   __export(static_exports, {
@@ -15417,6 +15414,9 @@ var _Sources = (() => {
   var parse5 = getParse((content, options, isDocument2, context) => options._useHtmlParser2 ? parseDocument(content, options) : parseWithParse5(content, options, isDocument2, context));
   var load = getLoad(parse5, (dom, options) => options._useHtmlParser2 ? esm_default(dom, options) : renderWithParse5(dom));
 
+  // src/MangaStream.ts
+  var import_types3 = __toESM(require_lib());
+
   // node_modules/html-entities/dist/esm/named-references.js
   var __assign = function() {
     __assign = Object.assign || function(t) {
@@ -16418,7 +16418,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
   // src/KomikTap/KomikTap.ts
   var DOMAIN = "https://komiktap.info";
   var KomikTapInfo = {
-    version: getExportVersion("0.0.3"),
+    version: getExportVersion("0.0.4"),
     name: "KomikTap",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",
@@ -16444,25 +16444,81 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
       this.baseUrl = DOMAIN;
       this.manga_tag_selector_box = "div.seriestugenre";
       this.dateMonths = {
-        january: "Januari",
-        february: "Februari",
-        march: "Maret",
-        april: "April",
-        may: "Mei",
-        june: "Juni",
-        july: "Juli",
-        august: "Agustus",
-        september: "September",
-        october: "Oktober",
-        november: "November",
-        december: "Desember"
+        january: "januari",
+        february: "februari",
+        march: "maret",
+        april: "april",
+        may: "mei",
+        june: "juni",
+        july: "juli",
+        august: "agustus",
+        september: "september",
+        october: "oktober",
+        november: "november",
+        december: "desember"
       };
     }
     configureSections() {
+      this.homescreen_sections["popular_today"].enabled = false;
       this.homescreen_sections["new_titles"].enabled = false;
       this.homescreen_sections["top_alltime"].enabled = false;
       this.homescreen_sections["top_monthly"].enabled = false;
       this.homescreen_sections["top_weekly"].enabled = false;
+      this.homescreen_sections["latest_update"].selectorFunc = ($2) => $2("div.bs", "div.listupd");
+      this.homescreen_sections["latest_update"].titleSelectorFunc = ($2, element) => $2("a", element).first().attr("title");
+      this.homescreen_sections["latest_update"].subtitleSelectorFunc = ($2, element) => $2("div.epxs", element).first().text().trim();
+      this.homescreen_sections["latest_update"].getViewMoreItemsFunc = (page) => `manga/page/${page}/?order=update`;
+    }
+    async getHomePageSections(sectionCallback) {
+      const request = App.createRequest({
+        url: `${this.baseUrl}/manga/?page=1&order=update`,
+        method: "GET"
+      });
+      const response = await this.requestManager.schedule(request, 1);
+      this.checkResponseError(response);
+      const $2 = load(response.data);
+      const section = this.homescreen_sections["latest_update"];
+      sectionCallback(section.section);
+      section.section.items = await this.parser.parseHomeSection($2, section, this);
+      sectionCallback(section.section);
+    }
+    async getViewMoreItems(homepageSectionId, metadata) {
+      if (homepageSectionId !== "latest_update") {
+        return super.getViewMoreItems(homepageSectionId, metadata);
+      }
+      const page = metadata?.page ?? 2;
+      const request = App.createRequest({
+        url: `${this.baseUrl}/manga/page/${page}/?order=update`,
+        method: "GET"
+      });
+      const response = await this.requestManager.schedule(request, 1);
+      this.checkResponseError(response);
+      const $2 = load(response.data);
+      return App.createPagedResults({
+        results: await this.parser.parseViewMore($2, this),
+        metadata: !this.parser.isLastPage($2, "view_more") ? { page: page + 1 } : void 0
+      });
+    }
+    async getSearchTags() {
+      const request = App.createRequest({
+        url: `${this.baseUrl}/manga/?page=1&order=update`,
+        method: "GET"
+      });
+      const response = await this.requestManager.schedule(request, 1);
+      this.checkResponseError(response);
+      const $2 = load(response.data);
+      return this.parser.parseTags($2);
+    }
+    async getCloudflareBypassRequestAsync() {
+      return App.createRequest({
+        url: `${this.baseUrl}/manga/?page=1&order=update`,
+        method: "GET",
+        headers: {
+          "referer": `${this.baseUrl}/`,
+          "origin": `${this.baseUrl}/`,
+          "user-agent": await this.requestManager.getDefaultUserAgent()
+        }
+      });
     }
   };
   return __toCommonJS(KomikTap_exports);
