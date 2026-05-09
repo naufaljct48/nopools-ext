@@ -26,7 +26,7 @@ import { createHomeSection } from '../MangaStreamHelper'
 const DOMAIN = 'https://kanzenin.info'
 
 export const KanzeninInfo: SourceInfo = {
-    version: getExportVersion('0.0.7'),
+    version: getExportVersion('0.0.8'),
     name: 'Kanzenin',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',

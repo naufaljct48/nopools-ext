@@ -25,7 +25,7 @@ import { createHomeSection } from '../MangaStreamHelper'
 const DOMAIN = 'https://mangasusuku.com'
 
 export const MangasusuInfo: SourceInfo = {
-    version: getExportVersion('0.0.5'),
+    version: getExportVersion('0.0.6'),
     name: 'Mangasusu',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',

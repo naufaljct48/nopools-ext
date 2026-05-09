@@ -15,6 +15,7 @@ import {
     Response,
     SearchRequest,
     SearchResultsProviding,
+    Source,
     SourceManga,
     SourceStateManager,
     TagSection
@@ -44,8 +45,9 @@ export const getExportVersion = (EXTENSION_VERSION: string): string => {
     return BASE_VERSION.split('.').map((x, index) => Number(x) + Number(EXTENSION_VERSION.split('.')[index])).join('.')
 }
 
-export abstract class MangaStream implements ChapterProviding, HomePageSectionsProviding, MangaProviding, SearchResultsProviding {
-    constructor() {
+export abstract class MangaStream extends Source implements ChapterProviding, HomePageSectionsProviding, MangaProviding, SearchResultsProviding {
+    constructor(cheerioInstance: cheerio.CheerioAPI) {
+        super(cheerioInstance)
         this.configureSections()
     }
 
@@ -78,7 +80,7 @@ export abstract class MangaStream implements ChapterProviding, HomePageSectionsP
         }
     })
 
-    async getSourceMenu(): Promise<DUISection> {
+    override async getSourceMenu(): Promise<DUISection> {
         return App.createDUISection({
             id: 'sourceMenu',
             header: 'Source Menu',
@@ -282,7 +284,7 @@ export abstract class MangaStream implements ChapterProviding, HomePageSectionsP
     stateManager = App.createSourceStateManager()
     parser = new MangaStreamParser()
 
-    getMangaShareUrl(mangaId: string): string {
+    override getMangaShareUrl(mangaId: string): string {
         return this.usePostIds ? `${this.baseUrl}/?p=${mangaId}/` : `${this.baseUrl}/${this.directoryPath}/${mangaId}/`
     }
 
@@ -352,7 +354,7 @@ export abstract class MangaStream implements ChapterProviding, HomePageSectionsP
         return this.parser.parseChapterDetails(_$, mangaId, chapterId)
     }
 
-    async getSearchTags(): Promise<TagSection[]> {
+    override async getSearchTags(): Promise<TagSection[]> {
         const request = App.createRequest({
             url: `${this.baseUrl}/${this.directoryPath}/`,
             method: 'GET'
@@ -365,7 +367,7 @@ export abstract class MangaStream implements ChapterProviding, HomePageSectionsP
         return this.parser.parseTags($)
     }
 
-    async getSearchResults(query: SearchRequest, metadata: any): Promise<PagedResults> {
+    override async getSearchResults(query: SearchRequest, metadata: any): Promise<PagedResults> {
         const page: number = metadata?.page ?? 1
 
         const request = await this.constructSearchRequest(page, query)
@@ -418,11 +420,11 @@ export abstract class MangaStream implements ChapterProviding, HomePageSectionsP
         })
     }
 
-    async supportsTagExclusion(): Promise<boolean> {
+    override async supportsTagExclusion(): Promise<boolean> {
         return false
     }
 
-    async getHomePageSections(sectionCallback: (section: HomeSection) => void): Promise<void> {
+    override async getHomePageSections(sectionCallback: (section: HomeSection) => void): Promise<void> {
         const request = App.createRequest({
             url: `${this.baseUrl}/`,
             method: 'GET'
@@ -462,7 +464,7 @@ export abstract class MangaStream implements ChapterProviding, HomePageSectionsP
         return this.getHomePageSections(sectionCallback)
     }
 
-    async getViewMoreItems(homepageSectionId: string, metadata: any): Promise<PagedResults> {
+    override async getViewMoreItems(homepageSectionId: string, metadata: any): Promise<PagedResults> {
         const page: number = metadata?.page ?? 1
 
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -596,7 +598,7 @@ export abstract class MangaStream implements ChapterProviding, HomePageSectionsP
         return postId.toString()
     }
 
-    async getCloudflareBypassRequestAsync(): Promise<Request> {
+    override async getCloudflareBypassRequestAsync(): Promise<Request> {
         return App.createRequest({
             url: `${this.bypassPage || this.baseUrl}/`,
             method: 'GET',
@@ -608,7 +610,7 @@ export abstract class MangaStream implements ChapterProviding, HomePageSectionsP
         })
     }
 
-    getCloudflareBypassRequest(): Request {
+    override getCloudflareBypassRequest(): Request {
         return App.createRequest({
             url: `${this.bypassPage || this.baseUrl}/`,
             method: 'GET',

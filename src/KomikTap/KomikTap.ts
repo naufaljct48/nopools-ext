@@ -19,7 +19,7 @@ import {
 const DOMAIN = 'https://komiktap.info'
 
 export const KomikTapInfo: SourceInfo = {
-    version: getExportVersion('3.0.1'),
+    version: getExportVersion('3.0.2'),
     name: 'KomikTap',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
