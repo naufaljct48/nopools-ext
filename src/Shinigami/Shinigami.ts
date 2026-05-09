@@ -22,7 +22,7 @@ const API_URL = 'https://api.shngm.io'
 const BASE_URL = 'https://app.shinigami.asia'
 
 export const ShinigamiInfo: SourceInfo = {
-    version: '1.2.2',
+    version: '1.2.3',
     name: 'Shinigami',
     icon: 'icon.png',
     author: 'NaufalJCT48',
@@ -122,12 +122,12 @@ export class Shinigami extends Source {
         const sections = [
             {
                 request: createRequestObject({
-                    url: `${API_URL}/v1/manga/list?type=project&page=1&page_size=30&is_featured=true`,
+                    url: `${API_URL}/v1/manga/list?type=project&page=1&page_size=24&is_update=true&sort=latest&sort_order=desc`,
                     method: 'GET'
                 }),
                 section: App.createHomeSection({
                     id: 'latest',
-                    title: 'Latest Updates',
+                    title: 'Project Updates',
                     type: HomeSectionType.singleRowNormal,
                     containsMoreItems: true
                 })
