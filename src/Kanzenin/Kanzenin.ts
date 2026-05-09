@@ -26,7 +26,7 @@ import { createHomeSection } from '../MangaStreamHelper'
 const DOMAIN = 'https://kanzenin.info'
 
 export const KanzeninInfo: SourceInfo = {
-    version: getExportVersion('0.0.6'),
+    version: getExportVersion('0.0.7'),
     name: 'Kanzenin',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -88,6 +88,10 @@ export class Kanzenin extends MangaStream {
         }
     }
 
+    override async getHomePageSection(sectionCallback: (section: HomeSection) => void): Promise<void> {
+        return this.getHomePageSections(sectionCallback)
+    }
+
     override async getViewMoreItems(homepageSectionId: string, metadata: any): Promise<PagedResults> {
         const page = metadata?.page ?? 2
         const path = homepageSectionId === 'popular_today'
@@ -129,6 +133,17 @@ export class Kanzenin extends MangaStream {
                 'referer': `${this.baseUrl}/`,
                 'origin': `${this.baseUrl}/`,
                 'user-agent': await this.requestManager.getDefaultUserAgent()
+            }
+        })
+    }
+
+    override getCloudflareBypassRequest(): Request {
+        return App.createRequest({
+            url: `${this.baseUrl}/manga/?page=1&order=update`,
+            method: 'GET',
+            headers: {
+                'referer': `${this.baseUrl}/`,
+                'origin': `${this.baseUrl}/`
             }
         })
     }

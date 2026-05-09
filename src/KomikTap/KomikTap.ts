@@ -19,7 +19,7 @@ import {
 const DOMAIN = 'https://komiktap.info'
 
 export const KomikTapInfo: SourceInfo = {
-    version: getExportVersion('3.0.0'),
+    version: getExportVersion('3.0.1'),
     name: 'KomikTap',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -74,6 +74,10 @@ export class KomikTap extends MangaStream {
         sectionCallback(section.section)
     }
 
+    override async getHomePageSection(sectionCallback: (section: HomeSection) => void): Promise<void> {
+        return this.getHomePageSections(sectionCallback)
+    }
+
     override async getViewMoreItems(homepageSectionId: string, metadata: any): Promise<PagedResults> {
         if (homepageSectionId !== 'latest_update') {
             return super.getViewMoreItems(homepageSectionId, metadata)
@@ -119,6 +123,18 @@ export class KomikTap extends MangaStream {
             }
         })
     }
+
+    override getCloudflareBypassRequest(): Request {
+        return App.createRequest({
+            url: `${this.baseUrl}/manga/?page=1&order=update`,
+            method: 'GET',
+            headers: {
+                'referer': `${this.baseUrl}/`,
+                'origin': `${this.baseUrl}/`
+            }
+        })
+    }
+
     override dateMonths = {
         january: 'januari',
         february: 'februari',

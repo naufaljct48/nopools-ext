@@ -458,6 +458,10 @@ export abstract class MangaStream implements ChapterProviding, HomePageSectionsP
         await Promise.all(promises)
     }
 
+    async getHomePageSection(sectionCallback: (section: HomeSection) => void): Promise<void> {
+        return this.getHomePageSections(sectionCallback)
+    }
+
     async getViewMoreItems(homepageSectionId: string, metadata: any): Promise<PagedResults> {
         const page: number = metadata?.page ?? 1
 
@@ -600,6 +604,17 @@ export abstract class MangaStream implements ChapterProviding, HomePageSectionsP
                 'referer': `${this.baseUrl}/`,
                 'origin': `${this.baseUrl}/`,
                 'user-agent': await this.requestManager.getDefaultUserAgent()
+            }
+        })
+    }
+
+    getCloudflareBypassRequest(): Request {
+        return App.createRequest({
+            url: `${this.bypassPage || this.baseUrl}/`,
+            method: 'GET',
+            headers: {
+                'referer': `${this.baseUrl}/`,
+                'origin': `${this.baseUrl}/`
             }
         })
     }

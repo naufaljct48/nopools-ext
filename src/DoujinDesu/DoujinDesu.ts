@@ -41,7 +41,7 @@ const MONTHS: Record<string, number> = {
 }
 
 export const DoujinDesuInfo: SourceInfo = {
-    version: '5.0.0',
+    version: '5.0.1',
     name: 'DoujinDesu',
     icon: 'icon.png',
     author: 'NaufalJCT48',
@@ -312,6 +312,10 @@ export class DoujinDesu extends Source {
             item.section.items = this.parseMangaList(cheerio.load(response.data as string))
             sectionCallback(item.section)
         }
+    }
+
+    async getHomePageSection(sectionCallback: (section: HomeSection) => void): Promise<void> {
+        return this.getHomePageSections(sectionCallback)
     }
 
     override async getViewMoreItems(homepageSectionId: string, metadata: any): Promise<PagedResults> {
