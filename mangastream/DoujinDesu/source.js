@@ -15433,7 +15433,7 @@ var _Sources = (() => {
     desember: 11
   };
   var DoujinDesuInfo = {
-    version: "0.0.1",
+    version: "0.0.2",
     name: "DoujinDesu",
     icon: "icon.png",
     author: "NaufalJCT48",
@@ -15465,7 +15465,7 @@ var _Sources = (() => {
   var imageFromElement = ($2, element) => {
     const srcset = element.attr("srcset") ?? "";
     return absoluteUrl(
-      element.attr("data-src") ?? element.attr("data-lazy-src") ?? srcset.split(" ")[0] ?? element.attr("src") ?? ""
+      element.attr("data-src") || element.attr("data-lazy-src") || srcset.split(" ")[0] || element.attr("src") || ""
     );
   };
   var parseDate = (value) => {
@@ -15502,7 +15502,8 @@ var _Sources = (() => {
               "Referer": `${BASE_URL}/`,
               "Origin": BASE_URL,
               "User-Agent": USER_AGENT,
-              "X-Requested-With": "XMLHttpRequest"
+              "DNT": "1",
+              "Sec-GPC": "1"
             };
             return request;
           },
@@ -15517,6 +15518,15 @@ var _Sources = (() => {
         data: data2,
         headers
       });
+    }
+    checkResponseError(response) {
+      if (response.status === 403 || response.status === 503) {
+        throw new Error(`CLOUDFLARE BYPASS ERROR:
+Please open ${BASE_URL} with the cloud icon first.`);
+      }
+      if (response.status === 404) {
+        throw new Error(`The requested page ${response.request.url} was not found.`);
+      }
     }
     parseMangaList($2) {
       const results = [];
@@ -15539,6 +15549,7 @@ var _Sources = (() => {
     }
     async getMangaDetails(mangaId) {
       const response = await this.requestManager.schedule(this.createRequest(`/manga/${mangaId}/`), 1);
+      this.checkResponseError(response);
       const $2 = load(response.data);
       const titleElement = $2("section.metadata h1.title").first().clone();
       const alternativeTitle = titleElement.find("span.alter").text().trim();
@@ -15583,6 +15594,7 @@ var _Sources = (() => {
     }
     async getChapters(mangaId) {
       const response = await this.requestManager.schedule(this.createRequest(`/manga/${mangaId}/`), 1);
+      this.checkResponseError(response);
       const $2 = load(response.data);
       const chapters = [];
       let sortingIndex = 0;
@@ -15608,6 +15620,7 @@ var _Sources = (() => {
     }
     async getChapterDetails(mangaId, chapterId) {
       const chapterResponse = await this.requestManager.schedule(this.createRequest(`/${chapterId}/`), 1);
+      this.checkResponseError(chapterResponse);
       const $2 = load(chapterResponse.data);
       const readerId = $2("#reader").attr("data-id") ?? "";
       if (!readerId) throw new Error(`Unable to find reader id for ${chapterId}`);
@@ -15618,6 +15631,7 @@ var _Sources = (() => {
         "Origin": BASE_URL,
         "X-Requested-With": "XMLHttpRequest"
       }), 1);
+      this.checkResponseError(pageResponse);
       const _$ = load(pageResponse.data);
       const pages = _$("img").toArray().map((img) => imageFromElement(_$, _$(img))).filter(Boolean);
       if (pages.length === 0) throw new Error(`Unable to find pages for ${chapterId}`);
@@ -15651,6 +15665,7 @@ var _Sources = (() => {
       for (const item of sections) {
         sectionCallback(item.section);
         const response = await this.requestManager.schedule(item.request, 1);
+        this.checkResponseError(response);
         item.section.items = this.parseMangaList(load(response.data));
         sectionCallback(item.section);
       }
@@ -15659,6 +15674,7 @@ var _Sources = (() => {
       const page = metadata?.page ?? 2;
       const type = homepageSectionId === "manhwa" ? "Manhwa" : "Manga";
       const response = await this.requestManager.schedule(this.createRequest(`/manga/page/${page}/?type=${type}`), 1);
+      this.checkResponseError(response);
       const $2 = load(response.data);
       return App.createPagedResults({
         results: this.parseMangaList($2),
@@ -15667,6 +15683,7 @@ var _Sources = (() => {
     }
     async getSearchTags() {
       const response = await this.requestManager.schedule(this.createRequest("/genre/"), 1);
+      this.checkResponseError(response);
       const $2 = load(response.data);
       const genres = [];
       for (const element of $2('section#taxonomy div.entry a[href*="/genre/"]').toArray()) {
@@ -15702,6 +15719,7 @@ var _Sources = (() => {
         path = page === 1 ? `/manga/?type=${encodeURIComponent(typeTag)}` : `/manga/page/${page}/?type=${encodeURIComponent(typeTag)}`;
       }
       const response = await this.requestManager.schedule(this.createRequest(path), 1);
+      this.checkResponseError(response);
       const $2 = load(response.data);
       return App.createPagedResults({
         results: this.parseMangaList($2),
@@ -15709,7 +15727,26 @@ var _Sources = (() => {
       });
     }
     async getCloudflareBypassRequestAsync() {
-      return this.createRequest("/");
+      return App.createRequest({
+        url: `${BASE_URL}/`,
+        method: "GET",
+        headers: {
+          "referer": `${BASE_URL}/`,
+          "origin": `${BASE_URL}/`,
+          "user-agent": USER_AGENT
+        }
+      });
+    }
+    getCloudflareBypassRequest() {
+      return App.createRequest({
+        url: `${BASE_URL}/`,
+        method: "GET",
+        headers: {
+          "referer": `${BASE_URL}/`,
+          "origin": `${BASE_URL}/`,
+          "user-agent": USER_AGENT
+        }
+      });
     }
     getMangaShareUrl(mangaId) {
       return `${BASE_URL}/manga/${mangaId}/`;
