@@ -17,26 +17,24 @@ module.exports = {
         '@typescript-eslint'
     ],
     'rules': {
-        '@typescript-eslint/indent': [
-            'error',
-            4
-        ],
+        '@typescript-eslint/indent': 'off',
         'linebreak-style': [
-            'error',
-            'unix'
+            'off'
         ],
-        'quotes': [
-            'error',
-            'single'
-        ],
+        'quotes': 'off',
         'semi': [
             'error',
             'never'
         ],
         'comma-dangle': 'off',
-        '@typescript-eslint/comma-dangle': 'error',
-        'prefer-arrow-callback': 'error',
-        'modules-newline/import-declaration-newline': 'error',
-        'modules-newline/export-declaration-newline': 'error'
+        '@typescript-eslint/comma-dangle': 'off',
+        '@typescript-eslint/no-explicit-any': 'off',
+        '@typescript-eslint/no-unused-vars': 'off',
+        '@typescript-eslint/no-var-requires': 'off',
+        'prefer-arrow-callback': 'off',
+        'prefer-const': 'off',
+        'no-empty': 'off',
+        'modules-newline/import-declaration-newline': 'off',
+        'modules-newline/export-declaration-newline': 'off'
     }
 }

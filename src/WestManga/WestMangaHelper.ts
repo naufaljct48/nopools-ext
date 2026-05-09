@@ -48,27 +48,29 @@ const sha256 = (input: number[]): number[] => {
         const w = new Array<number>(64)
         for (let i = 0; i < 16; i++) {
             const j = offset + i * 4
-            w[i] = ((bytes[j] << 24) | (bytes[j + 1] << 16) | (bytes[j + 2] << 8) | bytes[j + 3]) >>> 0
+            w[i] = (((bytes[j] ?? 0) << 24) | ((bytes[j + 1] ?? 0) << 16) | ((bytes[j + 2] ?? 0) << 8) | (bytes[j + 3] ?? 0)) >>> 0
         }
         for (let i = 16; i < 64; i++) {
-            const s0 = rightRotate(w[i - 15], 7) ^ rightRotate(w[i - 15], 18) ^ (w[i - 15] >>> 3)
-            const s1 = rightRotate(w[i - 2], 17) ^ rightRotate(w[i - 2], 19) ^ (w[i - 2] >>> 10)
-            w[i] = (w[i - 16] + s0 + w[i - 7] + s1) >>> 0
+            const w15 = w[i - 15] ?? 0
+            const w2 = w[i - 2] ?? 0
+            const s0 = rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3)
+            const s1 = rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10)
+            w[i] = ((w[i - 16] ?? 0) + s0 + (w[i - 7] ?? 0) + s1) >>> 0
         }
 
-        let a = hash[0]
-        let b = hash[1]
-        let c = hash[2]
-        let d = hash[3]
-        let e = hash[4]
-        let f = hash[5]
-        let g = hash[6]
-        let h = hash[7]
+        let a = hash[0] ?? 0
+        let b = hash[1] ?? 0
+        let c = hash[2] ?? 0
+        let d = hash[3] ?? 0
+        let e = hash[4] ?? 0
+        let f = hash[5] ?? 0
+        let g = hash[6] ?? 0
+        let h = hash[7] ?? 0
 
         for (let i = 0; i < 64; i++) {
             const s1 = rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25)
             const ch = (e & f) ^ (~e & g)
-            const temp1 = (h + s1 + ch + SHA256_K[i] + w[i]) >>> 0
+            const temp1 = (h + s1 + ch + (SHA256_K[i] ?? 0) + (w[i] ?? 0)) >>> 0
             const s0 = rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22)
             const maj = (a & b) ^ (a & c) ^ (b & c)
             const temp2 = (s0 + maj) >>> 0
@@ -82,14 +84,14 @@ const sha256 = (input: number[]): number[] => {
             a = (temp1 + temp2) >>> 0
         }
 
-        hash[0] = (hash[0] + a) >>> 0
-        hash[1] = (hash[1] + b) >>> 0
-        hash[2] = (hash[2] + c) >>> 0
-        hash[3] = (hash[3] + d) >>> 0
-        hash[4] = (hash[4] + e) >>> 0
-        hash[5] = (hash[5] + f) >>> 0
-        hash[6] = (hash[6] + g) >>> 0
-        hash[7] = (hash[7] + h) >>> 0
+        hash[0] = ((hash[0] ?? 0) + a) >>> 0
+        hash[1] = ((hash[1] ?? 0) + b) >>> 0
+        hash[2] = ((hash[2] ?? 0) + c) >>> 0
+        hash[3] = ((hash[3] ?? 0) + d) >>> 0
+        hash[4] = ((hash[4] ?? 0) + e) >>> 0
+        hash[5] = ((hash[5] ?? 0) + f) >>> 0
+        hash[6] = ((hash[6] ?? 0) + g) >>> 0
+        hash[7] = ((hash[7] ?? 0) + h) >>> 0
     }
 
     const output: number[] = []
@@ -143,7 +145,7 @@ export const createRequestObject = (requestObj: any): Request => {
         
         const withoutProtocol = url.replace(/^https?:\/\//, '')
         const pathStart = withoutProtocol.indexOf('/')
-        const urlPath = pathStart !== -1 ? withoutProtocol.substring(pathStart).split('?')[0].split('#')[0] : '/'
+        const urlPath = pathStart !== -1 ? (withoutProtocol.substring(pathStart).split('?')[0]?.split('#')[0] ?? '/') : '/'
         
         defaultHeaders['x-wm-accses-key'] = ACCESS_KEY
         defaultHeaders['x-wm-request-time'] = now
@@ -213,7 +215,7 @@ export const extractChapterDataFromElement = (element: any) => {
     const chapterText = link.find('p').first().text().trim()
     const dateText = link.find('p.text-xs').text().trim()
     const numMatch = chapterText.match(/chapter\s*(\d+(?:\.\d+)?)/i)
-    const chapterNumber = numMatch ? parseFloat(numMatch[1]) : 0
+    const chapterNumber = numMatch ? parseFloat(numMatch[1] ?? '0') : 0
 
     return { url, chapterText, dateText, chapterNumber }
 }

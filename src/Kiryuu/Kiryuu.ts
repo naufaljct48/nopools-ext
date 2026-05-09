@@ -72,7 +72,7 @@ const getIncludedTagsByPrefix = (query: SearchRequest, prefix: string): string[]
 }
 
 export const KiryuuInfo: SourceInfo = {
-    version: '2.2.7',
+    version: '2.2.9',
     name: 'Kiryuu',
     icon: 'icon.png',
     author: 'NaufalJCT48',
@@ -150,7 +150,7 @@ export class Kiryuu extends Source {
         return parseChapterDetails(response.data as string, mangaId, chapterId)
     }
 
-    async getHomePageSections(sectionCallback: (section: HomeSection) => void): Promise<void> {
+    override async getHomePageSections(sectionCallback: (section: HomeSection) => void): Promise<void> {
         const sections: Array<{ request: Request, section: HomeSection }> = [
             {
                 request: createRequestObject({
@@ -196,7 +196,7 @@ export class Kiryuu extends Source {
         }
     }
 
-    async getSearchTags(): Promise<TagSection[]> {
+    override async getSearchTags(): Promise<TagSection[]> {
         const request = createRequestObject({
             url: `${WEBSITE_BASE}/advanced-search/`
         })
@@ -204,7 +204,7 @@ export class Kiryuu extends Source {
         return parseSearchTags(response.data as string)
     }
 
-    async getSearchResults(query: SearchRequest, metadata: any): Promise<PagedResults> {
+    override async getSearchResults(query: SearchRequest, metadata: any): Promise<PagedResults> {
         const page = metadata?.page ?? 1
         const searchTerm = query.title?.trim() ?? ''
         const genreList = getIncludedTagsByPrefix(query, 'genre:')
@@ -234,7 +234,7 @@ export class Kiryuu extends Source {
         })
     }
 
-    async getViewMoreItems(homepageSectionId: string, metadata: any): Promise<PagedResults> {
+    override async getViewMoreItems(homepageSectionId: string, metadata: any): Promise<PagedResults> {
         const page = metadata?.page ?? 1
         
         let url: string

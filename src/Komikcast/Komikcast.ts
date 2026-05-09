@@ -31,7 +31,7 @@ const BASE_URL = 'https://v2.komikcast.fit'
 const AUTH_TOKEN = 'oat_NTQwNjU.eVU0Tjc4aEhpNmlwcDJkNWlDSU9GT0w2VXJxR25UdFc5UnV0dHRGdzY1MDY1NjYyNw'
 
 export const KomikcastInfo: SourceInfo = {
-    version: '4.0.6',
+    version: '4.0.7',
     name: 'Komikcast',
     icon: 'icon.png',
     author: 'NaufalJCT48',
@@ -83,7 +83,7 @@ export class Komikcast extends Source {
         })
         
         const response = await this.requestManager.schedule(request, 1)
-        const data = JSON.parse(response.data)
+        const data = JSON.parse(response.data as string)
         
         if (data.status !== 200) {
             throw new Error(`Failed to get manga details: ${data.message}`)
@@ -100,7 +100,7 @@ export class Komikcast extends Source {
         })
         
         const response = await this.requestManager.schedule(request, 1)
-        const data = JSON.parse(response.data)
+        const data = JSON.parse(response.data as string)
         
         if (data.status !== 200) {
             return []
@@ -117,7 +117,7 @@ export class Komikcast extends Source {
         })
         
         const response = await this.requestManager.schedule(request, 1)
-        const data = JSON.parse(response.data)
+        const data = JSON.parse(response.data as string)
         
         if (data.status !== 200) {
             throw new Error(`Failed to get chapter details: ${data.message}`)
@@ -171,7 +171,7 @@ export class Komikcast extends Source {
             
             try {
                 const response = await this.requestManager.schedule(item.request, 1)
-                const data = JSON.parse(response.data)
+                const data = JSON.parse(response.data as string)
                 
                 if (data.status === 200 && data.data) {
                     item.section.items = parseMangaList(data.data)
@@ -190,7 +190,7 @@ export class Komikcast extends Source {
         })
         
         const response = await this.requestManager.schedule(request, 1)
-        const data = JSON.parse(response.data)
+        const data = JSON.parse(response.data as string)
         
         if (data.status !== 200) {
             return []
@@ -251,7 +251,7 @@ export class Komikcast extends Source {
         })
         
         const response = await this.requestManager.schedule(request, 1)
-        const data = JSON.parse(response.data)
+        const data = JSON.parse(response.data as string)
         
         if (data.status !== 200) {
             return App.createPagedResults({
@@ -289,7 +289,7 @@ export class Komikcast extends Source {
         })
         
         const response = await this.requestManager.schedule(request, 1)
-        const data = JSON.parse(response.data)
+        const data = JSON.parse(response.data as string)
         
         if (data.status !== 200) {
             return App.createPagedResults({

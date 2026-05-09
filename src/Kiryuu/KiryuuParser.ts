@@ -8,12 +8,13 @@ const extractText = (html: string, regex: RegExp): string => {
     return match?.[1]?.trim() ?? ''
 }
 
-const extractBlocks = (html: string, pattern: RegExp): Array<{ match: RegExpExecArray, html: string }> => {
+const extractBlocks = (html: string, pattern: RegExp): Array<{ match: RegExpMatchArray, html: string }> => {
     const matches = Array.from(html.matchAll(pattern))
-    const blocks: Array<{ match: RegExpExecArray, html: string }> = []
+    const blocks: Array<{ match: RegExpMatchArray, html: string }> = []
 
     for (let i = 0; i < matches.length; i++) {
         const current = matches[i]
+        if (!current) continue
         const start = current.index ?? 0
         const end = matches[i + 1]?.index ?? html.length
         blocks.push({ match: current, html: html.slice(start, end) })
@@ -136,6 +137,36 @@ export const parseChapterDetails = (html: string, mangaId: string, chapterId: st
 export const parseMangaList = (html: string): PartialSourceManga[] => {
     const results: PartialSourceManga[] = []
     const seen = new Set<string>()
+    const cardBlocks = extractBlocks(html, /<div>\s*<div\s+class=["'][^"']*group-data-\[direction=horizontal\]:hidden[^"']*["'][^>]*>/gi)
+
+    if (cardBlocks.length > 0) {
+        for (const card of cardBlocks) {
+            const cardHtml = card.html
+            const mangaId = extractText(cardHtml, /<a[^>]*href=["'](?:https?:\/\/[^"']+)?\/manga\/([^/"']+)\/?["'][^>]*>[\s\S]*?<img\b/i)
+            if (!mangaId || seen.has(mangaId)) continue
+
+            const image = extractText(cardHtml, /<a[^>]*href=["'](?:https?:\/\/[^"']+)?\/manga\/[^/"']+\/?["'][^>]*>[\s\S]*?<img[^>]*src=["']([^"']+)["']/i)
+            if (!image) continue
+
+            const imageTitle = decodeHTMLEntity(extractText(cardHtml, /<img[^>]*alt=["']([^"']*)["']/i)).trim()
+            const headingTitle = decodeAndClean(extractText(cardHtml, /<h1[^>]*>([\s\S]*?)<\/h1>/i))
+            const title = headingTitle || imageTitle || mangaId
+            const mangaHrefPattern = escapeRegex(`/manga/${mangaId}/`)
+            const chapterRegex = new RegExp(`<a[^>]*href=["'][^"']*${mangaHrefPattern}chapter-[^"']+["'][^>]*>([\\s\\S]*?)<\\/a>`, 'i')
+            const chapterHtml = extractText(cardHtml, chapterRegex)
+            const subtitle = decodeAndClean(extractText(chapterHtml, /<p[^>]*>([\s\S]*?)<\/p>/i)) || decodeAndClean(chapterHtml)
+
+            seen.add(mangaId)
+            results.push(App.createPartialSourceManga({
+                mangaId,
+                image: normalizeUrl(image),
+                title,
+                subtitle
+            }))
+        }
+
+        return results
+    }
 
     const linkMatches = html.matchAll(/<a[^>]*href=["'](?:https?:\/\/[^"']+)?\/manga\/([^/"']+)\/?["'][^>]*>([\s\S]*?)<\/a>/gi)
     for (const match of linkMatches) {

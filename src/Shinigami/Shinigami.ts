@@ -1,6 +1,5 @@
 import {
     Source,
-    Manga,
     Chapter,
     ChapterDetails,
     HomeSection,
@@ -10,17 +9,20 @@ import {
     SourceInfo,
     ContentRating,
     BadgeColor,
-    SourceIntents
+    SourceIntents,
+    TagSection,
+    Request,
+    Response,
+    SourceManga
 } from '@paperback/types'
 import { createRequestObject } from './ShinigamiHelper'
 import { parseMangaDetails, parseChapterList, parseChapterDetails, parseMangaList } from './ShinigamiParser'
 
 const API_URL = 'https://api.shngm.io'
-const CDN_URL = 'https://storage.shngm.id'
 const BASE_URL = 'https://app.shinigami.asia'
 
 export const ShinigamiInfo: SourceInfo = {
-    version: '1.2.1',
+    version: '1.2.2',
     name: 'Shinigami',
     icon: 'icon.png',
     author: 'NaufalJCT48',
@@ -69,14 +71,14 @@ export class Shinigami extends Source {
         }
     })
 
-    async getMangaDetails(mangaId: string): Promise<Manga> {
+    override async getMangaDetails(mangaId: string): Promise<SourceManga> {
         const request = createRequestObject({
             url: `${API_URL}/v1/manga/detail/${mangaId}`,
             method: 'GET'
         })
 
         const response = await this.requestManager.schedule(request, 1)
-        const data = JSON.parse(response.data)
+        const data = JSON.parse(response.data as string)
 
         if (data.retcode !== 0) {
             throw new Error('Failed to get manga details')
@@ -85,7 +87,7 @@ export class Shinigami extends Source {
         return parseMangaDetails(data, mangaId)
     }
 
-    async getChapters(mangaId: string): Promise<Chapter[]> {
+    override async getChapters(mangaId: string): Promise<Chapter[]> {
         const request = createRequestObject({
             url: `${API_URL}/v1/chapter/${mangaId}/list`,
             param: '?page=1&page_size=3000&sort_by=chapter_number&sort_order=desc',
@@ -93,21 +95,21 @@ export class Shinigami extends Source {
         })
 
         const response = await this.requestManager.schedule(request, 1)
-        const data = JSON.parse(response.data)
+        const data = JSON.parse(response.data as string)
 
         if (data.retcode !== 0) return []
 
         return parseChapterList(data, mangaId)
     }
 
-    async getChapterDetails(mangaId: string, chapterId: string): Promise<ChapterDetails> {
+    override async getChapterDetails(mangaId: string, chapterId: string): Promise<ChapterDetails> {
         const request = createRequestObject({
             url: `${API_URL}/v1/chapter/detail/${chapterId}`,
             method: 'GET'
         })
 
         const response = await this.requestManager.schedule(request, 1)
-        const data = JSON.parse(response.data)
+        const data = JSON.parse(response.data as string)
 
         if (data.retcode !== 0) {
             throw new Error('Failed to get chapter details')
@@ -116,7 +118,7 @@ export class Shinigami extends Source {
         return parseChapterDetails(data, mangaId, chapterId)
     }
 
-    async getHomePageSections(sectionCallback: (section: HomeSection) => void): Promise<void> {
+    override async getHomePageSections(sectionCallback: (section: HomeSection) => void): Promise<void> {
         const sections = [
             {
                 request: createRequestObject({
@@ -127,7 +129,7 @@ export class Shinigami extends Source {
                     id: 'latest',
                     title: 'Latest Updates',
                     type: HomeSectionType.singleRowNormal,
-                    view_more: true
+                    containsMoreItems: true
                 })
             },
             {
@@ -139,7 +141,7 @@ export class Shinigami extends Source {
                     id: 'featured',
                     title: 'Featured Series',
                     type: HomeSectionType.featured,
-                    view_more: true
+                    containsMoreItems: true
                 })
             },
             {
@@ -151,7 +153,7 @@ export class Shinigami extends Source {
                     id: 'mirror',
                     title: 'Mirror Project',
                     type: HomeSectionType.singleRowNormal,
-                    view_more: true
+                    containsMoreItems: true
                 })
             },
             {
@@ -163,7 +165,7 @@ export class Shinigami extends Source {
                     id: 'manga',
                     title: 'Popular Manga',
                     type: HomeSectionType.singleRowNormal,
-                    view_more: true
+                    containsMoreItems: true
                 })
             },
             {
@@ -175,7 +177,7 @@ export class Shinigami extends Source {
                     id: 'manhua',
                     title: 'Popular Manhua',
                     type: HomeSectionType.singleRowNormal,
-                    view_more: true
+                    containsMoreItems: true
                 })
             }
         ]
@@ -183,7 +185,7 @@ export class Shinigami extends Source {
         for (const section of sections) {
             sectionCallback(section.section)
             const response = await this.requestManager.schedule(section.request, 1)
-            const data = JSON.parse(response.data)
+            const data = JSON.parse(response.data as string)
 
             if (data.retcode !== 0) continue
 
@@ -192,7 +194,7 @@ export class Shinigami extends Source {
         }
     }
 
-    async getSearchTags(): Promise<TagSection[]> {
+    override async getSearchTags(): Promise<TagSection[]> {
         const requests = [
             {
                 request: createRequestObject({
@@ -214,7 +216,7 @@ export class Shinigami extends Source {
     
         for (const req of requests) {
             const response = await this.requestManager.schedule(req.request, 1)
-            const data = JSON.parse(response.data)
+            const data = JSON.parse(response.data as string)
     
             if (data.retcode !== 0) continue
     
@@ -231,7 +233,7 @@ export class Shinigami extends Source {
         return tags
     }
 
-    async getSearchResults(query: SearchRequest): Promise<PagedResults> {
+    override async getSearchResults(query: SearchRequest): Promise<PagedResults> {
         const params = [
             'page=1',
             'page_size=24',
@@ -264,7 +266,7 @@ export class Shinigami extends Source {
         })
     
         const response = await this.requestManager.schedule(request, 1)
-        const data = JSON.parse(response.data)
+        const data = JSON.parse(response.data as string)
     
         if (data.retcode !== 0) {
             return App.createPagedResults({
@@ -277,7 +279,7 @@ export class Shinigami extends Source {
         })
     }
 
-    async getViewMoreItems(homepageSectionId: string, metadata: any): Promise<PagedResults> {
+    override async getViewMoreItems(homepageSectionId: string, metadata: any): Promise<PagedResults> {
         const page = metadata?.page ?? 1
         let param = ''
 
@@ -307,7 +309,7 @@ export class Shinigami extends Source {
         })
 
         const response = await this.requestManager.schedule(request, 1)
-        const data = JSON.parse(response.data)
+        const data = JSON.parse(response.data as string)
 
         if (data.retcode !== 0) {
             return App.createPagedResults({
@@ -324,7 +326,7 @@ export class Shinigami extends Source {
         })
     }
 
-    async getCloudflareBypassRequestAsync(): Promise<Request> {
+    override async getCloudflareBypassRequestAsync(): Promise<Request> {
         return App.createRequest({
             url: `${BASE_URL}/`,
             method: 'GET',
@@ -336,7 +338,7 @@ export class Shinigami extends Source {
         })
     }
 
-    getMangaShareUrl(mangaId: string): string {
+    override getMangaShareUrl(mangaId: string): string {
         return `${BASE_URL}/series/${mangaId}`
     }
 }

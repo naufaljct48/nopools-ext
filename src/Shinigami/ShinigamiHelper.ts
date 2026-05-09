@@ -1,4 +1,4 @@
-import { Request, HomeSection, PagedResults, Tag, TagSection } from '@paperback/types'
+import { Request, Tag } from '@paperback/types'
 
 const BASE_URL = 'https://app.shinigami.asia'
 

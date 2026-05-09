@@ -1,10 +1,7 @@
-import { PartialSourceManga, MangaInfo, TagSection, Tag } from '@paperback/types'
-import { getTaxonomyNames, parseTaxonomyTags, parseStatus } from './ShinigamiHelper'
+import { ChapterDetails, PartialSourceManga, SourceManga } from '@paperback/types'
+import { parseStatus } from './ShinigamiHelper'
 
-const CDN_URL = 'https://storage.shngm.id'
-const BASE_URL = 'https://app.shinigami.asia'
-
-export const parseMangaDetails = (data: any, mangaId: string) => {
+export const parseMangaDetails = (data: any, mangaId: string): SourceManga => {
     const mangaInfo = data.data
     const taxonomy = mangaInfo.taxonomy
 
@@ -38,7 +35,6 @@ export const parseMangaDetails = (data: any, mangaId: string) => {
 export const parseChapterList = (data: any, mangaId: string) => {
     return data.data.map((chapter: any) => App.createChapter({
         id: chapter.chapter_id,
-        mangaId: mangaId,
         chapNum: chapter.chapter_number,
         name: `Chapter ${chapter.chapter_number}`,
         time: new Date(chapter.release_date),
@@ -57,8 +53,7 @@ export const parseChapterDetails = (data: any, mangaId: string, chapterId: strin
     return App.createChapterDetails({
         id: chapterId,
         mangaId: mangaId,
-        pages: pages,
-        longStrip: false
+        pages: pages
     })
 }
 
