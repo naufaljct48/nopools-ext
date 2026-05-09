@@ -731,7 +731,7 @@ var _Sources = (() => {
 
   // src/Komikcast/KomikcastHelper.ts
   var API_URL = "https://be.komikcast.fit";
-  var BASE_URL = "https://v1.komikcast.fit";
+  var BASE_URL = "https://v2.komikcast.fit";
   var AUTH_TOKEN = "oat_NTQwNjU.eVU0Tjc4aEhpNmlwcDJkNWlDSU9GT0w2VXJxR25UdFc5UnV0dHRGdzY1MDY1NjYyNw";
   var createRequestObject = (requestObj) => {
     const isImage = /\.(png|jpe?g|webp|gif)$/i.test(requestObj.url || "");
@@ -895,7 +895,7 @@ var _Sources = (() => {
   var BASE_URL2 = "https://v2.komikcast.fit";
   var AUTH_TOKEN2 = "oat_NTQwNjU.eVU0Tjc4aEhpNmlwcDJkNWlDSU9GT0w2VXJxR25UdFc5UnV0dHRGdzY1MDY1NjYyNw";
   var KomikcastInfo = {
-    version: "4.0.7",
+    version: "4.0.8",
     name: "Komikcast",
     icon: "icon.png",
     author: "NaufalJCT48",
