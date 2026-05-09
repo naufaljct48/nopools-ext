@@ -791,7 +791,6 @@ var _Sources = (() => {
   var parseChapterList = (data, mangaId) => {
     return data.data.map((chapter) => App.createChapter({
       id: chapter.chapter_id,
-      mangaId,
       chapNum: chapter.chapter_number,
       name: `Chapter ${chapter.chapter_number}`,
       time: new Date(chapter.release_date),
@@ -807,8 +806,7 @@ var _Sources = (() => {
     return App.createChapterDetails({
       id: chapterId,
       mangaId,
-      pages,
-      longStrip: false
+      pages
     });
   };
   var parseMangaList = (data) => {
@@ -824,7 +822,7 @@ var _Sources = (() => {
   var API_URL = "https://api.shngm.io";
   var BASE_URL2 = "https://app.shinigami.asia";
   var ShinigamiInfo = {
-    version: "1.2.1",
+    version: "1.2.2",
     name: "Shinigami",
     icon: "icon.png",
     author: "NaufalJCT48",
@@ -918,7 +916,7 @@ var _Sources = (() => {
             id: "latest",
             title: "Latest Updates",
             type: import_types.HomeSectionType.singleRowNormal,
-            view_more: true
+            containsMoreItems: true
           })
         },
         {
@@ -930,7 +928,7 @@ var _Sources = (() => {
             id: "featured",
             title: "Featured Series",
             type: import_types.HomeSectionType.featured,
-            view_more: true
+            containsMoreItems: true
           })
         },
         {
@@ -942,7 +940,7 @@ var _Sources = (() => {
             id: "mirror",
             title: "Mirror Project",
             type: import_types.HomeSectionType.singleRowNormal,
-            view_more: true
+            containsMoreItems: true
           })
         },
         {
@@ -954,7 +952,7 @@ var _Sources = (() => {
             id: "manga",
             title: "Popular Manga",
             type: import_types.HomeSectionType.singleRowNormal,
-            view_more: true
+            containsMoreItems: true
           })
         },
         {
@@ -966,7 +964,7 @@ var _Sources = (() => {
             id: "manhua",
             title: "Popular Manhua",
             type: import_types.HomeSectionType.singleRowNormal,
-            view_more: true
+            containsMoreItems: true
           })
         }
       ];

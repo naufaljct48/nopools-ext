@@ -812,6 +812,7 @@ var _Sources = (() => {
     const blocks = [];
     for (let i = 0; i < matches.length; i++) {
       const current = matches[i];
+      if (!current) continue;
       const start = current.index ?? 0;
       const end = matches[i + 1]?.index ?? html.length;
       blocks.push({ match: current, html: html.slice(start, end) });
@@ -911,6 +912,31 @@ var _Sources = (() => {
   var parseMangaList = (html) => {
     const results = [];
     const seen = /* @__PURE__ */ new Set();
+    const cardBlocks = extractBlocks(html, /<div>\s*<div\s+class=["'][^"']*group-data-\[direction=horizontal\]:hidden[^"']*["'][^>]*>/gi);
+    if (cardBlocks.length > 0) {
+      for (const card of cardBlocks) {
+        const cardHtml = card.html;
+        const mangaId = extractText(cardHtml, /<a[^>]*href=["'](?:https?:\/\/[^"']+)?\/manga\/([^/"']+)\/?["'][^>]*>[\s\S]*?<img\b/i);
+        if (!mangaId || seen.has(mangaId)) continue;
+        const image = extractText(cardHtml, /<a[^>]*href=["'](?:https?:\/\/[^"']+)?\/manga\/[^/"']+\/?["'][^>]*>[\s\S]*?<img[^>]*src=["']([^"']+)["']/i);
+        if (!image) continue;
+        const imageTitle = decodeHTMLEntity(extractText(cardHtml, /<img[^>]*alt=["']([^"']*)["']/i)).trim();
+        const headingTitle = decodeAndClean(extractText(cardHtml, /<h1[^>]*>([\s\S]*?)<\/h1>/i));
+        const title = headingTitle || imageTitle || mangaId;
+        const mangaHrefPattern = escapeRegex(`/manga/${mangaId}/`);
+        const chapterRegex = new RegExp(`<a[^>]*href=["'][^"']*${mangaHrefPattern}chapter-[^"']+["'][^>]*>([\\s\\S]*?)<\\/a>`, "i");
+        const chapterHtml = extractText(cardHtml, chapterRegex);
+        const subtitle = decodeAndClean(extractText(chapterHtml, /<p[^>]*>([\s\S]*?)<\/p>/i)) || decodeAndClean(chapterHtml);
+        seen.add(mangaId);
+        results.push(App.createPartialSourceManga({
+          mangaId,
+          image: normalizeUrl(image),
+          title,
+          subtitle
+        }));
+      }
+      return results;
+    }
     const linkMatches = html.matchAll(/<a[^>]*href=["'](?:https?:\/\/[^"']+)?\/manga\/([^/"']+)\/?["'][^>]*>([\s\S]*?)<\/a>/gi);
     for (const match of linkMatches) {
       const mangaId = String(match[1] ?? "").trim();
@@ -1051,7 +1077,7 @@ var _Sources = (() => {
     return results;
   };
   var KiryuuInfo = {
-    version: "2.2.7",
+    version: "2.2.9",
     name: "Kiryuu",
     icon: "icon.png",
     author: "NaufalJCT48",

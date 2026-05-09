@@ -895,7 +895,7 @@ var _Sources = (() => {
   var BASE_URL2 = "https://v2.komikcast.fit";
   var AUTH_TOKEN2 = "oat_NTQwNjU.eVU0Tjc4aEhpNmlwcDJkNWlDSU9GT0w2VXJxR25UdFc5UnV0dHRGdzY1MDY1NjYyNw";
   var KomikcastInfo = {
-    version: "4.0.6",
+    version: "4.0.7",
     name: "Komikcast",
     icon: "icon.png",
     author: "NaufalJCT48",
