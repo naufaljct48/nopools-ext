@@ -15433,7 +15433,7 @@ var _Sources = (() => {
     desember: 11
   };
   var DoujinDesuInfo = {
-    version: "5.0.1",
+    version: "5.0.2",
     name: "DoujinDesu",
     icon: "icon.png",
     author: "NaufalJCT48",
