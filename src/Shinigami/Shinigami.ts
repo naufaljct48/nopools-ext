@@ -22,7 +22,7 @@ const API_URL = 'https://api.shngm.io'
 const BASE_URL = 'https://app.shinigami.asia'
 
 export const ShinigamiInfo: SourceInfo = {
-    version: '1.2.3',
+    version: '1.2.4',
     name: 'Shinigami',
     icon: 'icon.png',
     author: 'NaufalJCT48',
@@ -285,7 +285,7 @@ export class Shinigami extends Source {
 
         switch (homepageSectionId) {
             case 'latest':
-                param = `?type=project&page=${page}&page_size=30&is_featured=true`
+                param = `?type=project&page=${page}&page_size=24&is_update=true&sort=latest&sort_order=desc`
                 break
             case 'featured':
                 param = `?format=manhwa&page=${page}&page_size=30&is_recommended=true`
