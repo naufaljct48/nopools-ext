@@ -150,20 +150,6 @@ export abstract class MangaStream implements ChapterProviding, HomePageSectionsP
     bypassPage = ''
 
     /**
-     * Override this to set a custom URL for homepage listing (used by getHomePageSections, getSearchTags, getCloudflareBypassRequest).
-     * Default = undefined (falls back to baseUrl + directoryPath)
-     * Example: 'https://example.com/manga/?page=1&order=update'
-     */
-    homepageListingUrl: string | undefined = undefined
-
-    /**
-     * For sources with multiple homepage sections fetched from different URLs.
-     * Each entry: { url: string, sectionKey: keyof homescreen_sections }
-     * If set, getHomePageSections will use this instead of homepageListingUrl.
-     */
-    homepageSections: { url: string, sectionKey: 'popular_today' | 'latest_update' | 'new_titles' | 'top_alltime' | 'top_monthly' | 'top_weekly' }[] = []
-
-    /**
      * If it's not possible to use postIds for certain reasons, you can disable this here.
      */
     usePostIds = true
@@ -367,11 +353,15 @@ export abstract class MangaStream implements ChapterProviding, HomePageSectionsP
     }
 
     async getSearchTags(): Promise<TagSection[]> {
-        const url = this.homepageListingUrl ?? `${this.baseUrl}/${this.directoryPath}/`
-        const request = App.createRequest({ url, method: 'GET' })
+        const request = App.createRequest({
+            url: `${this.baseUrl}/${this.directoryPath}/`,
+            method: 'GET'
+        })
+
         const response = await this.requestManager.schedule(request, 1)
         this.checkResponseError(response)
         const $ = cheerio.load(response.data as string)
+
         return this.parser.parseTags($)
     }
 
@@ -412,7 +402,7 @@ export abstract class MangaStream implements ChapterProviding, HomePageSectionsP
             .addQueryParameter('page', page.toString())
 
         if (query?.title) {
-            urlBuilder = urlBuilder.addQueryParameter('s', encodeURIComponent(query?.title.replace(/[’–][a-z]*/g, '') ?? ''))
+            urlBuilder = urlBuilder.addQueryParameter('s', encodeURIComponent(query?.title.replace(/[ΓÇÖΓÇô][a-z]*/g, '') ?? ''))
         } else {
             urlBuilder = urlBuilder
                 .addQueryParameter('genre', getFilterTagsBySection('genres', query?.includedTags, true))
@@ -433,42 +423,6 @@ export abstract class MangaStream implements ChapterProviding, HomePageSectionsP
     }
 
     async getHomePageSections(sectionCallback: (section: HomeSection) => void): Promise<void> {
-        // If source defines multiple homepage sections with different URLs
-        if (this.homepageSections.length > 0) {
-            const enabledSections = this.homepageSections.filter(s => this.homescreen_sections[s.sectionKey].enabled !== false)
-            for (const item of enabledSections) {
-                const section = this.homescreen_sections[item.sectionKey]
-                sectionCallback(section.section)
-            }
-            for (const item of enabledSections) {
-                const section = this.homescreen_sections[item.sectionKey]
-                const request = App.createRequest({ url: item.url, method: 'GET' })
-                const response = await this.requestManager.schedule(request, 1)
-                this.checkResponseError(response)
-                section.section.items = await this.parser.parseHomeSection(cheerio.load(response.data as string), section, this)
-                sectionCallback(section.section)
-            }
-            return
-        }
-
-        // If source defines a single custom listing URL
-        if (this.homepageListingUrl) {
-            const request = App.createRequest({ url: this.homepageListingUrl, method: 'GET' })
-            const response = await this.requestManager.schedule(request, 1)
-            this.checkResponseError(response)
-            const $ = cheerio.load(response.data as string)
-            const sectionValues = Object.values(this.homescreen_sections)
-                .filter(s => s.enabled !== false)
-                .sort((a, b) => a.sortIndex - b.sortIndex)
-            for (const section of sectionValues) {
-                sectionCallback(section.section)
-                section.section.items = await this.parser.parseHomeSection($, section, this)
-                sectionCallback(section.section)
-            }
-            return
-        }
-
-        // Default: fetch from baseUrl homepage
         const request = App.createRequest({
             url: `${this.baseUrl}/`,
             method: 'GET'
@@ -643,9 +597,8 @@ export abstract class MangaStream implements ChapterProviding, HomePageSectionsP
     }
 
     async getCloudflareBypassRequestAsync(): Promise<Request> {
-        const url = this.homepageListingUrl ?? `${this.bypassPage || this.baseUrl}/`
         return App.createRequest({
-            url,
+            url: `${this.bypassPage || this.baseUrl}/`,
             method: 'GET',
             headers: {
                 'referer': `${this.baseUrl}/`,
@@ -656,9 +609,8 @@ export abstract class MangaStream implements ChapterProviding, HomePageSectionsP
     }
 
     getCloudflareBypassRequest(): Request {
-        const url = this.homepageListingUrl ?? `${this.bypassPage || this.baseUrl}/`
         return App.createRequest({
-            url,
+            url: `${this.bypassPage || this.baseUrl}/`,
             method: 'GET',
             headers: {
                 'referer': `${this.baseUrl}/`,

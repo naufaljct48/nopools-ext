@@ -1,8 +1,12 @@
 import {
     BadgeColor,
     ContentRating,
+    HomeSection,
+    PagedResults,
+    Request,
     SourceInfo,
-    SourceIntents
+    SourceIntents,
+    TagSection
 } from '@paperback/types'
 import * as cheerio from 'cheerio'
 import { AnyNode } from 'domhandler'
@@ -11,11 +15,17 @@ import {
     getExportVersion,
     MangaStream
 } from '../MangaStream'
+import {
+    getCloudflareBypassUrlKomikTap,
+    getHomePageSectionsKomikTap,
+    getSearchTagsKomikTap,
+    getViewMoreItemsKomikTap
+} from './KomikTapHelper'
 
 const DOMAIN = 'https://komiktap.info'
 
 export const KomikTapInfo: SourceInfo = {
-    version: getExportVersion('3.0.3'),
+    version: getExportVersion('3.0.4'),
     name: 'KomikTap',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -42,8 +52,6 @@ export class KomikTap extends MangaStream {
 
     override manga_tag_selector_box = 'div.seriestugenre'
 
-    override homepageListingUrl = `${DOMAIN}/manga/?page=1&order=update`
-
     override configureSections(): void {
         this.homescreen_sections['popular_today'].enabled = false
         this.homescreen_sections['new_titles'].enabled = false
@@ -54,6 +62,47 @@ export class KomikTap extends MangaStream {
         this.homescreen_sections['latest_update'].titleSelectorFunc = ($: cheerio.CheerioAPI, element: cheerio.BasicAcceptedElems<AnyNode>) => $('a', element).first().attr('title')
         this.homescreen_sections['latest_update'].subtitleSelectorFunc = ($: cheerio.CheerioAPI, element: cheerio.BasicAcceptedElems<AnyNode>) => $('div.epxs', element).first().text().trim()
         this.homescreen_sections['latest_update'].getViewMoreItemsFunc = (page: string) => `manga/page/${page}/?order=update`
+    }
+
+    override async getHomePageSections(sectionCallback: (section: HomeSection) => void): Promise<void> {
+        return getHomePageSectionsKomikTap(this, sectionCallback)
+    }
+
+    override async getHomePageSection(sectionCallback: (section: HomeSection) => void): Promise<void> {
+        return this.getHomePageSections(sectionCallback)
+    }
+
+    override async getViewMoreItems(homepageSectionId: string, metadata: any): Promise<PagedResults> {
+        const result = await getViewMoreItemsKomikTap(this, homepageSectionId, metadata)
+        if (result) return result
+        return super.getViewMoreItems(homepageSectionId, metadata)
+    }
+
+    override async getSearchTags(): Promise<TagSection[]> {
+        return getSearchTagsKomikTap(this)
+    }
+
+    override async getCloudflareBypassRequestAsync(): Promise<Request> {
+        return App.createRequest({
+            url: getCloudflareBypassUrlKomikTap(this.baseUrl),
+            method: 'GET',
+            headers: {
+                'referer': `${this.baseUrl}/`,
+                'origin': `${this.baseUrl}/`,
+                'user-agent': await this.requestManager.getDefaultUserAgent()
+            }
+        })
+    }
+
+    override getCloudflareBypassRequest(): Request {
+        return App.createRequest({
+            url: getCloudflareBypassUrlKomikTap(this.baseUrl),
+            method: 'GET',
+            headers: {
+                'referer': `${this.baseUrl}/`,
+                'origin': `${this.baseUrl}/`
+            }
+        })
     }
 
     override dateMonths = {

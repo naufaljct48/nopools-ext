@@ -1,9 +1,13 @@
 import {
     BadgeColor,
     ContentRating,
+    HomeSection,
     HomeSectionType,
+    PagedResults,
+    Request,
     SourceInfo,
-    SourceIntents
+    SourceIntents,
+    TagSection
 } from '@paperback/types'
 import {
     BasicAcceptedElems,
@@ -16,6 +20,12 @@ import {
     MangaStream
 } from '../MangaStream'
 import { createHomeSection } from '../MangaStreamHelper'
+import {
+    getCloudflareBypassUrlMangasusu,
+    getHomePageSectionsMangasusu,
+    getSearchTagsMangasusu,
+    getViewMoreItemsMangasusu
+} from './MangasusuHelper'
 
 const DOMAIN = 'https://mangasusuku.com'
 
@@ -49,13 +59,6 @@ export class Mangasusu extends MangaStream {
 
     override directoryPath = 'komik'
 
-    override homepageListingUrl = `${DOMAIN}/komik/?page=1&order=update`
-
-    override homepageSections = [
-        { url: `${DOMAIN}/komik/?page=1&order=update`, sectionKey: 'latest_update' as const },
-        { url: `${DOMAIN}/komik/?status=&type=&order=popular`, sectionKey: 'popular_today' as const }
-    ]
-
     override configureSections(): void {
         this.homescreen_sections['popular_today'].section = createHomeSection('popular_today', 'Featured', true, HomeSectionType.featured)
         this.homescreen_sections['popular_today'].selectorFunc = ($: CheerioAPI) => $('div.bs', 'div.listupd')
@@ -70,5 +73,44 @@ export class Mangasusu extends MangaStream {
         this.homescreen_sections['latest_update'].titleSelectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('a', element).first().attr('title')
         this.homescreen_sections['latest_update'].subtitleSelectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('div.epxs', element).first().text().trim()
         this.homescreen_sections['latest_update'].getViewMoreItemsFunc = (page: string) => `komik/page/${page}/?order=update`
+    }
+
+    override async getHomePageSections(sectionCallback: (section: HomeSection) => void): Promise<void> {
+        return getHomePageSectionsMangasusu(this, sectionCallback)
+    }
+
+    override async getHomePageSection(sectionCallback: (section: HomeSection) => void): Promise<void> {
+        return this.getHomePageSections(sectionCallback)
+    }
+
+    override async getViewMoreItems(homepageSectionId: string, metadata: any): Promise<PagedResults> {
+        return getViewMoreItemsMangasusu(this, homepageSectionId, metadata)
+    }
+
+    override async getSearchTags(): Promise<TagSection[]> {
+        return getSearchTagsMangasusu(this)
+    }
+
+    override async getCloudflareBypassRequestAsync(): Promise<Request> {
+        return App.createRequest({
+            url: getCloudflareBypassUrlMangasusu(this.baseUrl),
+            method: 'GET',
+            headers: {
+                'referer': `${this.baseUrl}/`,
+                'origin': `${this.baseUrl}/`,
+                'user-agent': await this.requestManager.getDefaultUserAgent()
+            }
+        })
+    }
+
+    override getCloudflareBypassRequest(): Request {
+        return App.createRequest({
+            url: getCloudflareBypassUrlMangasusu(this.baseUrl),
+            method: 'GET',
+            headers: {
+                'referer': `${this.baseUrl}/`,
+                'origin': `${this.baseUrl}/`
+            }
+        })
     }
 }
