@@ -743,6 +743,9 @@ var _Sources = (() => {
   });
   var import_types4 = __toESM(require_lib());
 
+  // src/MangaStream.ts
+  var import_types3 = __toESM(require_lib());
+
   // node_modules/cheerio/dist/browser/static.js
   var static_exports = {};
   __export(static_exports, {
@@ -15414,9 +15417,6 @@ var _Sources = (() => {
   var parse5 = getParse((content, options, isDocument2, context) => options._useHtmlParser2 ? parseDocument(content, options) : parseWithParse5(content, options, isDocument2, context));
   var load = getLoad(parse5, (dom, options) => options._useHtmlParser2 ? esm_default(dom, options) : renderWithParse5(dom));
 
-  // src/MangaStream.ts
-  var import_types3 = __toESM(require_lib());
-
   // node_modules/html-entities/dist/esm/named-references.js
   var __assign = function() {
     __assign = Object.assign || function(t) {
@@ -16020,6 +16020,18 @@ var _Sources = (() => {
        */
       this.bypassPage = "";
       /**
+       * Override this to set a custom URL for homepage listing (used by getHomePageSections, getSearchTags, getCloudflareBypassRequest).
+       * Default = undefined (falls back to baseUrl + directoryPath)
+       * Example: 'https://example.com/manga/?page=1&order=update'
+       */
+      this.homepageListingUrl = void 0;
+      /**
+       * For sources with multiple homepage sections fetched from different URLs.
+       * Each entry: { url: string, sectionKey: keyof homescreen_sections }
+       * If set, getHomePageSections will use this instead of homepageListingUrl.
+       */
+      this.homepageSections = [];
+      /**
        * If it's not possible to use postIds for certain reasons, you can disable this here.
        */
       this.usePostIds = true;
@@ -16218,10 +16230,8 @@ var _Sources = (() => {
       return this.parser.parseChapterDetails(_$, mangaId, chapterId);
     }
     async getSearchTags() {
-      const request = App.createRequest({
-        url: `${this.baseUrl}/${this.directoryPath}/`,
-        method: "GET"
-      });
+      const url = this.homepageListingUrl ?? `${this.baseUrl}/${this.directoryPath}/`;
+      const request = App.createRequest({ url, method: "GET" });
       const response = await this.requestManager.schedule(request, 1);
       this.checkResponseError(response);
       const $2 = load(response.data);
@@ -16269,6 +16279,35 @@ var _Sources = (() => {
       return false;
     }
     async getHomePageSections(sectionCallback) {
+      if (this.homepageSections.length > 0) {
+        const enabledSections = this.homepageSections.filter((s) => this.homescreen_sections[s.sectionKey].enabled !== false);
+        for (const item of enabledSections) {
+          const section = this.homescreen_sections[item.sectionKey];
+          sectionCallback(section.section);
+        }
+        for (const item of enabledSections) {
+          const section = this.homescreen_sections[item.sectionKey];
+          const request2 = App.createRequest({ url: item.url, method: "GET" });
+          const response2 = await this.requestManager.schedule(request2, 1);
+          this.checkResponseError(response2);
+          section.section.items = await this.parser.parseHomeSection(load(response2.data), section, this);
+          sectionCallback(section.section);
+        }
+        return;
+      }
+      if (this.homepageListingUrl) {
+        const request2 = App.createRequest({ url: this.homepageListingUrl, method: "GET" });
+        const response2 = await this.requestManager.schedule(request2, 1);
+        this.checkResponseError(response2);
+        const $3 = load(response2.data);
+        const sectionValues2 = Object.values(this.homescreen_sections).filter((s) => s.enabled !== false).sort((a, b) => a.sortIndex - b.sortIndex);
+        for (const section of sectionValues2) {
+          sectionCallback(section.section);
+          section.section.items = await this.parser.parseHomeSection($3, section, this);
+          sectionCallback(section.section);
+        }
+        return;
+      }
       const request = App.createRequest({
         url: `${this.baseUrl}/`,
         method: "GET"
@@ -16395,8 +16434,9 @@ var _Sources = (() => {
       return postId.toString();
     }
     async getCloudflareBypassRequestAsync() {
+      const url = this.homepageListingUrl ?? `${this.bypassPage || this.baseUrl}/`;
       return App.createRequest({
-        url: `${this.bypassPage || this.baseUrl}/`,
+        url,
         method: "GET",
         headers: {
           "referer": `${this.baseUrl}/`,
@@ -16406,8 +16446,9 @@ var _Sources = (() => {
       });
     }
     getCloudflareBypassRequest() {
+      const url = this.homepageListingUrl ?? `${this.bypassPage || this.baseUrl}/`;
       return App.createRequest({
-        url: `${this.bypassPage || this.baseUrl}/`,
+        url,
         method: "GET",
         headers: {
           "referer": `${this.baseUrl}/`,
@@ -16431,7 +16472,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
   // src/Mangasusu/Mangasusu.ts
   var DOMAIN = "https://mangasusuku.com";
   var MangasusuInfo = {
-    version: getExportVersion("0.0.6"),
+    version: getExportVersion("0.0.7"),
     name: "Mangasusu",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",
@@ -16457,6 +16498,11 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
       this.baseUrl = DOMAIN;
       this.manga_tag_selector_box = "div.seriestugenre";
       this.directoryPath = "komik";
+      this.homepageListingUrl = `${DOMAIN}/komik/?page=1&order=update`;
+      this.homepageSections = [
+        { url: `${DOMAIN}/komik/?page=1&order=update`, sectionKey: "latest_update" },
+        { url: `${DOMAIN}/komik/?status=&type=&order=popular`, sectionKey: "popular_today" }
+      ];
     }
     configureSections() {
       this.homescreen_sections["popular_today"].section = createHomeSection("popular_today", "Featured", true, import_types4.HomeSectionType.featured);
@@ -16472,74 +16518,6 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
       this.homescreen_sections["latest_update"].titleSelectorFunc = ($2, element) => $2("a", element).first().attr("title");
       this.homescreen_sections["latest_update"].subtitleSelectorFunc = ($2, element) => $2("div.epxs", element).first().text().trim();
       this.homescreen_sections["latest_update"].getViewMoreItemsFunc = (page) => `komik/page/${page}/?order=update`;
-    }
-    async getHomePageSections(sectionCallback) {
-      const sections = [
-        {
-          request: App.createRequest({ url: `${this.baseUrl}/komik/?page=1&order=update`, method: "GET" }),
-          data: this.homescreen_sections["latest_update"]
-        },
-        {
-          request: App.createRequest({ url: `${this.baseUrl}/komik/?status=&type=&order=popular`, method: "GET" }),
-          data: this.homescreen_sections["popular_today"]
-        }
-      ];
-      for (const section of sections) {
-        sectionCallback(section.data.section);
-        const response = await this.requestManager.schedule(section.request, 1);
-        this.checkResponseError(response);
-        section.data.section.items = await this.parser.parseHomeSection(load(response.data), section.data, this);
-        sectionCallback(section.data.section);
-      }
-    }
-    async getHomePageSection(sectionCallback) {
-      return this.getHomePageSections(sectionCallback);
-    }
-    async getViewMoreItems(homepageSectionId, metadata) {
-      const page = metadata?.page ?? 2;
-      const path = homepageSectionId === "popular_today" ? `komik/page/${page}/?status=&type=&order=popular` : `komik/page/${page}/?order=update`;
-      const request = App.createRequest({
-        url: `${this.baseUrl}/${path}`,
-        method: "GET"
-      });
-      const response = await this.requestManager.schedule(request, 1);
-      this.checkResponseError(response);
-      const $2 = load(response.data);
-      return App.createPagedResults({
-        results: await this.parser.parseViewMore($2, this),
-        metadata: !this.parser.isLastPage($2, "view_more") ? { page: page + 1 } : void 0
-      });
-    }
-    async getSearchTags() {
-      const request = App.createRequest({
-        url: `${this.baseUrl}/komik/?page=1&order=update`,
-        method: "GET"
-      });
-      const response = await this.requestManager.schedule(request, 1);
-      this.checkResponseError(response);
-      const $2 = load(response.data);
-      return this.parser.parseTags($2);
-    }
-    async getCloudflareBypassRequestAsync() {
-      return App.createRequest({
-        url: `${this.baseUrl}/komik/?page=1&order=update`,
-        method: "GET",
-        headers: {
-          "referer": `${this.baseUrl}/`,
-          "origin": `${this.baseUrl}/`,
-          "user-agent": await this.requestManager.getDefaultUserAgent()
-        }
-      });
-    }
-    getCloudflareBypassRequest() {
-      return App.createRequest({
-        url: `${this.baseUrl}/komik/?page=1&order=update`,
-        method: "GET",
-        headers: {
-          "referer": `${this.baseUrl}/`,
-          "origin": `${this.baseUrl}/`
-        }
-      });
     }
   };
   return __toCommonJS(Mangasusu_exports);

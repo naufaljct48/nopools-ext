@@ -448,7 +448,7 @@ var _Sources = (() => {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
       exports.urlEncodeObject = exports.convertTime = exports.Source = void 0;
-      var Source2 = class {
+      var Source = class {
         constructor(cheerio) {
           this.cheerio = cheerio;
         }
@@ -465,7 +465,7 @@ var _Sources = (() => {
           return this.getSearchTags?.();
         }
       };
-      exports.Source = Source2;
+      exports.Source = Source;
       function convertTime(timeAgo) {
         let time;
         let trimmed = Number((/\d*/.exec(timeAgo) ?? [])[0]);
@@ -15486,9 +15486,8 @@ var _Sources = (() => {
     return $2(`section.metadata td:contains(${label})`).filter((_, el) => $2(el).text().trim() === label).first().next("td").text().trim().replace(/\s+/g, " ");
   };
   var hasNextPage = ($2) => $2("nav.pagination li.last a").length > 0 || $2("a.next.page-numbers").length > 0;
-  var DoujinDesu = class extends import_types2.Source {
+  var DoujinDesu = class {
     constructor() {
-      super(...arguments);
       this.requestManager = App.createRequestManager({
         requestsPerSecond: 4,
         requestTimeout: 15e3,
