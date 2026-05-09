@@ -637,13 +637,13 @@ var _Sources = (() => {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
       exports.HomeSectionType = void 0;
-      var HomeSectionType3;
-      (function(HomeSectionType4) {
-        HomeSectionType4["singleRowNormal"] = "singleRowNormal";
-        HomeSectionType4["singleRowLarge"] = "singleRowLarge";
-        HomeSectionType4["doubleRow"] = "doubleRow";
-        HomeSectionType4["featured"] = "featured";
-      })(HomeSectionType3 = exports.HomeSectionType || (exports.HomeSectionType = {}));
+      var HomeSectionType4;
+      (function(HomeSectionType5) {
+        HomeSectionType5["singleRowNormal"] = "singleRowNormal";
+        HomeSectionType5["singleRowLarge"] = "singleRowLarge";
+        HomeSectionType5["doubleRow"] = "doubleRow";
+        HomeSectionType5["featured"] = "featured";
+      })(HomeSectionType4 = exports.HomeSectionType || (exports.HomeSectionType = {}));
     }
   });
 
@@ -742,9 +742,6 @@ var _Sources = (() => {
     KanzeninInfo: () => KanzeninInfo
   });
   var import_types4 = __toESM(require_lib());
-
-  // src/MangaStream.ts
-  var import_types3 = __toESM(require_lib());
 
   // node_modules/cheerio/dist/browser/static.js
   var static_exports = {};
@@ -15417,6 +15414,9 @@ var _Sources = (() => {
   var parse5 = getParse((content, options, isDocument2, context) => options._useHtmlParser2 ? parseDocument(content, options) : parseWithParse5(content, options, isDocument2, context));
   var load = getLoad(parse5, (dom, options) => options._useHtmlParser2 ? esm_default(dom, options) : renderWithParse5(dom));
 
+  // src/MangaStream.ts
+  var import_types3 = __toESM(require_lib());
+
   // node_modules/html-entities/dist/esm/named-references.js
   var __assign = function() {
     __assign = Object.assign || function(t) {
@@ -16418,7 +16418,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
   // src/Kanzenin/Kanzenin.ts
   var DOMAIN = "https://kanzenin.info";
   var KanzeninInfo = {
-    version: getExportVersion("0.0.4"),
+    version: getExportVersion("0.0.6"),
     name: "Kanzenin",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",
@@ -16443,26 +16443,89 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
       super(...arguments);
       this.baseUrl = DOMAIN;
       this.dateMonths = {
-        january: "Januari",
-        february: "Februari",
-        march: "Maret",
-        april: "April",
-        may: "Mei",
-        june: "Juni",
-        july: "Juli",
-        august: "Agustus",
-        september: "September",
-        october: "Oktober",
-        november: "November",
-        december: "Desember"
+        january: "januari",
+        february: "februari",
+        march: "maret",
+        april: "april",
+        may: "mei",
+        june: "juni",
+        july: "juli",
+        august: "agustus",
+        september: "september",
+        october: "oktober",
+        november: "november",
+        december: "desember"
       };
     }
     configureSections() {
+      this.homescreen_sections["popular_today"].section = createHomeSection("popular_today", "Featured", true, import_types4.HomeSectionType.featured);
+      this.homescreen_sections["popular_today"].selectorFunc = ($2) => $2("div.bs", "div.listupd");
+      this.homescreen_sections["popular_today"].titleSelectorFunc = ($2, element) => $2("a", element).first().attr("title");
+      this.homescreen_sections["popular_today"].subtitleSelectorFunc = ($2, element) => $2("div.epxs", element).first().text().trim();
+      this.homescreen_sections["popular_today"].getViewMoreItemsFunc = (page) => `manga/page/${page}/?status=&type=&order=popular`;
       this.homescreen_sections["new_titles"].enabled = false;
       this.homescreen_sections["top_alltime"].enabled = false;
       this.homescreen_sections["top_monthly"].enabled = false;
       this.homescreen_sections["top_weekly"].enabled = false;
-      this.homescreen_sections["latest_update"].selectorFunc = ($2, element) => $2("div.bsx", $2("h2:contains(Latest Update)")?.parent()?.next());
+      this.homescreen_sections["latest_update"].selectorFunc = ($2) => $2("div.bs", "div.listupd");
+      this.homescreen_sections["latest_update"].titleSelectorFunc = ($2, element) => $2("a", element).first().attr("title");
+      this.homescreen_sections["latest_update"].subtitleSelectorFunc = ($2, element) => $2("div.epxs", element).first().text().trim();
+      this.homescreen_sections["latest_update"].getViewMoreItemsFunc = (page) => `manga/page/${page}/?order=update`;
+    }
+    async getHomePageSections(sectionCallback) {
+      const sections = [
+        {
+          request: App.createRequest({ url: `${this.baseUrl}/manga/?page=1&status=&type=&order=update`, method: "GET" }),
+          data: this.homescreen_sections["latest_update"]
+        },
+        {
+          request: App.createRequest({ url: `${this.baseUrl}/manga/?order=popular`, method: "GET" }),
+          data: this.homescreen_sections["popular_today"]
+        }
+      ];
+      for (const section of sections) {
+        sectionCallback(section.data.section);
+        const response = await this.requestManager.schedule(section.request, 1);
+        this.checkResponseError(response);
+        section.data.section.items = await this.parser.parseHomeSection(load(response.data), section.data, this);
+        sectionCallback(section.data.section);
+      }
+    }
+    async getViewMoreItems(homepageSectionId, metadata) {
+      const page = metadata?.page ?? 2;
+      const path = homepageSectionId === "popular_today" ? `manga/page/${page}/?status=&type=&order=popular` : `manga/page/${page}/?status=&type=&order=update`;
+      const request = App.createRequest({
+        url: `${this.baseUrl}/${path}`,
+        method: "GET"
+      });
+      const response = await this.requestManager.schedule(request, 1);
+      this.checkResponseError(response);
+      const $2 = load(response.data);
+      return App.createPagedResults({
+        results: await this.parser.parseViewMore($2, this),
+        metadata: !this.parser.isLastPage($2, "view_more") ? { page: page + 1 } : void 0
+      });
+    }
+    async getSearchTags() {
+      const request = App.createRequest({
+        url: `${this.baseUrl}/manga/?page=1&order=update`,
+        method: "GET"
+      });
+      const response = await this.requestManager.schedule(request, 1);
+      this.checkResponseError(response);
+      const $2 = load(response.data);
+      return this.parser.parseTags($2);
+    }
+    async getCloudflareBypassRequestAsync() {
+      return App.createRequest({
+        url: `${this.baseUrl}/manga/?page=1&order=update`,
+        method: "GET",
+        headers: {
+          "referer": `${this.baseUrl}/`,
+          "origin": `${this.baseUrl}/`,
+          "user-agent": await this.requestManager.getDefaultUserAgent()
+        }
+      });
     }
   };
   return __toCommonJS(Kanzenin_exports);
