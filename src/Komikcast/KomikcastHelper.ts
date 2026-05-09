@@ -1,7 +1,7 @@
 import { Request } from '@paperback/types'
 
 const API_URL = 'https://be.komikcast.fit'
-const BASE_URL = 'https://v1.komikcast.fit'
+const BASE_URL = 'https://v2.komikcast.fit'
 
 // Token from your curl request - might need to be dynamic/rotated
 const AUTH_TOKEN = 'oat_NTQwNjU.eVU0Tjc4aEhpNmlwcDJkNWlDSU9GT0w2VXJxR25UdFc5UnV0dHRGdzY1MDY1NjYyNw'

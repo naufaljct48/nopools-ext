@@ -31,7 +31,7 @@ const BASE_URL = 'https://v2.komikcast.fit'
 const AUTH_TOKEN = 'oat_NTQwNjU.eVU0Tjc4aEhpNmlwcDJkNWlDSU9GT0w2VXJxR25UdFc5UnV0dHRGdzY1MDY1NjYyNw'
 
 export const KomikcastInfo: SourceInfo = {
-    version: '4.0.7',
+    version: '4.0.8',
     name: 'Komikcast',
     icon: 'icon.png',
     author: 'NaufalJCT48',
