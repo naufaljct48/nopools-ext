@@ -822,7 +822,7 @@ var _Sources = (() => {
   var API_URL = "https://api.shngm.io";
   var BASE_URL2 = "https://app.shinigami.asia";
   var ShinigamiInfo = {
-    version: "1.2.2",
+    version: "1.2.3",
     name: "Shinigami",
     icon: "icon.png",
     author: "NaufalJCT48",
@@ -909,12 +909,12 @@ var _Sources = (() => {
       const sections = [
         {
           request: createRequestObject({
-            url: `${API_URL}/v1/manga/list?type=project&page=1&page_size=30&is_featured=true`,
+            url: `${API_URL}/v1/manga/list?type=project&page=1&page_size=24&is_update=true&sort=latest&sort_order=desc`,
             method: "GET"
           }),
           section: App.createHomeSection({
             id: "latest",
-            title: "Latest Updates",
+            title: "Project Updates",
             type: import_types.HomeSectionType.singleRowNormal,
             containsMoreItems: true
           })
