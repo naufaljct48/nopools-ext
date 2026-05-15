@@ -16431,7 +16431,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
   // src/KomikuAsia/KomikuAsia.ts
   var DOMAIN = "https://01.komiku.asia";
   var KomikuAsiaInfo = {
-    version: getExportVersion("1.0.1"),
+    version: getExportVersion("1.0.2"),
     name: "KomikuAsia",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",
@@ -16451,8 +16451,8 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
     constructor() {
       super(...arguments);
       this.baseUrl = DOMAIN;
-      // komiku.asia uses slug-based URLs, not post IDs
-      // override usePostIds = false
+      // Use slug-based URLs — komiku.asia doesn't need postId conversion
+      this.usePostIds = false;
       this.manga_tag_selector_box = "div.seriestugenre";
       this.dateMonths = {
         january: "Januari",
@@ -16476,6 +16476,18 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
       this.homescreen_sections["top_alltime"].enabled = false;
       this.homescreen_sections["top_monthly"].enabled = false;
       this.homescreen_sections["top_weekly"].enabled = false;
+    }
+    // Explicitly override to ensure async version is available
+    async getCloudflareBypassRequestAsync() {
+      return App.createRequest({
+        url: `${DOMAIN}/`,
+        method: "GET",
+        headers: {
+          "referer": `${DOMAIN}/`,
+          "origin": `${DOMAIN}/`,
+          "user-agent": await this.requestManager.getDefaultUserAgent()
+        }
+      });
     }
   };
   return __toCommonJS(KomikuAsia_exports);

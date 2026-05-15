@@ -878,24 +878,16 @@ var _Sources = (() => {
   };
   var parseChapterDetails = (html, mangaId, chapterId) => {
     const pages = [];
-    const imgRegex = /<img[^>]*class=["'][^"']*\bww\b[^"']*["'][^>]*src=["']([^"']+)["']/gi;
-    const imgs = extractAll(html, imgRegex);
-    for (const m of imgs) {
-      const src = (m[1] ?? "").trim();
+    const bacaKomikMatch = html.match(/<div[^>]*id=["']Baca_Komik["'][^>]*>([\s\S]*?)(?=<div[^>]*id=["']|<\/main|<footer|$)/i);
+    const searchHtml = bacaKomikMatch?.[1] ?? html;
+    const imgTagRegex = /<img\s[^>]*>/gi;
+    const imgTags = searchHtml.match(imgTagRegex) ?? [];
+    for (const imgTag of imgTags) {
+      if (!/class=["'][^"']*\bww\b/i.test(imgTag)) continue;
+      const srcMatch = imgTag.match(/\bsrc=["']([^"']+)["']/);
+      const src = srcMatch?.[1]?.trim() ?? "";
       if (src && !src.includes("data:image") && !src.includes("lazy.jpg")) {
         pages.push(src);
-      }
-    }
-    if (pages.length === 0) {
-      const chapterDataMatch = html.match(/var chapterData\s*=\s*(\{[\s\S]*?\});/);
-      if (chapterDataMatch) {
-        try {
-          const chapterData = JSON.parse((chapterDataMatch[1] ?? "").replace(/\\\//g, "/"));
-          const count = chapterData.jumlahgambar ?? 0;
-          const link = chapterData.link ?? "";
-          if (count === 0) throw new Error("No images found");
-        } catch {
-        }
       }
     }
     if (pages.length === 0) {
@@ -968,7 +960,7 @@ var _Sources = (() => {
 
   // src/Komiku/Komiku.ts
   var KomikuInfo = {
-    version: "1.0.1",
+    version: "1.0.2",
     name: "Komiku",
     icon: "icon.png",
     author: "NaufalJCT48",
