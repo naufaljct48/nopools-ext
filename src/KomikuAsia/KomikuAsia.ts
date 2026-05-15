@@ -1,6 +1,7 @@
 import {
     BadgeColor,
     ContentRating,
+    Request,
     SourceInfo,
     SourceIntents
 } from '@paperback/types'
@@ -18,7 +19,7 @@ import {
 const DOMAIN = 'https://01.komiku.asia'
 
 export const KomikuAsiaInfo: SourceInfo = {
-    version: getExportVersion('1.0.1'),
+    version: getExportVersion('1.0.2'),
     name: 'KomikuAsia',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -39,8 +40,8 @@ export class KomikuAsia extends MangaStream {
 
     baseUrl: string = DOMAIN
 
-    // komiku.asia uses slug-based URLs, not post IDs
-    // override usePostIds = false
+    // Use slug-based URLs — komiku.asia doesn't need postId conversion
+    override usePostIds = false
 
     override manga_tag_selector_box = 'div.seriestugenre'
 
@@ -66,5 +67,18 @@ export class KomikuAsia extends MangaStream {
         october: 'Oktober',
         november: 'November',
         december: 'Desember'
+    }
+
+    // Explicitly override to ensure async version is available
+    override async getCloudflareBypassRequestAsync(): Promise<Request> {
+        return App.createRequest({
+            url: `${DOMAIN}/`,
+            method: 'GET',
+            headers: {
+                'referer': `${DOMAIN}/`,
+                'origin': `${DOMAIN}/`,
+                'user-agent': await this.requestManager.getDefaultUserAgent()
+            }
+        })
     }
 }

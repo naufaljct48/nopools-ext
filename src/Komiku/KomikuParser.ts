@@ -148,31 +148,24 @@ export const parseChapterList = (html: string, mangaId: string): Chapter[] => {
 export const parseChapterDetails = (html: string, mangaId: string, chapterId: string): ChapterDetails => {
     const pages: string[] = []
 
-    // Images inside #Baca_Komik with class "ww"
-    const imgRegex = /<img[^>]*class=["'][^"']*\bww\b[^"']*["'][^>]*src=["']([^"']+)["']/gi
-    const imgs = extractAll(html, imgRegex)
+    // Find the #Baca_Komik div first
+    const bacaKomikMatch = html.match(/<div[^>]*id=["']Baca_Komik["'][^>]*>([\s\S]*?)(?=<div[^>]*id=["']|<\/main|<footer|$)/i)
+    const searchHtml = bacaKomikMatch?.[1] ?? html
 
-    for (const m of imgs) {
-        const src = (m[1] ?? '').trim()
+    // Images with class "ww" — src comes BEFORE class in the actual HTML
+    // Use a simple approach: find all img tags and filter by class containing "ww"
+    const imgTagRegex = /<img\s[^>]*>/gi
+    const imgTags = searchHtml.match(imgTagRegex) ?? []
+
+    for (const imgTag of imgTags) {
+        // Must have class containing "ww"
+        if (!/class=["'][^"']*\bww\b/i.test(imgTag)) continue
+
+        // Extract src
+        const srcMatch = imgTag.match(/\bsrc=["']([^"']+)["']/)
+        const src = srcMatch?.[1]?.trim() ?? ''
         if (src && !src.includes('data:image') && !src.includes('lazy.jpg')) {
             pages.push(src)
-        }
-    }
-
-    // Fallback: parse chapterData JS object for image count + construct URLs
-    if (pages.length === 0) {
-        const chapterDataMatch = html.match(/var chapterData\s*=\s*(\{[\s\S]*?\});/)
-        if (chapterDataMatch) {
-            try {
-                const chapterData = JSON.parse((chapterDataMatch[1] ?? '').replace(/\\\//g, '/'))
-                const count: number = chapterData.jumlahgambar ?? 0
-                const link: string = chapterData.link ?? ''
-                // Images follow pattern: https://img.komiku.org/upload5/{series}/{ch}/{date}/{n}.webp
-                // We can't reconstruct without date, so just note it failed
-                if (count === 0) throw new Error('No images found')
-            } catch {
-                // ignore
-            }
         }
     }
 
