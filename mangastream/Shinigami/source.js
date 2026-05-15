@@ -822,7 +822,7 @@ var _Sources = (() => {
   var API_URL = "https://api.shngm.io";
   var BASE_URL2 = "https://app.shinigami.asia";
   var ShinigamiInfo = {
-    version: "1.2.4",
+    version: "1.2.5",
     name: "Shinigami",
     icon: "icon.png",
     author: "NaufalJCT48",
@@ -1081,7 +1081,8 @@ var _Sources = (() => {
           results: []
         });
       }
-      const hasNextPage = data.data.length === (homepageSectionId === "latest" ? 30 : 30);
+      const pageSize = homepageSectionId === "latest" ? 24 : 30;
+      const hasNextPage = data.data.length === pageSize;
       return App.createPagedResults({
         results: parseMangaList(data),
         metadata: hasNextPage ? { page: page + 1 } : void 0
