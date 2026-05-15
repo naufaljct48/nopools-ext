@@ -912,7 +912,7 @@ var _Sources = (() => {
   var parseMangaList = (html) => {
     const results = [];
     const seen = /* @__PURE__ */ new Set();
-    const cardBlocks = extractBlocks(html, /<div>\s*<div\s+class=["'][^"']*group-data-\[direction=horizontal\]:hidden[^"']*["'][^>]*>/gi);
+    const cardBlocks = extractBlocks(html, /<div>\s*<div\s+class=["'][^"']*(?:group-data-\[direction=horizontal\]:hidden|group-data-\[mode=vertical\]:hidden)[^"']*["'][^>]*>/gi);
     if (cardBlocks.length > 0) {
       for (const card of cardBlocks) {
         const cardHtml = card.html;
@@ -926,7 +926,8 @@ var _Sources = (() => {
         const mangaHrefPattern = escapeRegex(`/manga/${mangaId}/`);
         const chapterRegex = new RegExp(`<a[^>]*href=["'][^"']*${mangaHrefPattern}chapter-[^"']+["'][^>]*>([\\s\\S]*?)<\\/a>`, "i");
         const chapterHtml = extractText(cardHtml, chapterRegex);
-        const subtitle = decodeAndClean(extractText(chapterHtml, /<p[^>]*>([\s\S]*?)<\/p>/i)) || decodeAndClean(chapterHtml);
+        const inlineChapter = extractText(cardHtml, /<span[^>]*class=["'][^"']*text-sm[^"']*text-gray-300[^"']*["'][^>]*>(Chapter\s*[\s\S]*?)<\/span>/i);
+        const subtitle = decodeAndClean(extractText(chapterHtml, /<p[^>]*>([\s\S]*?)<\/p>/i)) || decodeAndClean(chapterHtml) || decodeAndClean(inlineChapter);
         seen.add(mangaId);
         results.push(App.createPartialSourceManga({
           mangaId,
@@ -1077,7 +1078,7 @@ var _Sources = (() => {
     return results;
   };
   var KiryuuInfo = {
-    version: "2.2.9",
+    version: "2.2.10",
     name: "Kiryuu",
     icon: "icon.png",
     author: "NaufalJCT48",
