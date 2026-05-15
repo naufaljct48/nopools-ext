@@ -878,7 +878,7 @@ var _Sources = (() => {
   var API_URL = "https://api-be.komiknesia.my.id/api";
   var BASE_URL2 = "https://02.komiknesia.asia";
   var KomiknesiaInfo = {
-    version: "1.0.0",
+    version: "1.0.1",
     name: "Komiknesia",
     icon: "icon.png",
     author: "NaufalJCT48",
