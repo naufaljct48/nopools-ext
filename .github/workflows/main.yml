@@ -4,6 +4,9 @@ on:
     branches:
       - '**'
       - '!main'
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   build:
     name: Bundle and Publish Sources
@@ -21,6 +24,7 @@ jobs:
         uses: actions/setup-node@v4.0.2
         with:
           node-version: ${{ matrix.node-version }}
+          cache: npm
       
       - name: Extract branch name
         shell: bash
@@ -34,7 +38,7 @@ jobs:
           ref: gh-pages
           path: bundles
 
-      - run: npm install
+      - run: npm ci
       - run: npm run bundle -- --folder=${{ steps.extract_branch.outputs.branch }}
 
       - name: Deploy to GitHub Pages
