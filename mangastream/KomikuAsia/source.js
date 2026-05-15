@@ -16433,7 +16433,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
   // src/KomikuAsia/KomikuAsia.ts
   var DOMAIN = "https://01.komiku.asia";
   var KomikuAsiaInfo = {
-    version: getExportVersion("1.0.2"),
+    version: getExportVersion("1.0.3"),
     name: "KomikuAsia",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",

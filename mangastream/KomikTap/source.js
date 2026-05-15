@@ -16476,7 +16476,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
   // src/KomikTap/KomikTap.ts
   var DOMAIN = "https://komiktap.info";
   var KomikTapInfo = {
-    version: getExportVersion("3.0.4"),
+    version: getExportVersion("3.0.5"),
     name: "KomikTap",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",

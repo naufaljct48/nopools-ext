@@ -15566,7 +15566,7 @@ var _Sources = (() => {
   var BASE_URL2 = "https://doujindesu.tv";
   var USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36";
   var DoujinDesuInfo = {
-    version: "5.0.4",
+    version: "5.0.5",
     name: "DoujinDesu",
     icon: "icon.png",
     author: "NaufalJCT48",
