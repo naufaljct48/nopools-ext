@@ -29,8 +29,21 @@ import {
     parseSearchTags
 } from './ComixParser'
 
+/**
+ * Bookmarklet yang user bisa save sebagai bookmark di Safari.
+ * Saat dijalankan di halaman comix.to, script ini intercept
+ * XHR/fetch requests dan capture token `_` dari URL chapters API.
+ *
+ * Cara pakai:
+ * 1. Buat bookmark baru di Safari, isi URL dengan code di bawah
+ * 2. Buka comix.to/title/{any-manga}
+ * 3. Tap bookmark tadi
+ * 4. Token muncul di layar, copy paste ke Settings
+ */
+const BOOKMARKLET_CODE = "javascript:void((function(){var o=XMLHttpRequest.prototype.open;XMLHttpRequest.prototype.open=function(m,u){if(u&&u.indexOf('/chapters')>-1){var t=(u.match(/[?&]_=([^&]+)/)||[])[1];if(t){prompt('Copy this token:',t)}}return o.apply(this,arguments)};var f=window.fetch;window.fetch=function(u,opts){var url=typeof u==='string'?u:u.url;if(url&&url.indexOf('/chapters')>-1){var t=(url.match(/[?&]_=([^&]+)/)||[])[1];if(t){prompt('Copy this token:',t)}}return f.apply(this,arguments)};alert('Token interceptor active! Now scroll down to load chapters, or refresh the page.')})())"
+
 export const ComixInfo: SourceInfo = {
-    version: '1.3.0',
+    version: '1.3.1',
     name: 'Comix.to',
     icon: 'icon.png',
     author: 'NaufalJCT48',
@@ -73,10 +86,76 @@ export class Comix extends Source {
                 }),
                 App.createDUILabel({
                     id: 'token_help',
-                    label: 'How to get token: Open comix.to in browser → DevTools (F12) → Network tab → filter "chapters" → copy the `_` query parameter value from the request URL'
+                    label: 'Paste your token above. To get it:'
+                }),
+                App.createDUILabel({
+                    id: 'token_step1',
+                    label: '1. Open Safari → go to comix.to and open any manga page'
+                }),
+                App.createDUILabel({
+                    id: 'token_step2',
+                    label: '2. Tap the URL bar → paste this bookmarklet (see step 3)'
+                }),
+                App.createDUILabel({
+                    id: 'token_step3',
+                    label: '3. Create a bookmark with this URL as the address:'
+                }),
+                App.createDUILabel({
+                    id: 'token_bookmarklet',
+                    label: BOOKMARKLET_CODE
+                }),
+                App.createDUILabel({
+                    id: 'token_step4',
+                    label: '4. The token will appear on screen — long press to copy, then paste above'
+                }),
+                App.createDUIButton({
+                    id: 'try_auto_token',
+                    label: 'Try Auto-Capture Token (after CF bypass)',
+                    onTap: async () => {
+                        await this.tryAutoCapture()
+                    }
                 })
             ]
         })
+    }
+
+    /**
+     * Attempt to auto-capture token by fetching a manga page after CF bypass
+     * and looking for token in the response or script tags.
+     * This is a best-effort approach — may not always work.
+     */
+    private async tryAutoCapture(): Promise<void> {
+        try {
+            const response = await this.requestManager.schedule(
+                createRequestObject({
+                    url: `${BASE_URL}/title/93q1r-the-summoner-apocalypse-rewinds`,
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    }
+                }),
+                1
+            )
+            const html = response.data as string ?? ''
+
+            // Try to find token in any inline script or XHR URL
+            const tokenMatch = html.match(/[?&]_=([\w\-_.]+)/)
+            if (tokenMatch?.[1]) {
+                await this.stateManager.store('api_token', tokenMatch[1])
+                console.log('[Comix] Auto-captured token successfully!')
+                return
+            }
+
+            // Try meta[name=cfg] — won't decode but worth logging
+            const cfgMatch = html.match(/<meta[^>]+name=["']cfg["'][^>]+content=["']([^"']+)["']/)
+            if (cfgMatch) {
+                console.log('[Comix] Found meta cfg but cannot decode without JS runtime')
+            }
+
+            console.log('[Comix] Auto-capture failed — token not found in HTML. Use bookmarklet method.')
+        } catch (e) {
+            console.log('[Comix] Auto-capture error:', e)
+        }
     }
 
     // ========================= API Helpers =========================
