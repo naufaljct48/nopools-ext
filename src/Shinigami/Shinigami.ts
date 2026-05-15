@@ -22,7 +22,7 @@ const API_URL = 'https://api.shngm.io'
 const BASE_URL = 'https://app.shinigami.asia'
 
 export const ShinigamiInfo: SourceInfo = {
-    version: '1.2.4',
+    version: '1.2.5',
     name: 'Shinigami',
     icon: 'icon.png',
     author: 'NaufalJCT48',
@@ -318,7 +318,8 @@ export class Shinigami extends Source {
         }
 
         // Check if there are more pages
-        const hasNextPage = data.data.length === (homepageSectionId === 'latest' ? 30 : 30)
+        const pageSize = homepageSectionId === 'latest' ? 24 : 30
+        const hasNextPage = data.data.length === pageSize
 
         return App.createPagedResults({
             results: parseMangaList(data),
