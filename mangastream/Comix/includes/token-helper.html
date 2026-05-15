@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comix.to Token Helper</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #1a1a2e; color: #eee; padding: 20px; min-height: 100vh; }
+        .container { max-width: 600px; margin: 0 auto; }
+        h1 { color: #7c3aed; margin-bottom: 8px; font-size: 1.5rem; }
+        .subtitle { color: #888; margin-bottom: 24px; font-size: 0.9rem; }
+        .step { background: #16213e; border-radius: 12px; padding: 16px; margin-bottom: 12px; border-left: 3px solid #7c3aed; }
+        .step-num { color: #7c3aed; font-weight: bold; font-size: 0.85rem; margin-bottom: 4px; }
+        .step p { font-size: 0.95rem; line-height: 1.5; }
+        .code-box { background: #0f0f23; border: 1px solid #333; border-radius: 8px; padding: 12px; margin-top: 12px; font-family: monospace; font-size: 0.75rem; word-break: break-all; line-height: 1.4; color: #a5d6ff; position: relative; }
+        .copy-btn { position: absolute; top: 8px; right: 8px; background: #7c3aed; color: white; border: none; border-radius: 6px; padding: 6px 12px; font-size: 0.8rem; cursor: pointer; }
+        .copy-btn:active { background: #5b21b6; }
+        .note { background: #1e3a5f; border-radius: 8px; padding: 12px; margin-top: 20px; font-size: 0.85rem; line-height: 1.5; }
+        .note strong { color: #fbbf24; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔑 Comix.to Token Helper</h1>
+        <p class="subtitle">Get your API token for Paperback extension</p>
+
+        <div class="step">
+            <div class="step-num">STEP 1</div>
+            <p>Open <strong>Safari</strong> and go to <strong>comix.to</strong>. Open any manga page (e.g. comix.to/title/93q1r).</p>
+        </div>
+
+        <div class="step">
+            <div class="step-num">STEP 2</div>
+            <p>Copy the bookmarklet code below. Create a new <strong>bookmark</strong> in Safari and paste this as the <strong>URL/Address</strong>:</p>
+            <div class="code-box" id="bookmarklet-code">
+                <button class="copy-btn" onclick="copyCode()">Copy</button>
+                javascript:void((function(){var o=XMLHttpRequest.prototype.open;XMLHttpRequest.prototype.open=function(m,u){if(u&&u.indexOf('/chapters')>-1){var t=(u.match(/[?&]_=([^&]+)/)||[])[1];if(t){prompt('Copy this token:',t)}}return o.apply(this,arguments)};var f=window.fetch;window.fetch=function(u,opts){var url=typeof u==='string'?u:u.url;if(url&&url.indexOf('/chapters')>-1){var t=(url.match(/[?&]_=([^&]+)/)||[])[1];if(t){prompt('Copy this token:',t)}}return f.apply(this,arguments)};alert('Token interceptor active! Now scroll down to load chapters, or refresh the page.')})())
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-num">STEP 3</div>
+            <p>While on the manga page, <strong>tap the bookmark</strong> you just created. You'll see an alert saying "Token interceptor active!"</p>
+        </div>
+
+        <div class="step">
+            <div class="step-num">STEP 4</div>
+            <p><strong>Scroll down</strong> on the manga page (or refresh) to trigger chapter loading. A prompt will appear with your token — <strong>Select All → Copy</strong>.</p>
+        </div>
+
+        <div class="step">
+            <div class="step-num">STEP 5</div>
+            <p>Go back to <strong>Paperback → Comix.to Settings</strong> and paste the token in the "API Token" field.</p>
+        </div>
+
+        <div class="note">
+            <strong>⚠️ Note:</strong> Token expires after a few hours (tied to your Cloudflare session). When chapters stop loading, repeat these steps to get a fresh token.
+        </div>
+    </div>
+
+    <script>
+        function copyCode() {
+            const code = document.getElementById('bookmarklet-code').textContent.replace('Copy', '').trim();
+            navigator.clipboard.writeText(code).then(() => {
+                const btn = document.querySelector('.copy-btn');
+                btn.textContent = 'Copied!';
+                setTimeout(() => btn.textContent = 'Copy', 2000);
+            });
+        }
+    </script>
+</body>
+</html>

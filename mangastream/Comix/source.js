@@ -931,8 +931,9 @@ var _Sources = (() => {
   ];
 
   // src/Comix/Comix.ts
+  var BOOKMARKLET_CODE = "javascript:void((function(){var o=XMLHttpRequest.prototype.open;XMLHttpRequest.prototype.open=function(m,u){if(u&&u.indexOf('/chapters')>-1){var t=(u.match(/[?&]_=([^&]+)/)||[])[1];if(t){prompt('Copy this token:',t)}}return o.apply(this,arguments)};var f=window.fetch;window.fetch=function(u,opts){var url=typeof u==='string'?u:u.url;if(url&&url.indexOf('/chapters')>-1){var t=(url.match(/[?&]_=([^&]+)/)||[])[1];if(t){prompt('Copy this token:',t)}}return f.apply(this,arguments)};alert('Token interceptor active! Now scroll down to load chapters, or refresh the page.')})())";
   var ComixInfo = {
-    version: "1.3.0",
+    version: "1.3.1",
     name: "Comix.to",
     icon: "icon.png",
     author: "NaufalJCT48",
@@ -973,10 +974,70 @@ var _Sources = (() => {
           }),
           App.createDUILabel({
             id: "token_help",
-            label: 'How to get token: Open comix.to in browser \u2192 DevTools (F12) \u2192 Network tab \u2192 filter "chapters" \u2192 copy the `_` query parameter value from the request URL'
+            label: "Paste your token above. To get it:"
+          }),
+          App.createDUILabel({
+            id: "token_step1",
+            label: "1. Open Safari \u2192 go to comix.to and open any manga page"
+          }),
+          App.createDUILabel({
+            id: "token_step2",
+            label: "2. Tap the URL bar \u2192 paste this bookmarklet (see step 3)"
+          }),
+          App.createDUILabel({
+            id: "token_step3",
+            label: "3. Create a bookmark with this URL as the address:"
+          }),
+          App.createDUILabel({
+            id: "token_bookmarklet",
+            label: BOOKMARKLET_CODE
+          }),
+          App.createDUILabel({
+            id: "token_step4",
+            label: "4. The token will appear on screen \u2014 long press to copy, then paste above"
+          }),
+          App.createDUIButton({
+            id: "try_auto_token",
+            label: "Try Auto-Capture Token (after CF bypass)",
+            onTap: async () => {
+              await this.tryAutoCapture();
+            }
           })
         ]
       });
+    }
+    /**
+     * Attempt to auto-capture token by fetching a manga page after CF bypass
+     * and looking for token in the response or script tags.
+     * This is a best-effort approach — may not always work.
+     */
+    async tryAutoCapture() {
+      try {
+        const response = await this.requestManager.schedule(
+          createRequestObject({
+            url: `${BASE_URL}/title/93q1r-the-summoner-apocalypse-rewinds`,
+            method: "GET",
+            headers: {
+              "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+            }
+          }),
+          1
+        );
+        const html = response.data ?? "";
+        const tokenMatch = html.match(/[?&]_=([\w\-_.]+)/);
+        if (tokenMatch?.[1]) {
+          await this.stateManager.store("api_token", tokenMatch[1]);
+          console.log("[Comix] Auto-captured token successfully!");
+          return;
+        }
+        const cfgMatch = html.match(/<meta[^>]+name=["']cfg["'][^>]+content=["']([^"']+)["']/);
+        if (cfgMatch) {
+          console.log("[Comix] Found meta cfg but cannot decode without JS runtime");
+        }
+        console.log("[Comix] Auto-capture failed \u2014 token not found in HTML. Use bookmarklet method.");
+      } catch (e) {
+        console.log("[Comix] Auto-capture error:", e);
+      }
     }
     // ========================= API Helpers =========================
     async getToken() {
