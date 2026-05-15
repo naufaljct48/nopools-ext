@@ -49,8 +49,9 @@ export class Comix extends Source {
 
     override async getHomePageSections(sectionCallback: (section: HomeSection) => void): Promise<void> {
         const sections = [
-            { id: 'trending', title: 'Trending', url: `${API_URL}/manga?limit=24&sort=views_7d:desc` },
-            { id: 'latest', title: 'Latest Updates', url: `${API_URL}/manga?limit=24&sort=chapter_updated_at:desc` }
+            { id: 'featured', title: 'Featured', url: `${API_URL}/manga/top?type=trending&days=7&limit=50&content_rating=suggestive` },
+            { id: 'most_follows', title: 'Most Follows - New Comics', url: `${API_URL}/manga/top?type=follows&days=7&limit=50&content_rating=suggestive` },
+            { id: 'latest', title: 'Latest Updates', url: `${API_URL}/manga?order%5Bchapter_updated_at%5D=desc&scope=hot&content_rating=suggestive&page=1&limit=31` }
         ]
         for (const s of sections) {
             const section = App.createHomeSection({ id: s.id, title: s.title, type: HomeSectionType.singleRowNormal, containsMoreItems: true })
@@ -76,9 +77,23 @@ export class Comix extends Source {
 
     override async getViewMoreItems(homepageSectionId: string, metadata: any): Promise<PagedResults> {
         const page = metadata?.page ?? 1
-        const sort = homepageSectionId === 'trending' ? 'views_7d:desc' : 'chapter_updated_at:desc'
-        const results = parseMangaList(await this.getJSON(`${API_URL}/manga?page=${page}&limit=24&sort=${encodeURIComponent(sort)}`))
-        return App.createPagedResults({ results, metadata: results.length >= 24 ? { page: page + 1 } : undefined })
+        let url = `${API_URL}/manga?order%5Bchapter_updated_at%5D=desc&scope=hot&content_rating=suggestive&page=${page}&limit=31`
+        if (homepageSectionId === 'featured') url = `${API_URL}/manga/top?type=trending&days=7&limit=50&content_rating=suggestive`
+        if (homepageSectionId === 'most_follows') url = `${API_URL}/manga/top?type=follows&days=7&limit=50&content_rating=suggestive`
+        const results = parseMangaList(await this.getJSON(url))
+        return App.createPagedResults({ results, metadata: homepageSectionId === 'latest' && results.length >= 31 ? { page: page + 1 } : undefined })
+    }
+
+    override async getCloudflareBypassRequestAsync(): Promise<Request> {
+        return App.createRequest({
+            url: `${BASE_URL}/`,
+            method: 'GET',
+            headers: {
+                'referer': `${BASE_URL}/`,
+                'origin': `${BASE_URL}/`,
+                'user-agent': await this.requestManager.getDefaultUserAgent()
+            }
+        })
     }
 
     override getMangaShareUrl(mangaId: string): string { return `${BASE_URL}/title/${mangaId}` }
