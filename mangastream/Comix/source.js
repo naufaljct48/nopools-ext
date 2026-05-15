@@ -744,16 +744,6 @@ var _Sources = (() => {
       ...requestObj.headers ?? {}
     }
   });
-  var createHtmlRequestObject = (requestObj) => App.createRequest({
-    ...requestObj,
-    headers: {
-      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-      "Referer": `${BASE_URL}/`,
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
-      "Sec-GPC": "1",
-      ...requestObj.headers ?? {}
-    }
-  });
   var parseStatus = (status) => {
     switch (status?.toLowerCase()) {
       case "releasing":
@@ -828,7 +818,7 @@ var _Sources = (() => {
     return App.createSourceManga({
       id: mangaId,
       mangaInfo: App.createMangaInfo({
-        titles: [m.title, ...m.altTitles ?? []].filter(Boolean),
+        titles: [m.title, ...m.altTitles ?? m.alt_titles ?? []].filter(Boolean),
         image: getImage(m),
         status: parseStatus(m.status),
         author: (m.authors ?? m.author ?? []).map((x) => x.title || x.name).join(", ") || "Unknown",
@@ -839,49 +829,41 @@ var _Sources = (() => {
     });
   };
   var parseChapterList = (data) => {
-    const chapters = [];
-    const seen = /* @__PURE__ */ new Set();
-    let sortingIndex = 0;
     const items = data?.items ?? [];
+    const bestByNumber = /* @__PURE__ */ new Map();
     for (const c of items) {
-      const id = String(c.id ?? "");
-      if (!id || seen.has(id)) continue;
-      seen.add(id);
+      if (!c.id) continue;
+      const num = Number(c.number ?? 0);
+      const existing = bestByNumber.get(num);
+      if (!existing) {
+        bestByNumber.set(num, c);
+      } else {
+        const isBetter = (() => {
+          if (c.isOfficial && !existing.isOfficial) return true;
+          if (!c.isOfficial && existing.isOfficial) return false;
+          if (c.group?.id === 10702 && existing.group?.id !== 10702) return true;
+          if (c.group?.id !== 10702 && existing.group?.id === 10702) return false;
+          if ((c.votes ?? 0) > (existing.votes ?? 0)) return true;
+          if ((c.votes ?? 0) < (existing.votes ?? 0)) return false;
+          return c.id > existing.id;
+        })();
+        if (isBetter) bestByNumber.set(num, c);
+      }
+    }
+    const sorted = Array.from(bestByNumber.values()).sort((a, b) => (b.number ?? 0) - (a.number ?? 0));
+    return sorted.map((c, idx) => {
       const chapNum = Number(c.number ?? 0);
       const name = c.name ? `Chapter ${chapNum}: ${c.name}` : `Chapter ${chapNum}`;
-      chapters.push(App.createChapter({
-        id,
+      return App.createChapter({
+        id: String(c.id),
         chapNum,
         name,
         langCode: "\u{1F1EC}\u{1F1E7}",
         group: c.group?.name ?? (c.isOfficial ? "Official" : "Unknown"),
         volume: Number(c.volume ?? 0) || void 0,
-        sortingIndex: sortingIndex--
-      }));
-    }
-    return chapters;
-  };
-  var parseChapterListFromHtml = (html, mangaId) => {
-    const chapters = [];
-    const seen = /* @__PURE__ */ new Set();
-    let sortingIndex = 0;
-    const regex = /href="\/title\/[^"]*\/(\d+)-chapter-([\d.]+)"[^>]*>[\s\S]*?<\/a>/gi;
-    const simpleRegex = /\/title\/[^"]+\/(\d+)-chapter-([\d.]+)/g;
-    let match;
-    while ((match = simpleRegex.exec(html)) !== null) {
-      const id = match[1] ?? "";
-      const chapNum = parseFloat(match[2] ?? "0");
-      if (!id || seen.has(id) || isNaN(chapNum)) continue;
-      seen.add(id);
-      chapters.push(App.createChapter({
-        id,
-        chapNum,
-        name: `Chapter ${chapNum}`,
-        langCode: "\u{1F1EC}\u{1F1E7}",
-        sortingIndex: sortingIndex--
-      }));
-    }
-    return chapters;
+        sortingIndex: idx
+      });
+    });
   };
   var parseChapterDetails = (data, mangaId, chapterId) => {
     const p = data?.pages;
@@ -890,36 +872,9 @@ var _Sources = (() => {
       const url = x?.url ?? "";
       if (url.startsWith("http")) return url;
       return `${baseUrl}/${url.replace(/^\//, "")}`;
-    });
-    return App.createChapterDetails({ id: chapterId, mangaId, pages });
-  };
-  var parseChapterDetailsFromHtml = (html, mangaId, chapterId) => {
-    const initialDataMatch = html.match(/id="initial-data">({.+?})<\/script>/s);
-    if (initialDataMatch) {
-      try {
-        const data = JSON.parse(initialDataMatch[1] ?? "{}");
-        for (const key of Object.keys(data.queries ?? {})) {
-          const val = data.queries[key];
-          if (val?.pages || val?.images) {
-            const pages2 = val.pages ?? val.images ?? [];
-            if (pages2.length > 0) {
-              return App.createChapterDetails({ id: chapterId, mangaId, pages: pages2 });
-            }
-          }
-        }
-      } catch {
-      }
-    }
-    const imgRegex = /https:\/\/[^"'\s]+\.(?:jpg|jpeg|png|webp|gif)(?:\?[^"'\s]*)?/gi;
-    const pages = [];
-    const seen = /* @__PURE__ */ new Set();
-    let match;
-    while ((match = imgRegex.exec(html)) !== null) {
-      const url = match[0];
-      if (!seen.has(url) && (url.includes("storage.") || url.includes("/pages/") || url.includes("/chapter"))) {
-        seen.add(url);
-        pages.push(url);
-      }
+    }).filter((u) => u.length > 0);
+    if (pages.length === 0) {
+      throw new Error("[Comix] No pages found for this chapter. Token might be expired.");
     }
     return App.createChapterDetails({ id: chapterId, mangaId, pages });
   };
@@ -977,7 +932,7 @@ var _Sources = (() => {
 
   // src/Comix/Comix.ts
   var ComixInfo = {
-    version: "1.2.0",
+    version: "1.3.0",
     name: "Comix.to",
     icon: "icon.png",
     author: "NaufalJCT48",
@@ -1001,25 +956,7 @@ var _Sources = (() => {
         }
       });
     }
-    /**
-     * Token `_` untuk chapter API.
-     *
-     * Comix.to melindungi endpoint /chapters dengan token yang di-generate
-     * oleh JavaScript browser (VM-obfuscated, tidak bisa di-reverse).
-     * Tachiyomi menggunakan Android WebView untuk intercept request JS dan
-     * capture token — Paperback tidak punya API setara.
-     *
-     * Cara dapat token:
-     * 1. Buka comix.to/title/{manga-id} di browser
-     * 2. Buka DevTools → Network → filter "chapters"
-     * 3. Copy nilai query param `_` dari URL request
-     * 4. Paste ke Source Settings → API Token
-     *
-     * Token valid selama cf_clearance session aktif (~beberapa jam).
-     */
-    get apiToken() {
-      return this.stateManager?.retrieve?.("api_token") ?? "";
-    }
+    // ========================= Settings UI =========================
     async getSourceMenu() {
       return App.createDUISection({
         id: "main",
@@ -1036,10 +973,20 @@ var _Sources = (() => {
           }),
           App.createDUILabel({
             id: "token_help",
-            label: 'Cara dapat token: Buka comix.to di browser \u2192 DevTools \u2192 Network \u2192 filter "chapters" \u2192 copy nilai `_` dari URL request'
+            label: 'How to get token: Open comix.to in browser \u2192 DevTools (F12) \u2192 Network tab \u2192 filter "chapters" \u2192 copy the `_` query parameter value from the request URL'
           })
         ]
       });
+    }
+    // ========================= API Helpers =========================
+    async getToken() {
+      const token = await this.stateManager.retrieve("api_token");
+      if (!token) {
+        throw new Error(
+          '[Comix] API Token required!\n\nGo to Source Settings and paste your token.\nHow: Open comix.to \u2192 DevTools \u2192 Network \u2192 filter "chapters" \u2192 copy `_` param value.'
+        );
+      }
+      return token;
     }
     async getJSON(url) {
       const response = await this.requestManager.schedule(
@@ -1047,67 +994,49 @@ var _Sources = (() => {
         1
       );
       const data = typeof response.data === "string" ? JSON.parse(response.data) : response.data;
+      if (data?.status === "error") {
+        const msg = data.message ?? "Unknown API error";
+        if (msg.toLowerCase().includes("token") || msg.toLowerCase().includes("unauthorized") || msg.toLowerCase().includes("forbidden")) {
+          throw new Error("[Comix] Token expired or invalid. Please update your token in Source Settings.");
+        }
+        throw new Error(`[Comix] API Error: ${msg}`);
+      }
       if (data?.status === "ok" && "result" in data) return data.result;
-      if (data?.status === "error") throw new Error(data.message ?? "Comix API error");
       return data;
     }
-    async getHtml(url) {
-      const response = await this.requestManager.schedule(
-        createHtmlRequestObject({ url, method: "GET" }),
-        1
-      );
-      return response.data;
-    }
+    // ========================= Manga Details =========================
     async getMangaDetails(mangaId) {
-      return parseMangaDetails(await this.getJSON(`${API_URL}/manga/${mangaId}`), mangaId);
+      const data = await this.getJSON(`${API_URL}/manga/${mangaId}`);
+      return parseMangaDetails(data, mangaId);
     }
+    // ========================= Chapters =========================
     async getChapters(mangaId) {
-      const token = await this.stateManager.retrieve("api_token") ?? "";
-      if (token) {
-        try {
-          const allChapters = [];
-          let page = 1;
-          let hasMore = true;
-          while (hasMore) {
-            const url = `${API_URL}/manga/${mangaId}/chapters?page=${page}&limit=100&order%5Bnumber%5D=desc&_=${token}`;
-            const data = await this.getJSON(url);
-            const items = data?.items ?? [];
-            allChapters.push(...items);
-            const meta = data?.meta ?? data?.pagination;
-            const lastPage = meta?.lastPage ?? meta?.last_page ?? 1;
-            hasMore = page < lastPage && items.length > 0;
-            page++;
-          }
-          if (allChapters.length > 0) {
-            return parseChapterList({ items: allChapters });
-          }
-        } catch (e) {
-          console.log("[Comix] Token invalid/expired, falling back to HTML scrape:", e);
-        }
+      const token = await this.getToken();
+      const allChapters = [];
+      let page = 1;
+      let hasMore = true;
+      while (hasMore) {
+        const url = `${API_URL}/manga/${mangaId}/chapters?page=${page}&limit=100&order%5Bnumber%5D=desc&_=${encodeURIComponent(token)}`;
+        const data = await this.getJSON(url);
+        const items = data?.items ?? [];
+        allChapters.push(...items);
+        const meta = data?.meta ?? data?.pagination;
+        const lastPage = meta?.lastPage ?? meta?.last_page ?? 1;
+        hasMore = page < lastPage && items.length > 0;
+        page++;
       }
-      const html = await this.getHtml(`${BASE_URL}/title/${mangaId}`);
-      return parseChapterListFromHtml(html, mangaId);
+      if (allChapters.length === 0) {
+        throw new Error("[Comix] No chapters found. Token might be expired \u2014 update it in Source Settings.");
+      }
+      return parseChapterList({ items: allChapters });
     }
+    // ========================= Chapter Details (Pages) =========================
     async getChapterDetails(mangaId, chapterId) {
-      const token = await this.stateManager.retrieve("api_token") ?? "";
-      if (token) {
-        try {
-          const data = await this.getJSON(`${API_URL}/chapters/${chapterId}?_=${token}`);
-          return parseChapterDetails(data, mangaId, chapterId);
-        } catch (e) {
-          console.log("[Comix] Token invalid for chapter details, falling back:", e);
-        }
-      }
-      try {
-        const mangaData = await this.getJSON(`${API_URL}/manga/${mangaId}`);
-        const mangaUrl = mangaData?.url ?? "";
-        const slug = mangaUrl.split("/title/")?.[1] ?? mangaId;
-        const html = await this.getHtml(`${BASE_URL}/title/${slug}/${chapterId}-chapter-0`);
-        return parseChapterDetailsFromHtml(html, mangaId, chapterId);
-      } catch {
-        return App.createChapterDetails({ id: chapterId, mangaId, pages: [] });
-      }
+      const token = await this.getToken();
+      const data = await this.getJSON(`${API_URL}/chapters/${chapterId}?_=${encodeURIComponent(token)}`);
+      return parseChapterDetails(data, mangaId, chapterId);
     }
+    // ========================= Homepage =========================
     async getHomePageSections(sectionCallback) {
       const sections = [
         {
@@ -1151,6 +1080,7 @@ var _Sources = (() => {
         }
       }
     }
+    // ========================= Search =========================
     async getSearchTags() {
       return parseSearchTags();
     }
@@ -1208,6 +1138,7 @@ var _Sources = (() => {
         metadata: page < lastPage ? { page: page + 1 } : void 0
       });
     }
+    // ========================= Cloudflare =========================
     async getCloudflareBypassRequestAsync() {
       return App.createRequest({
         url: `${BASE_URL}/`,
