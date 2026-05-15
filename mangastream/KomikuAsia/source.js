@@ -16431,7 +16431,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
   // src/KomikuAsia/KomikuAsia.ts
   var DOMAIN = "https://01.komiku.asia";
   var KomikuAsiaInfo = {
-    version: getExportVersion("1.0.0"),
+    version: getExportVersion("1.0.1"),
     name: "KomikuAsia",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",
@@ -16451,6 +16451,8 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
     constructor() {
       super(...arguments);
       this.baseUrl = DOMAIN;
+      // komiku.asia uses slug-based URLs, not post IDs
+      // override usePostIds = false
       this.manga_tag_selector_box = "div.seriestugenre";
       this.dateMonths = {
         january: "Januari",

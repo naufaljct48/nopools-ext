@@ -817,7 +817,8 @@ var _Sources = (() => {
     return results;
   };
   var parseMangaDetails = (html, mangaId) => {
-    const title = cleanText(extractText(html, /<h1[^>]*itemprop=["']name["'][^>]*>([\s\S]*?)<\/h1>/i)) || cleanText(extractText(html, /<h1[^>]*>([\s\S]*?)<\/h1>/i));
+    const rawTitle = cleanText(extractText(html, /<h1[^>]*itemprop=["']name["'][^>]*>([\s\S]*?)<\/h1>/i)) || cleanText(extractText(html, /<h1[^>]*>([\s\S]*?)<\/h1>/i));
+    const title = rawTitle.replace(/^Komik\s+/i, "");
     let image = extractText(html, /<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i);
     if (!image) image = extractText(html, /<img[^>]*class=["'][^"']*thumbnail[^"']*["'][^>]*src=["']([^"']+)["']/i);
     const statusRaw = cleanText(extractText(html, /Status[^<]*<\/[^>]+>\s*<[^>]+>([^<]+)/i));
@@ -852,16 +853,16 @@ var _Sources = (() => {
   var parseChapterList = (html, mangaId) => {
     const chapters = [];
     let sortingIndex = 0;
-    const rowRegex = /<tr[^>]*data-ch=["']([^"']+)["'][^>]*>([\s\S]*?)<\/tr>/gi;
+    const rowRegex = /<tr[^>]*itemprop=["']itemListElement["'][^>]*>([\s\S]*?)<\/tr>/gi;
     const rows = extractAll(html, rowRegex);
     for (const row of rows) {
-      const chapNum = parseFloat(row[1] ?? "0") || 0;
-      const rowHtml = row[2] ?? "";
-      const hrefMatch = rowHtml.match(/href=["']\/([^"']+chapter[^"']+)\/?["']/i);
+      const rowHtml = row[1] ?? "";
+      const hrefMatch = rowHtml.match(/href=["']\/([^"']*chapter[^"']+?)\/?["']/i);
       if (!hrefMatch) continue;
       const chapterId = (hrefMatch[1] ?? "").replace(/\/$/, "");
-      const titleRaw = cleanText(extractText(rowHtml, /<b>([\s\S]*?)<\/b>/i));
-      const name = titleRaw || `Chapter ${chapNum}`;
+      const nameRaw = cleanText(extractText(rowHtml, /itemprop=["']name["'][^>]*>([\s\S]*?)<\/span>/i));
+      const chapNum = parseFloat(nameRaw.replace(/[^0-9.]/g, "")) || 0;
+      const name = nameRaw || `Chapter ${chapNum}`;
       const dateRaw = cleanText(extractText(rowHtml, /<td[^>]*class=["']tanggalseries["'][^>]*>([\s\S]*?)<\/td>/i));
       const time = convertRelativeDate(dateRaw);
       chapters.push(App.createChapter({
@@ -967,7 +968,7 @@ var _Sources = (() => {
 
   // src/Komiku/Komiku.ts
   var KomikuInfo = {
-    version: "1.0.0",
+    version: "1.0.1",
     name: "Komiku",
     icon: "icon.png",
     author: "NaufalJCT48",
