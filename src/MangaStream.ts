@@ -46,8 +46,9 @@ export const getExportVersion = (EXTENSION_VERSION: string): string => {
 }
 
 export abstract class MangaStream extends Source {
-    constructor() {
-        super(cheerio as any)
+    // @ts-ignore - Paperback runtime injects cheerio via arguments
+    constructor(...args: any[]) {
+        super(...args)
         this.configureSections()
     }
 
