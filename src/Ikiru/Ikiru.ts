@@ -72,7 +72,7 @@ const getIncludedTagsByPrefix = (query: SearchRequest, prefix: string): string[]
 }
 
 export const IkiruInfo: SourceInfo = {
-    version: '2.0.0',
+    version: '2.0.1',
     name: 'Ikiru',
     icon: 'icon.png',
     author: 'NaufalJCT48',
@@ -151,6 +151,31 @@ export class Ikiru extends Source {
     }
 
     override async getHomePageSections(sectionCallback: (section: HomeSection) => void): Promise<void> {
+        const ajaxUrl = `${WEBSITE_BASE}/wp-admin/admin-ajax.php?action=advanced_search`
+        const ajaxHeaders = {
+            'content-type': 'application/x-www-form-urlencoded',
+            'origin': WEBSITE_BASE,
+            'referer': `${WEBSITE_BASE}/advanced-search/`,
+            'x-requested-with': 'XMLHttpRequest'
+        }
+
+        const buildBody = (orderby: string): string => [
+            'search_nonce=',
+            'inclusion=OR',
+            'exclusion=OR',
+            'page=1',
+            'genre=%5B%5D',
+            'genre_exclude=%5B%5D',
+            'author=%5B%5D',
+            'artist=%5B%5D',
+            'project=0',
+            'type=%5B%5D',
+            'status=%5B%5D',
+            'order=desc',
+            `orderby=${orderby}`,
+            'query='
+        ].join('&')
+
         const sections: Array<{ request: Request, section: HomeSection }> = [
             {
                 request: createRequestObject({
@@ -165,22 +190,39 @@ export class Ikiru extends Source {
             },
             {
                 request: createRequestObject({
-                    url: `${WEBSITE_BASE}/project/`
+                    url: `${WEBSITE_BASE}/latest/`
                 }),
                 section: App.createHomeSection({
-                    id: 'project_updates',
-                    title: 'Project Updates',
+                    id: 'latest_update',
+                    title: 'Latest Update',
                     type: HomeSectionType.singleRowNormal,
                     containsMoreItems: true
                 })
             },
             {
                 request: createRequestObject({
-                    url: `${WEBSITE_BASE}/latest/`
+                    url: ajaxUrl,
+                    method: 'POST',
+                    data: buildBody('popular'),
+                    headers: ajaxHeaders
                 }),
                 section: App.createHomeSection({
-                    id: 'latest_update',
-                    title: 'Latest Update',
+                    id: 'popular',
+                    title: 'Popular',
+                    type: HomeSectionType.singleRowNormal,
+                    containsMoreItems: true
+                })
+            },
+            {
+                request: createRequestObject({
+                    url: ajaxUrl,
+                    method: 'POST',
+                    data: buildBody('rating'),
+                    headers: ajaxHeaders
+                }),
+                section: App.createHomeSection({
+                    id: 'most_rated',
+                    title: 'Most Rated',
                     type: HomeSectionType.singleRowNormal,
                     containsMoreItems: true
                 })
@@ -237,23 +279,58 @@ export class Ikiru extends Source {
     override async getViewMoreItems(homepageSectionId: string, metadata: any): Promise<PagedResults> {
         const page = metadata?.page ?? 1
 
-        let url: string
         if (homepageSectionId === 'latest_update') {
-            url = `${WEBSITE_BASE}/latest/?the_page=${page}`
-        } else if (homepageSectionId === 'project_updates') {
-            url = `${WEBSITE_BASE}/project/?the_page=${page}`
-        } else {
-            throw new Error(`View more not supported for section: ${homepageSectionId}`)
+            const request = createRequestObject({ url: `${WEBSITE_BASE}/latest/?the_page=${page}` })
+            const response = await this.requestManager.schedule(request, 1)
+            const results = parseMangaList(response.data as string)
+            return App.createPagedResults({
+                results,
+                metadata: results.length >= 12 ? { page: page + 1 } : undefined
+            })
         }
 
-        const request = createRequestObject({ url })
+        // popular & most_rated use admin-ajax POST
+        const orderbyMap: Record<string, string> = {
+            popular: 'popular',
+            most_rated: 'rating'
+        }
+        const orderby = orderbyMap[homepageSectionId]
+        if (!orderby) throw new Error(`View more not supported for section: ${homepageSectionId}`)
+
+        const body = [
+            'search_nonce=',
+            'inclusion=OR',
+            'exclusion=OR',
+            `page=${page}`,
+            'genre=%5B%5D',
+            'genre_exclude=%5B%5D',
+            'author=%5B%5D',
+            'artist=%5B%5D',
+            'project=0',
+            'type=%5B%5D',
+            'status=%5B%5D',
+            'order=desc',
+            `orderby=${orderby}`,
+            'query='
+        ].join('&')
+
+        const request = createRequestObject({
+            url: `${WEBSITE_BASE}/wp-admin/admin-ajax.php?action=advanced_search`,
+            method: 'POST',
+            data: body,
+            headers: {
+                'content-type': 'application/x-www-form-urlencoded',
+                'origin': WEBSITE_BASE,
+                'referer': `${WEBSITE_BASE}/advanced-search/`,
+                'x-requested-with': 'XMLHttpRequest'
+            }
+        })
+
         const response = await this.requestManager.schedule(request, 1)
         const results = parseMangaList(response.data as string)
-        const hasMore = results.length >= 12
-
         return App.createPagedResults({
             results,
-            metadata: hasMore ? { page: page + 1 } : undefined
+            metadata: results.length >= 20 ? { page: page + 1 } : undefined
         })
     }
 
