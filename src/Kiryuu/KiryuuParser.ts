@@ -137,7 +137,7 @@ export const parseChapterDetails = (html: string, mangaId: string, chapterId: st
 export const parseMangaList = (html: string): PartialSourceManga[] => {
     const results: PartialSourceManga[] = []
     const seen = new Set<string>()
-    const cardBlocks = extractBlocks(html, /<div>\s*<div\s+class=["'][^"']*group-data-\[direction=horizontal\]:hidden[^"']*["'][^>]*>/gi)
+    const cardBlocks = extractBlocks(html, /<div>\s*<div\s+class=["'][^"']*(?:group-data-\[direction=horizontal\]:hidden|group-data-\[mode=vertical\]:hidden)[^"']*["'][^>]*>/gi)
 
     if (cardBlocks.length > 0) {
         for (const card of cardBlocks) {
@@ -154,7 +154,8 @@ export const parseMangaList = (html: string): PartialSourceManga[] => {
             const mangaHrefPattern = escapeRegex(`/manga/${mangaId}/`)
             const chapterRegex = new RegExp(`<a[^>]*href=["'][^"']*${mangaHrefPattern}chapter-[^"']+["'][^>]*>([\\s\\S]*?)<\\/a>`, 'i')
             const chapterHtml = extractText(cardHtml, chapterRegex)
-            const subtitle = decodeAndClean(extractText(chapterHtml, /<p[^>]*>([\s\S]*?)<\/p>/i)) || decodeAndClean(chapterHtml)
+            const inlineChapter = extractText(cardHtml, /<span[^>]*class=["'][^"']*text-sm[^"']*text-gray-300[^"']*["'][^>]*>(Chapter\s*[\s\S]*?)<\/span>/i)
+            const subtitle = decodeAndClean(extractText(chapterHtml, /<p[^>]*>([\s\S]*?)<\/p>/i)) || decodeAndClean(chapterHtml) || decodeAndClean(inlineChapter)
 
             seen.add(mangaId)
             results.push(App.createPartialSourceManga({

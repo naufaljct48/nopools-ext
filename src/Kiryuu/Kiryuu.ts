@@ -72,7 +72,7 @@ const getIncludedTagsByPrefix = (query: SearchRequest, prefix: string): string[]
 }
 
 export const KiryuuInfo: SourceInfo = {
-    version: '2.2.9',
+    version: '2.2.10',
     name: 'Kiryuu',
     icon: 'icon.png',
     author: 'NaufalJCT48',
