@@ -18,7 +18,7 @@ import {
 const DOMAIN = 'https://01.komiku.asia'
 
 export const KomikuAsiaInfo: SourceInfo = {
-    version: getExportVersion('1.0.0'),
+    version: getExportVersion('1.0.1'),
     name: 'KomikuAsia',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -38,6 +38,9 @@ export const KomikuAsiaInfo: SourceInfo = {
 export class KomikuAsia extends MangaStream {
 
     baseUrl: string = DOMAIN
+
+    // komiku.asia uses slug-based URLs, not post IDs
+    // override usePostIds = false
 
     override manga_tag_selector_box = 'div.seriestugenre'
 

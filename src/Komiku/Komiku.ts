@@ -25,7 +25,7 @@ import {
 } from './KomikuParser'
 
 export const KomikuInfo: SourceInfo = {
-    version: '1.0.0',
+    version: '1.0.1',
     name: 'Komiku',
     icon: 'icon.png',
     author: 'NaufalJCT48',

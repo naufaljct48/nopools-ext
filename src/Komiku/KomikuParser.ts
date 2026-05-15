@@ -51,9 +51,10 @@ export const parseMangaList = (html: string): PartialSourceManga[] => {
 // ─── Manga Details ───────────────────────────────────────────────────────────
 
 export const parseMangaDetails = (html: string, mangaId: string): SourceManga => {
-    // Title from <h1 itemprop="name">
-    const title = cleanText(extractText(html, /<h1[^>]*itemprop=["']name["'][^>]*>([\s\S]*?)<\/h1>/i))
+    // Title from <h1 itemprop="name"> — strip "Komik " prefix
+    const rawTitle = cleanText(extractText(html, /<h1[^>]*itemprop=["']name["'][^>]*>([\s\S]*?)<\/h1>/i))
         || cleanText(extractText(html, /<h1[^>]*>([\s\S]*?)<\/h1>/i))
+    const title = rawTitle.replace(/^Komik\s+/i, '')
 
     // Cover from og:image meta
     let image = extractText(html, /<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i)
@@ -106,24 +107,26 @@ export const parseChapterList = (html: string, mangaId: string): Chapter[] => {
     const chapters: Chapter[] = []
     let sortingIndex = 0
 
-    // Rows: <tr data-ch="235">
-    const rowRegex = /<tr[^>]*data-ch=["']([^"']+)["'][^>]*>([\s\S]*?)<\/tr>/gi
+    // Rows: <tr itemprop="itemListElement" ... data-ch="235"> OR without data-ch
+    // Match all <tr> inside #daftarChapter that have itemprop="itemListElement"
+    const rowRegex = /<tr[^>]*itemprop=["']itemListElement["'][^>]*>([\s\S]*?)<\/tr>/gi
     const rows = extractAll(html, rowRegex)
 
     for (const row of rows) {
-        const chapNum = parseFloat(row[1] ?? '0') || 0
-        const rowHtml = row[2] ?? ''
+        const rowHtml = row[1] ?? ''
 
-        // href="/manga-slug-chapter-N/" — relative URL
-        const hrefMatch = rowHtml.match(/href=["']\/([^"']+chapter[^"']+)\/?["']/i)
+        // href="/the-beginning-after-the-end-chapter-235/"
+        const hrefMatch = rowHtml.match(/href=["']\/([^"']*chapter[^"']+?)\/?["']/i)
         if (!hrefMatch) continue
 
-        // chapterId = the slug after the last slash, e.g. "the-beginning-after-the-end-chapter-235"
         const chapterId = (hrefMatch[1] ?? '').replace(/\/$/, '')
 
-        const titleRaw = cleanText(extractText(rowHtml, /<b>([\s\S]*?)<\/b>/i))
-        const name = titleRaw || `Chapter ${chapNum}`
+        // Chapter number from itemprop="name" content like "Chapter 235"
+        const nameRaw = cleanText(extractText(rowHtml, /itemprop=["']name["'][^>]*>([\s\S]*?)<\/span>/i))
+        const chapNum = parseFloat(nameRaw.replace(/[^0-9.]/g, '')) || 0
+        const name = nameRaw || `Chapter ${chapNum}`
 
+        // Date from <td class="tanggalseries">
         const dateRaw = cleanText(extractText(rowHtml, /<td[^>]*class=["']tanggalseries["'][^>]*>([\s\S]*?)<\/td>/i))
         const time = convertRelativeDate(dateRaw)
 
