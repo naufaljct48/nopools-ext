@@ -15,6 +15,7 @@ import {
     Response,
     SearchRequest,
     SearchResultsProviding,
+    Source,
     SourceManga,
     SourceStateManager,
     TagSection
@@ -44,8 +45,9 @@ export const getExportVersion = (EXTENSION_VERSION: string): string => {
     return BASE_VERSION.split('.').map((x, index) => Number(x) + Number(EXTENSION_VERSION.split('.')[index])).join('.')
 }
 
-export abstract class MangaStream implements ChapterProviding, HomePageSectionsProviding, MangaProviding, SearchResultsProviding {
+export abstract class MangaStream extends Source {
     constructor() {
+        super(cheerio as any)
         this.configureSections()
     }
 
