@@ -19,7 +19,7 @@ import {
 const DOMAIN = 'https://01.komiku.asia'
 
 export const KomikuAsiaInfo: SourceInfo = {
-    version: getExportVersion('1.0.2'),
+    version: getExportVersion('1.0.3'),
     name: 'KomikuAsia',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
