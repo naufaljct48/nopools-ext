@@ -1064,7 +1064,7 @@ var _Sources = (() => {
     return results;
   };
   var IkiruInfo = {
-    version: "2.0.0",
+    version: "2.0.1",
     name: "Ikiru",
     icon: "icon.png",
     author: "NaufalJCT48",
@@ -1140,6 +1140,29 @@ var _Sources = (() => {
       return parseChapterDetails(response.data, mangaId, chapterId);
     }
     async getHomePageSections(sectionCallback) {
+      const ajaxUrl = `${WEBSITE_BASE2}/wp-admin/admin-ajax.php?action=advanced_search`;
+      const ajaxHeaders = {
+        "content-type": "application/x-www-form-urlencoded",
+        "origin": WEBSITE_BASE2,
+        "referer": `${WEBSITE_BASE2}/advanced-search/`,
+        "x-requested-with": "XMLHttpRequest"
+      };
+      const buildBody = (orderby) => [
+        "search_nonce=",
+        "inclusion=OR",
+        "exclusion=OR",
+        "page=1",
+        "genre=%5B%5D",
+        "genre_exclude=%5B%5D",
+        "author=%5B%5D",
+        "artist=%5B%5D",
+        "project=0",
+        "type=%5B%5D",
+        "status=%5B%5D",
+        "order=desc",
+        `orderby=${orderby}`,
+        "query="
+      ].join("&");
       const sections = [
         {
           request: createRequestObject({
@@ -1154,22 +1177,39 @@ var _Sources = (() => {
         },
         {
           request: createRequestObject({
-            url: `${WEBSITE_BASE2}/project/`
+            url: `${WEBSITE_BASE2}/latest/`
           }),
           section: App.createHomeSection({
-            id: "project_updates",
-            title: "Project Updates",
+            id: "latest_update",
+            title: "Latest Update",
             type: import_types.HomeSectionType.singleRowNormal,
             containsMoreItems: true
           })
         },
         {
           request: createRequestObject({
-            url: `${WEBSITE_BASE2}/latest/`
+            url: ajaxUrl,
+            method: "POST",
+            data: buildBody("popular"),
+            headers: ajaxHeaders
           }),
           section: App.createHomeSection({
-            id: "latest_update",
-            title: "Latest Update",
+            id: "popular",
+            title: "Popular",
+            type: import_types.HomeSectionType.singleRowNormal,
+            containsMoreItems: true
+          })
+        },
+        {
+          request: createRequestObject({
+            url: ajaxUrl,
+            method: "POST",
+            data: buildBody("rating"),
+            headers: ajaxHeaders
+          }),
+          section: App.createHomeSection({
+            id: "most_rated",
+            title: "Most Rated",
             type: import_types.HomeSectionType.singleRowNormal,
             containsMoreItems: true
           })
@@ -1218,21 +1258,53 @@ var _Sources = (() => {
     }
     async getViewMoreItems(homepageSectionId, metadata) {
       const page = metadata?.page ?? 1;
-      let url;
       if (homepageSectionId === "latest_update") {
-        url = `${WEBSITE_BASE2}/latest/?the_page=${page}`;
-      } else if (homepageSectionId === "project_updates") {
-        url = `${WEBSITE_BASE2}/project/?the_page=${page}`;
-      } else {
-        throw new Error(`View more not supported for section: ${homepageSectionId}`);
+        const request2 = createRequestObject({ url: `${WEBSITE_BASE2}/latest/?the_page=${page}` });
+        const response2 = await this.requestManager.schedule(request2, 1);
+        const results2 = parseMangaList(response2.data);
+        return App.createPagedResults({
+          results: results2,
+          metadata: results2.length >= 12 ? { page: page + 1 } : void 0
+        });
       }
-      const request = createRequestObject({ url });
+      const orderbyMap = {
+        popular: "popular",
+        most_rated: "rating"
+      };
+      const orderby = orderbyMap[homepageSectionId];
+      if (!orderby) throw new Error(`View more not supported for section: ${homepageSectionId}`);
+      const body = [
+        "search_nonce=",
+        "inclusion=OR",
+        "exclusion=OR",
+        `page=${page}`,
+        "genre=%5B%5D",
+        "genre_exclude=%5B%5D",
+        "author=%5B%5D",
+        "artist=%5B%5D",
+        "project=0",
+        "type=%5B%5D",
+        "status=%5B%5D",
+        "order=desc",
+        `orderby=${orderby}`,
+        "query="
+      ].join("&");
+      const request = createRequestObject({
+        url: `${WEBSITE_BASE2}/wp-admin/admin-ajax.php?action=advanced_search`,
+        method: "POST",
+        data: body,
+        headers: {
+          "content-type": "application/x-www-form-urlencoded",
+          "origin": WEBSITE_BASE2,
+          "referer": `${WEBSITE_BASE2}/advanced-search/`,
+          "x-requested-with": "XMLHttpRequest"
+        }
+      });
       const response = await this.requestManager.schedule(request, 1);
       const results = parseMangaList(response.data);
-      const hasMore = results.length >= 12;
       return App.createPagedResults({
         results,
-        metadata: hasMore ? { page: page + 1 } : void 0
+        metadata: results.length >= 20 ? { page: page + 1 } : void 0
       });
     }
     async getCloudflareBypassRequestAsync() {
