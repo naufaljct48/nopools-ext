@@ -448,7 +448,7 @@ var _Sources = (() => {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
       exports.urlEncodeObject = exports.convertTime = exports.Source = void 0;
-      var Source = class {
+      var Source2 = class {
         constructor(cheerio) {
           this.cheerio = cheerio;
         }
@@ -465,7 +465,7 @@ var _Sources = (() => {
           return this.getSearchTags?.();
         }
       };
-      exports.Source = Source;
+      exports.Source = Source2;
       function convertTime(timeAgo) {
         let time;
         let trimmed = Number((/\d*/.exec(timeAgo) ?? [])[0]);
@@ -745,6 +745,14 @@ var _Sources = (() => {
 
   // src/MangaStream.ts
   var import_types3 = __toESM(require_lib());
+
+  // node_modules/cheerio/dist/browser/index.js
+  var browser_exports = {};
+  __export(browser_exports, {
+    contains: () => contains,
+    load: () => load,
+    merge: () => merge
+  });
 
   // node_modules/cheerio/dist/browser/static.js
   var static_exports = {};
@@ -15949,8 +15957,9 @@ var _Sources = (() => {
   var getExportVersion = (EXTENSION_VERSION) => {
     return BASE_VERSION.split(".").map((x, index2) => Number(x) + Number(EXTENSION_VERSION.split(".")[index2])).join(".");
   };
-  var MangaStream = class {
+  var MangaStream = class extends import_types3.Source {
     constructor() {
+      super(browser_exports);
       // ----REQUEST MANAGER----
       this.requestManager = App.createRequestManager({
         requestsPerSecond: 5,

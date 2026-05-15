@@ -448,7 +448,7 @@ var _Sources = (() => {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
       exports.urlEncodeObject = exports.convertTime = exports.Source = void 0;
-      var Source = class {
+      var Source2 = class {
         constructor(cheerio) {
           this.cheerio = cheerio;
         }
@@ -465,7 +465,7 @@ var _Sources = (() => {
           return this.getSearchTags?.();
         }
       };
-      exports.Source = Source;
+      exports.Source = Source2;
       function convertTime(timeAgo) {
         let time;
         let trimmed = Number((/\d*/.exec(timeAgo) ?? [])[0]);
@@ -15566,7 +15566,7 @@ var _Sources = (() => {
   var BASE_URL2 = "https://doujindesu.tv";
   var USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36";
   var DoujinDesuInfo = {
-    version: "5.0.3",
+    version: "5.0.4",
     name: "DoujinDesu",
     icon: "icon.png",
     author: "NaufalJCT48",
@@ -15580,8 +15580,9 @@ var _Sources = (() => {
     ],
     intents: import_types2.SourceIntents.MANGA_CHAPTERS | import_types2.SourceIntents.HOMEPAGE_SECTIONS | import_types2.SourceIntents.CLOUDFLARE_BYPASS_REQUIRED | import_types2.SourceIntents.SETTINGS_UI
   };
-  var DoujinDesu = class {
+  var DoujinDesu = class extends import_types2.Source {
     constructor() {
+      super(...arguments);
       this.requestManager = App.createRequestManager({
         requestsPerSecond: 4,
         requestTimeout: 15e3,
