@@ -746,14 +746,6 @@ var _Sources = (() => {
   // src/MangaStream.ts
   var import_types3 = __toESM(require_lib());
 
-  // node_modules/cheerio/dist/browser/index.js
-  var browser_exports = {};
-  __export(browser_exports, {
-    contains: () => contains,
-    load: () => load,
-    merge: () => merge
-  });
-
   // node_modules/cheerio/dist/browser/static.js
   var static_exports = {};
   __export(static_exports, {
@@ -15958,8 +15950,9 @@ var _Sources = (() => {
     return BASE_VERSION.split(".").map((x, index2) => Number(x) + Number(EXTENSION_VERSION.split(".")[index2])).join(".");
   };
   var MangaStream = class extends import_types3.Source {
-    constructor() {
-      super(browser_exports);
+    // @ts-ignore - Paperback runtime injects cheerio via arguments
+    constructor(...args) {
+      super(...args);
       // ----REQUEST MANAGER----
       this.requestManager = App.createRequestManager({
         requestsPerSecond: 5,
