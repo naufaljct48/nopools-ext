@@ -3,33 +3,6 @@ import { Request } from '@paperback/types'
 export const BASE_URL = 'https://comix.to'
 export const API_URL = `${BASE_URL}/api/v1`
 
-// Token `_` di-generate oleh JS browser dari meta[name=cfg] yang di-decrypt
-// oleh secure VM bundle. Token ini tied ke cf_clearance session.
-// Paperback akan fetch token dari HTML halaman sebelum hit chapter API.
-// Fallback: update manual kalau auto-fetch gagal.
-export let CACHED_TOKEN = ''
-
-/**
- * Extract token `_` dari HTML halaman comix.to.
- * Token ada di URL request yang dibuat JS — kita ambil dari meta cfg
- * yang sudah di-decode oleh VM, tapi karena kita tidak bisa run JS,
- * kita fetch halaman dan parse token dari script initial-data atau
- * gunakan pendekatan scrape chapter URL dari rendered HTML.
- *
- * Catatan: Token sebenarnya di-generate dari meta[name=cfg] oleh VM JS.
- * Kita tidak bisa decode sendiri tanpa run JS-nya.
- * Solusi: Paperback punya WebView untuk Cloudflare bypass — token bisa
- * di-capture dari sana, tapi API Paperback tidak expose intercept.
- *
- * Workaround: Parse chapter URLs langsung dari HTML (rendered via CF bypass).
- */
-export const extractTokenFromHtml = (html: string): string => {
-    // Token bisa ada di inline script sebagai query param
-    const tokenMatch = html.match(/[?&]_=([\w\-_]+)/)
-    if (tokenMatch?.[1]) return tokenMatch[1]
-    return ''
-}
-
 export const createRequestObject = (requestObj: any): Request => App.createRequest({
     ...requestObj,
     headers: {
@@ -37,17 +10,6 @@ export const createRequestObject = (requestObj: any): Request => App.createReque
         'X-Requested-With': 'XMLHttpRequest',
         'Referer': `${BASE_URL}/`,
         'Origin': BASE_URL,
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36',
-        'Sec-GPC': '1',
-        ...(requestObj.headers ?? {})
-    }
-})
-
-export const createHtmlRequestObject = (requestObj: any): Request => App.createRequest({
-    ...requestObj,
-    headers: {
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Referer': `${BASE_URL}/`,
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36',
         'Sec-GPC': '1',
         ...(requestObj.headers ?? {})
@@ -64,7 +26,7 @@ export const parseStatus = (status: string): string => {
     }
 }
 
-// Genre list dari Filters.kt Tachiyomi — pakai numeric ID
+// Genre list — numeric IDs from Comix API
 export const GENRES: { label: string; id: string }[] = [
     { label: 'Romance', id: '23' },
     { label: 'Drama', id: '11' },
@@ -109,6 +71,3 @@ export const FORMATS: { label: string; id: string }[] = [
     { label: 'Oneshot', id: '93169' },
     { label: 'Web Comic', id: '93171' },
 ]
-
-export const getIdFromUrl = (url: string): string =>
-    url.match(/\/title\/([^/]+)(?:\/|$)/)?.[1]?.split('-')[0] ?? ''

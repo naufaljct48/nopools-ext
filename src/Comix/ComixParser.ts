@@ -1,5 +1,5 @@
 import { Chapter, ChapterDetails, PartialSourceManga, SourceManga, Tag, TagSection } from '@paperback/types'
-import { BASE_URL, FORMATS, GENRES, parseStatus } from './ComixHelper'
+import { FORMATS, GENRES, parseStatus } from './ComixHelper'
 
 const getImage = (m: any): string => m?.poster?.large || m?.poster?.medium || m?.poster?.small || ''
 const clean = (v: any): string => String(v ?? '').trim()
@@ -19,7 +19,7 @@ export const parseMangaDetails = (data: any, mangaId: string): SourceManga => {
     return App.createSourceManga({
         id: mangaId,
         mangaInfo: App.createMangaInfo({
-            titles: [m.title, ...(m.altTitles ?? [])].filter(Boolean),
+            titles: [m.title, ...(m.altTitles ?? m.alt_titles ?? [])].filter(Boolean),
             image: getImage(m),
             status: parseStatus(m.status),
             author: (m.authors ?? m.author ?? []).map((x: any) => x.title || x.name).join(', ') || 'Unknown',
@@ -31,123 +31,80 @@ export const parseMangaDetails = (data: any, mangaId: string): SourceManga => {
 }
 
 /**
- * Parse chapter list dari API response (butuh token _).
- * Response format:
- * { status:'ok', result: { items: [ { id, number, name, url, group, votes, ... } ] } }
+ * Parse chapter list dari API response.
+ *
+ * API response (setelah unwrap):
+ * { items: [ { id, number, name, url, group, votes, isOfficial, createdAtFormatted, ... } ], meta/pagination }
+ *
+ * Deduplicate by chapter number — prefer official, then highest votes, then newest ID.
  */
 export const parseChapterList = (data: any): Chapter[] => {
-    const chapters: Chapter[] = []
-    const seen = new Set<string>()
-    let sortingIndex = 0
-
     const items: any[] = data?.items ?? []
 
+    // Deduplicate: keep best version per chapter number
+    const bestByNumber = new Map<number, any>()
+
     for (const c of items) {
-        const id = String(c.id ?? '')
-        if (!id || seen.has(id)) continue
-        seen.add(id)
+        if (!c.id) continue
+        const num = Number(c.number ?? 0)
+        const existing = bestByNumber.get(num)
 
+        if (!existing) {
+            bestByNumber.set(num, c)
+        } else {
+            // Priority: official > group 10702 > higher votes > newer id
+            const isBetter = (() => {
+                if (c.isOfficial && !existing.isOfficial) return true
+                if (!c.isOfficial && existing.isOfficial) return false
+                if (c.group?.id === 10702 && existing.group?.id !== 10702) return true
+                if (c.group?.id !== 10702 && existing.group?.id === 10702) return false
+                if ((c.votes ?? 0) > (existing.votes ?? 0)) return true
+                if ((c.votes ?? 0) < (existing.votes ?? 0)) return false
+                return c.id > existing.id
+            })()
+
+            if (isBetter) bestByNumber.set(num, c)
+        }
+    }
+
+    // Sort descending by chapter number
+    const sorted = Array.from(bestByNumber.values()).sort((a, b) => (b.number ?? 0) - (a.number ?? 0))
+
+    return sorted.map((c, idx) => {
         const chapNum = Number(c.number ?? 0)
-        const name = c.name ? `Chapter ${chapNum}: ${c.name}` : `Chapter ${chapNum}`
+        const name = c.name
+            ? `Chapter ${chapNum}: ${c.name}`
+            : `Chapter ${chapNum}`
 
-        // Simpan URL asli dari API untuk bisa extract chapter ID nanti
-        // Format: /title/{mangaSlug}/{chapterId}-chapter-{num}
-        chapters.push(App.createChapter({
-            id,
+        return App.createChapter({
+            id: String(c.id),
             chapNum,
             name,
             langCode: '🇬🇧',
             group: c.group?.name ?? (c.isOfficial ? 'Official' : 'Unknown'),
             volume: Number(c.volume ?? 0) || undefined,
-            sortingIndex: sortingIndex--
-        }))
-    }
-
-    return chapters
+            sortingIndex: idx
+        })
+    })
 }
 
 /**
- * Parse chapter list dari HTML halaman manga.
- * Dipakai sebagai fallback kalau token API expired.
- * Chapter links ada di rendered HTML: /title/{slug}/{id}-chapter-{num}
+ * Parse chapter pages dari API response.
+ *
+ * API response (setelah unwrap):
+ * { pages: { baseUrl: "https://...", items: [ { url: "/path/img.jpg" }, ... ] } }
  */
-export const parseChapterListFromHtml = (html: string, mangaId: string): Chapter[] => {
-    const chapters: Chapter[] = []
-    const seen = new Set<string>()
-    let sortingIndex = 0
-
-    // Match semua chapter links dari HTML
-    // Format: href="/title/5zd17-slug/9396458-chapter-83"
-    const regex = /href="\/title\/[^"]*\/(\d+)-chapter-([\d.]+)"[^>]*>[\s\S]*?<\/a>/gi
-    const simpleRegex = /\/title\/[^"]+\/(\d+)-chapter-([\d.]+)/g
-
-    let match
-    while ((match = simpleRegex.exec(html)) !== null) {
-        const id = match[1] ?? ''
-        const chapNum = parseFloat(match[2] ?? '0')
-        if (!id || seen.has(id) || isNaN(chapNum)) continue
-        seen.add(id)
-
-        chapters.push(App.createChapter({
-            id,
-            chapNum,
-            name: `Chapter ${chapNum}`,
-            langCode: '🇬🇧',
-            sortingIndex: sortingIndex--
-        }))
-    }
-
-    return chapters
-}
-
 export const parseChapterDetails = (data: any, mangaId: string, chapterId: string): ChapterDetails => {
     const p = data?.pages
     const baseUrl = (p?.baseUrl ?? '').replace(/\/$/, '')
     const pages: string[] = (p?.items ?? []).map((x: any) => {
-        const url = x?.url ?? ''
+        const url: string = x?.url ?? ''
         if (url.startsWith('http')) return url
         return `${baseUrl}/${url.replace(/^\//, '')}`
-    })
-    return App.createChapterDetails({ id: chapterId, mangaId, pages })
-}
+    }).filter((u: string) => u.length > 0)
 
-/**
- * Parse chapter pages dari HTML halaman chapter (initial-data script tag).
- * Dipakai sebagai fallback kalau token API expired.
- */
-export const parseChapterDetailsFromHtml = (html: string, mangaId: string, chapterId: string): ChapterDetails => {
-    // Coba ambil dari initial-data JSON
-    const initialDataMatch = html.match(/id="initial-data">({.+?})<\/script>/s)
-    if (initialDataMatch) {
-        try {
-            const data = JSON.parse(initialDataMatch[1] ?? '{}')
-            // Cari query yang berisi pages
-            for (const key of Object.keys(data.queries ?? {})) {
-                const val = data.queries[key]
-                if (val?.pages || val?.images) {
-                    const pages: string[] = val.pages ?? val.images ?? []
-                    if (pages.length > 0) {
-                        return App.createChapterDetails({ id: chapterId, mangaId, pages })
-                    }
-                }
-            }
-        } catch {
-            // ignore parse error
-        }
-    }
-
-    // Fallback: cari image URLs dari HTML
-    const imgRegex = /https:\/\/[^"'\s]+\.(?:jpg|jpeg|png|webp|gif)(?:\?[^"'\s]*)?/gi
-    const pages: string[] = []
-    const seen = new Set<string>()
-    let match
-    while ((match = imgRegex.exec(html)) !== null) {
-        const url = match[0]
-        // Filter hanya URL yang kemungkinan adalah page image (bukan thumbnail/icon)
-        if (!seen.has(url) && (url.includes('storage.') || url.includes('/pages/') || url.includes('/chapter'))) {
-            seen.add(url)
-            pages.push(url)
-        }
+    if (pages.length === 0) {
+        throw new Error('[Comix] No pages found for this chapter. Token might be expired.')
     }
 
     return App.createChapterDetails({ id: chapterId, mangaId, pages })

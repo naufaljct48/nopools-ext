@@ -19,21 +19,18 @@ import {
 import {
     API_URL,
     BASE_URL,
-    createHtmlRequestObject,
     createRequestObject
 } from './ComixHelper'
 import {
     parseChapterDetails,
-    parseChapterDetailsFromHtml,
     parseChapterList,
-    parseChapterListFromHtml,
     parseMangaDetails,
     parseMangaList,
     parseSearchTags
 } from './ComixParser'
 
 export const ComixInfo: SourceInfo = {
-    version: '1.2.0',
+    version: '1.3.0',
     name: 'Comix.to',
     icon: 'icon.png',
     author: 'NaufalJCT48',
@@ -46,25 +43,6 @@ export const ComixInfo: SourceInfo = {
 }
 
 export class Comix extends Source {
-    /**
-     * Token `_` untuk chapter API.
-     *
-     * Comix.to melindungi endpoint /chapters dengan token yang di-generate
-     * oleh JavaScript browser (VM-obfuscated, tidak bisa di-reverse).
-     * Tachiyomi menggunakan Android WebView untuk intercept request JS dan
-     * capture token — Paperback tidak punya API setara.
-     *
-     * Cara dapat token:
-     * 1. Buka comix.to/title/{manga-id} di browser
-     * 2. Buka DevTools → Network → filter "chapters"
-     * 3. Copy nilai query param `_` dari URL request
-     * 4. Paste ke Source Settings → API Token
-     *
-     * Token valid selama cf_clearance session aktif (~beberapa jam).
-     */
-    private get apiToken(): string {
-        return (this.stateManager as any)?.retrieve?.('api_token') ?? ''
-    }
 
     stateManager = App.createSourceStateManager()
 
@@ -76,6 +54,8 @@ export class Comix extends Source {
             interceptResponse: async (response: Response): Promise<Response> => response
         }
     })
+
+    // ========================= Settings UI =========================
 
     override async getSourceMenu(): Promise<DUISection> {
         return App.createDUISection({
@@ -93,10 +73,24 @@ export class Comix extends Source {
                 }),
                 App.createDUILabel({
                     id: 'token_help',
-                    label: 'Cara dapat token: Buka comix.to di browser → DevTools → Network → filter "chapters" → copy nilai `_` dari URL request'
+                    label: 'How to get token: Open comix.to in browser → DevTools (F12) → Network tab → filter "chapters" → copy the `_` query parameter value from the request URL'
                 })
             ]
         })
+    }
+
+    // ========================= API Helpers =========================
+
+    private async getToken(): Promise<string> {
+        const token = await this.stateManager.retrieve('api_token') as string
+        if (!token) {
+            throw new Error(
+                '[Comix] API Token required!\n\n' +
+                'Go to Source Settings and paste your token.\n' +
+                'How: Open comix.to → DevTools → Network → filter "chapters" → copy `_` param value.'
+            )
+        }
+        return token
     }
 
     private async getJSON(url: string): Promise<any> {
@@ -105,81 +99,66 @@ export class Comix extends Source {
             1
         )
         const data = typeof response.data === 'string' ? JSON.parse(response.data) : response.data
+
+        // Handle API error responses
+        if (data?.status === 'error') {
+            const msg = data.message ?? 'Unknown API error'
+            if (msg.toLowerCase().includes('token') || msg.toLowerCase().includes('unauthorized') || msg.toLowerCase().includes('forbidden')) {
+                throw new Error('[Comix] Token expired or invalid. Please update your token in Source Settings.')
+            }
+            throw new Error(`[Comix] API Error: ${msg}`)
+        }
+
+        // Unwrap { status: 'ok', result: ... }
         if (data?.status === 'ok' && 'result' in data) return data.result
-        if (data?.status === 'error') throw new Error(data.message ?? 'Comix API error')
         return data
     }
 
-    private async getHtml(url: string): Promise<string> {
-        const response = await this.requestManager.schedule(
-            createHtmlRequestObject({ url, method: 'GET' }),
-            1
-        )
-        return response.data as string
-    }
+    // ========================= Manga Details =========================
 
     override async getMangaDetails(mangaId: string): Promise<SourceManga> {
-        return parseMangaDetails(await this.getJSON(`${API_URL}/manga/${mangaId}`), mangaId)
+        const data = await this.getJSON(`${API_URL}/manga/${mangaId}`)
+        return parseMangaDetails(data, mangaId)
     }
+
+    // ========================= Chapters =========================
 
     override async getChapters(mangaId: string): Promise<Chapter[]> {
-        const token = await this.stateManager.retrieve('api_token') as string ?? ''
+        const token = await this.getToken()
 
-        if (token) {
-            try {
-                const allChapters: any[] = []
-                let page = 1
-                let hasMore = true
+        const allChapters: any[] = []
+        let page = 1
+        let hasMore = true
 
-                while (hasMore) {
-                    const url = `${API_URL}/manga/${mangaId}/chapters?page=${page}&limit=100&order%5Bnumber%5D=desc&_=${token}`
-                    const data = await this.getJSON(url)
-                    const items: any[] = data?.items ?? []
-                    allChapters.push(...items)
+        while (hasMore) {
+            const url = `${API_URL}/manga/${mangaId}/chapters?page=${page}&limit=100&order%5Bnumber%5D=desc&_=${encodeURIComponent(token)}`
+            const data = await this.getJSON(url)
+            const items: any[] = data?.items ?? []
+            allChapters.push(...items)
 
-                    const meta = data?.meta ?? data?.pagination
-                    const lastPage = meta?.lastPage ?? meta?.last_page ?? 1
-                    hasMore = page < lastPage && items.length > 0
-                    page++
-                }
-
-                if (allChapters.length > 0) {
-                    return parseChapterList({ items: allChapters })
-                }
-            } catch (e) {
-                console.log('[Comix] Token invalid/expired, falling back to HTML scrape:', e)
-            }
+            // Pagination check
+            const meta = data?.meta ?? data?.pagination
+            const lastPage = meta?.lastPage ?? meta?.last_page ?? 1
+            hasMore = page < lastPage && items.length > 0
+            page++
         }
 
-        // Fallback: scrape dari HTML (butuh CF bypass aktif, dapat ~20 chapter per page)
-        // HTML chapter list di-render oleh React — hanya tersedia via rendered WebView
-        const html = await this.getHtml(`${BASE_URL}/title/${mangaId}`)
-        return parseChapterListFromHtml(html, mangaId)
+        if (allChapters.length === 0) {
+            throw new Error('[Comix] No chapters found. Token might be expired — update it in Source Settings.')
+        }
+
+        return parseChapterList({ items: allChapters })
     }
+
+    // ========================= Chapter Details (Pages) =========================
 
     override async getChapterDetails(mangaId: string, chapterId: string): Promise<ChapterDetails> {
-        const token = await this.stateManager.retrieve('api_token') as string ?? ''
-
-        if (token) {
-            try {
-                const data = await this.getJSON(`${API_URL}/chapters/${chapterId}?_=${token}`)
-                return parseChapterDetails(data, mangaId, chapterId)
-            } catch (e) {
-                console.log('[Comix] Token invalid for chapter details, falling back:', e)
-            }
-        }
-
-        // Fallback: scrape pages dari HTML halaman chapter
-        try {
-            const mangaData = await this.getJSON(`${API_URL}/manga/${mangaId}`)
-            const mangaUrl = mangaData?.url ?? ''
-            const slug = mangaUrl.split('/title/')?.[1] ?? mangaId
-            const html = await this.getHtml(`${BASE_URL}/title/${slug}/${chapterId}-chapter-0`)
-            return parseChapterDetailsFromHtml(html, mangaId, chapterId)
-        } catch {
-            return App.createChapterDetails({ id: chapterId, mangaId, pages: [] })
-        }
+        const token = await this.getToken()
+        const data = await this.getJSON(`${API_URL}/chapters/${chapterId}?_=${encodeURIComponent(token)}`)
+        return parseChapterDetails(data, mangaId, chapterId)
     }
+
+    // ========================= Homepage =========================
 
     override async getHomePageSections(sectionCallback: (section: HomeSection) => void): Promise<void> {
         const sections = [
@@ -226,6 +205,8 @@ export class Comix extends Source {
             }
         }
     }
+
+    // ========================= Search =========================
 
     override async getSearchTags(): Promise<TagSection[]> {
         return parseSearchTags()
@@ -295,6 +276,8 @@ export class Comix extends Source {
             metadata: page < lastPage ? { page: page + 1 } : undefined
         })
     }
+
+    // ========================= Cloudflare =========================
 
     override async getCloudflareBypassRequestAsync(): Promise<Request> {
         return App.createRequest({
