@@ -3,7 +3,7 @@ import { API_TOKEN, API_URL, BASE_URL, CHAPTER_TOKEN, createRequestObject } from
 import { parseChapterDetails, parseChapterList, parseMangaDetails, parseMangaList, parseSearchTags } from './ComixParser'
 
 export const ComixInfo: SourceInfo = {
-    version: '1.0.0',
+    version: '1.0.1',
     name: 'Comix.to',
     icon: 'icon.png',
     author: 'NaufalJCT48',
