@@ -731,12 +731,16 @@ var _Sources = (() => {
 
   // src/Komiknesia/KomiknesiaHelper.ts
   var BASE_URL = "https://02.komiknesia.asia";
+  var imageReferer = (url) => {
+    const origin = url.match(/^https?:\/\/[^/]+/)?.[0];
+    return origin ? `${origin}/` : `${BASE_URL}/`;
+  };
   var createRequestObject = (requestObj) => {
     const url = requestObj.url || "";
     const isImage = /\.(png|jpe?g|webp|gif)$/i.test(url) || url.includes("cdn.itachi.my.id") || url.includes("cloudhost.id") || url.includes("ikiru.wtf");
     const headers = isImage ? {
       "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
-      "Referer": `${BASE_URL}/`
+      "Referer": imageReferer(url)
     } : {
       "Accept": "*/*",
       "Origin": BASE_URL,
@@ -878,7 +882,7 @@ var _Sources = (() => {
   var API_URL = "https://api-be.komiknesia.my.id/api";
   var BASE_URL2 = "https://02.komiknesia.asia";
   var KomiknesiaInfo = {
-    version: "1.0.1",
+    version: "1.0.2",
     name: "Komiknesia",
     icon: "icon.png",
     author: "NaufalJCT48",
@@ -908,7 +912,7 @@ var _Sources = (() => {
               request.headers = {
                 ...request.headers ?? {},
                 "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
-                "Referer": `${BASE_URL2}/`
+                "Referer": imageReferer(url)
               };
             } else {
               request.headers = {
