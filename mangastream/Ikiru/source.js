@@ -730,7 +730,7 @@ var _Sources = (() => {
   var import_types = __toESM(require_lib());
 
   // src/Ikiru/IkiruHelper.ts
-  var WEBSITE_BASE = "https://05.ikiru.wtf";
+  var WEBSITE_BASE = "https://07.ikiru.wtf";
   var createRequestObject = (requestObj) => {
     const isImage = /\.(png|jpe?g|webp|gif)$/i.test(requestObj.url || "");
     const headers = {
@@ -1021,7 +1021,7 @@ var _Sources = (() => {
   };
 
   // src/Ikiru/Ikiru.ts
-  var WEBSITE_BASE2 = "https://05.ikiru.wtf";
+  var WEBSITE_BASE2 = "https://07.ikiru.wtf";
   var getSearchNonce = async (requestManager) => {
     const request = createRequestObject({
       url: `${WEBSITE_BASE2}/wp-admin/admin-ajax.php?type=search_form&action=get_nonce`,
@@ -1064,7 +1064,7 @@ var _Sources = (() => {
     return results;
   };
   var IkiruInfo = {
-    version: "2.0.1",
+    version: "2.0.2",
     name: "Ikiru",
     icon: "icon.png",
     author: "NaufalJCT48",

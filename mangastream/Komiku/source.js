@@ -754,6 +754,11 @@ var _Sources = (() => {
       }
     });
   };
+  var toCoverUrl = (url) => {
+    if (!url) return "";
+    const path = url.split("?")[0] ?? "";
+    return path ? `${path}?resize=225,320` : "";
+  };
   var decodeHTMLEntity = (str) => {
     if (!str) return "";
     return str.replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(parseInt(dec))).replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&#x27;/g, "'").replace(/&#x2F;/g, "/");
@@ -809,12 +814,46 @@ var _Sources = (() => {
       seen.add(mangaId);
       results.push(App.createPartialSourceManga({
         mangaId,
-        image: image || "",
+        image: toCoverUrl(image),
         title,
         subtitle
       }));
     }
     return results;
+  };
+  var parseArticleCards = (html) => {
+    const results = [];
+    const seen = /* @__PURE__ */ new Set();
+    for (const card of extractAll(html, /<article[^>]*>([\s\S]*?)<\/article>/gi)) {
+      const cardHtml = card[1] ?? "";
+      const mangaId = extractText(cardHtml, /href=["'](?:https?:\/\/komiku\.org)?\/manga\/([^/"']+)\/?["']/);
+      if (!mangaId || seen.has(mangaId)) continue;
+      let image = extractText(cardHtml, /data-src=["']([^"']+)["']/);
+      if (!image || image.includes("lazy.jpg")) image = extractText(cardHtml, /<img[^>]*\bsrc=["']([^"']+)["']/);
+      if (!image || image.includes("lazy.jpg")) continue;
+      const title = cleanText(extractText(cardHtml, /<h[34][^>]*>([\s\S]*?)<\/h[34]>/i)) || mangaId;
+      const chapter = cleanText(extractText(cardHtml, /<a[^>]*href=["'][^"']*chapter[^"']*["'][^>]*>([\s\S]*?)<\/a>/i));
+      const meta = cleanText(extractText(cardHtml, /<p[^>]*class=["'][^"']*meta[^"']*["'][^>]*>([\s\S]*?)(?:<br|<\/p>)/i));
+      const subtitle = chapter || meta;
+      seen.add(mangaId);
+      results.push(App.createPartialSourceManga({
+        mangaId,
+        image: toCoverUrl(image),
+        title,
+        subtitle
+      }));
+    }
+    return results;
+  };
+  var sliceBlock = (html, startId, endMarkers) => {
+    const start = html.indexOf(`id="${startId}"`);
+    if (start < 0) return "";
+    let end = html.length;
+    for (const marker of endMarkers) {
+      const index = html.indexOf(marker, start + 1);
+      if (index > start && index < end) end = index;
+    }
+    return html.slice(start, end);
   };
   var parseMangaDetails = (html, mangaId) => {
     const rawTitle = cleanText(extractText(html, /<h1[^>]*itemprop=["']name["'][^>]*>([\s\S]*?)<\/h1>/i)) || cleanText(extractText(html, /<h1[^>]*>([\s\S]*?)<\/h1>/i));
@@ -960,7 +999,7 @@ var _Sources = (() => {
 
   // src/Komiku/Komiku.ts
   var KomikuInfo = {
-    version: "1.0.2",
+    version: "1.1.0",
     name: "Komiku",
     icon: "icon.png",
     author: "NaufalJCT48",
@@ -1036,51 +1075,63 @@ var _Sources = (() => {
       return parseChapterDetails(response.data, mangaId, chapterId);
     }
     async getHomePageSections(sectionCallback) {
-      const sections = [
+      const homeSections = [
         {
-          request: createRequestObject({
-            url: `${API_URL}/manga/`
+          section: App.createHomeSection({
+            id: "featured",
+            title: "Peringkat Mingguan",
+            type: import_types.HomeSectionType.featured,
+            containsMoreItems: false
           }),
+          blockId: "rank-mingguan",
+          endMarkers: ['id="rank-harian"', "</section>"]
+        },
+        {
           section: App.createHomeSection({
             id: "latest_update",
             title: "Latest Update",
             type: import_types.HomeSectionType.singleRowNormal,
             containsMoreItems: true
-          })
+          }),
+          blockId: "Terbaru",
+          endMarkers: ["<section"]
         },
         {
-          request: createRequestObject({
-            url: `${API_URL}/manga/?orderby=date&tipe=&genre=&genre2=&status=`
-          }),
           section: App.createHomeSection({
             id: "new_comics",
-            title: "New Comics",
+            title: "Baru Ditambahkan",
             type: import_types.HomeSectionType.singleRowNormal,
             containsMoreItems: true
-          })
-        },
-        {
-          request: createRequestObject({
-            url: `${API_URL}/manga/?orderby=meta_value_num&tipe=&genre=&genre2=&status=`
           }),
-          section: App.createHomeSection({
-            id: "featured",
-            title: "Top Rated",
-            type: import_types.HomeSectionType.featured,
-            containsMoreItems: false
-          })
+          blockId: "Baru_Ditambahkan",
+          endMarkers: ["<section"]
         }
       ];
-      for (const item of sections) {
-        sectionCallback(item.section);
-        try {
-          const response = await this.requestManager.schedule(item.request, 1);
-          const items = parseMangaList(response.data);
+      const catalogSection = App.createHomeSection({
+        id: "catalog",
+        title: "Daftar Komik",
+        type: import_types.HomeSectionType.singleRowNormal,
+        containsMoreItems: true
+      });
+      for (const item of homeSections) sectionCallback(item.section);
+      sectionCallback(catalogSection);
+      try {
+        const response = await this.requestManager.schedule(createRequestObject({ url: `${BASE_URL}/` }), 1);
+        const html = response.data;
+        for (const item of homeSections) {
+          const items = parseArticleCards(sliceBlock(html, item.blockId, item.endMarkers));
           item.section.items = item.section.id === "featured" ? items.slice(0, 12) : items;
           sectionCallback(item.section);
-        } catch (e) {
-          console.log(`Error loading section ${item.section.id}:`, e);
         }
+      } catch (e) {
+        console.log("Error loading homepage sections:", e);
+      }
+      try {
+        const response = await this.requestManager.schedule(createRequestObject({ url: `${BASE_URL}/daftar-komik/` }), 1);
+        catalogSection.items = parseArticleCards(response.data);
+        sectionCallback(catalogSection);
+      } catch (e) {
+        console.log("Error loading section catalog:", e);
       }
     }
     async getSearchTags() {
@@ -1109,6 +1160,15 @@ var _Sources = (() => {
     }
     async getViewMoreItems(homepageSectionId, metadata) {
       const page = metadata?.page ?? 1;
+      if (homepageSectionId === "catalog") {
+        const request2 = createRequestObject({ url: `${BASE_URL}/daftar-komik/?halaman=${page}` });
+        const response2 = await this.requestManager.schedule(request2, 1);
+        const results2 = parseArticleCards(response2.data);
+        return App.createPagedResults({
+          results: results2,
+          metadata: results2.length >= 50 ? { page: page + 1 } : void 0
+        });
+      }
       let url;
       switch (homepageSectionId) {
         case "latest_update":

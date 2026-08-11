@@ -822,7 +822,7 @@ var _Sources = (() => {
   var API_URL = "https://api.shngm.io";
   var BASE_URL2 = "https://app.shinigami.asia";
   var ShinigamiInfo = {
-    version: "1.2.5",
+    version: "1.2.6",
     name: "Shinigami",
     icon: "icon.png",
     author: "NaufalJCT48",
@@ -846,7 +846,7 @@ var _Sources = (() => {
         requestTimeout: 15e3,
         interceptor: {
           interceptRequest: async (request) => {
-            if (request.url.includes("storage.shngm.id")) {
+            if (request.url.includes("assets.shngm.id")) {
               request.headers = {
                 "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
                 "DNT": "1",
