@@ -27,6 +27,9 @@ export const createRequestObject = (requestObj: any): Request => {
 
 export const normalizeUrl = (url: string, baseUrl: string = WEBSITE_BASE): string => {
     if (!url) return ''
+    // admin-ajax (Popular / Most Rated / search) hands back cleartext http:// links
+    // while every other page uses https. iOS refuses to load those, so upgrade them.
+    if (url.startsWith('http://')) return `https://${url.slice('http://'.length)}`
     if (url.startsWith('http')) return url
     if (url.startsWith('//')) return `https:${url}`
     if (url.startsWith('/')) return `${baseUrl}${url}`
