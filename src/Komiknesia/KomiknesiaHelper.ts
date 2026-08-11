@@ -2,6 +2,14 @@ import { Request } from '@paperback/types'
 
 const BASE_URL = 'https://02.komiknesia.asia'
 
+// Komiknesia hotlinks a chunk of its covers from other sites (v6.kiryuu.to and
+// friends), and those block foreign referers. Sending the image's own origin keeps
+// hotlink protection happy; hosts that don't check referer are unaffected.
+export const imageReferer = (url: string): string => {
+    const origin = url.match(/^https?:\/\/[^/]+/)?.[0]
+    return origin ? `${origin}/` : `${BASE_URL}/`
+}
+
 export const createRequestObject = (requestObj: any): Request => {
     const url = requestObj.url || ''
     const isImage = /\.(png|jpe?g|webp|gif)$/i.test(url) ||
@@ -12,7 +20,7 @@ export const createRequestObject = (requestObj: any): Request => {
     const headers: Record<string, string> = isImage
         ? {
             'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
-            'Referer': `${BASE_URL}/`,
+            'Referer': imageReferer(url),
         }
         : {
             'Accept': '*/*',

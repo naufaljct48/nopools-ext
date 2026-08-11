@@ -15,7 +15,7 @@ import {
     Response,
     SourceManga
 } from '@paperback/types'
-import { createRequestObject } from './KomiknesiaHelper'
+import { createRequestObject, imageReferer } from './KomiknesiaHelper'
 import {
     parseMangaDetails,
     parseChapterList,
@@ -28,7 +28,7 @@ const API_URL = 'https://api-be.komiknesia.my.id/api'
 const BASE_URL = 'https://02.komiknesia.asia'
 
 export const KomiknesiaInfo: SourceInfo = {
-    version: '1.0.1',
+    version: '1.0.2',
     name: 'Komiknesia',
     icon: 'icon.png',
     author: 'NaufalJCT48',
@@ -61,7 +61,7 @@ export class Komiknesia extends Source {
                     request.headers = {
                         ...(request.headers ?? {}),
                         'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
-                        'Referer': `${BASE_URL}/`,
+                        'Referer': imageReferer(url),
                     }
                 } else {
                     request.headers = {
