@@ -18,6 +18,8 @@ import {
 import { createRequestObject, BASE_URL, API_URL } from './KomikuHelper'
 import {
     parseMangaList,
+    parseArticleCards,
+    sliceBlock,
     parseMangaDetails,
     parseChapterList,
     parseChapterDetails,
@@ -25,7 +27,7 @@ import {
 } from './KomikuParser'
 
 export const KomikuInfo: SourceInfo = {
-    version: '1.0.2',
+    version: '1.1.0',
     name: 'Komiku',
     icon: 'icon.png',
     author: 'NaufalJCT48',
@@ -108,52 +110,71 @@ export class Komiku extends Source {
     }
 
     override async getHomePageSections(sectionCallback: (section: HomeSection) => void): Promise<void> {
-        const sections: Array<{ request: Request, section: HomeSection }> = [
+        // api.komiku.org cards link the landscape banner (manga_img_horizontal-*), which
+        // Paperback has to blow up to fill a portrait tile. komiku.org/ and /daftar-komik/
+        // link the real cover, so home sections are parsed from those instead.
+        const homeSections = [
             {
-                request: createRequestObject({
-                    url: `${API_URL}/manga/`
+                section: App.createHomeSection({
+                    id: 'featured',
+                    title: 'Peringkat Mingguan',
+                    type: HomeSectionType.featured,
+                    containsMoreItems: false
                 }),
+                blockId: 'rank-mingguan',
+                endMarkers: ['id="rank-harian"', '</section>']
+            },
+            {
                 section: App.createHomeSection({
                     id: 'latest_update',
                     title: 'Latest Update',
                     type: HomeSectionType.singleRowNormal,
                     containsMoreItems: true
-                })
+                }),
+                blockId: 'Terbaru',
+                endMarkers: ['<section']
             },
             {
-                request: createRequestObject({
-                    url: `${API_URL}/manga/?orderby=date&tipe=&genre=&genre2=&status=`
-                }),
                 section: App.createHomeSection({
                     id: 'new_comics',
-                    title: 'New Comics',
+                    title: 'Baru Ditambahkan',
                     type: HomeSectionType.singleRowNormal,
                     containsMoreItems: true
-                })
-            },
-            {
-                request: createRequestObject({
-                    url: `${API_URL}/manga/?orderby=meta_value_num&tipe=&genre=&genre2=&status=`
                 }),
-                section: App.createHomeSection({
-                    id: 'featured',
-                    title: 'Top Rated',
-                    type: HomeSectionType.featured,
-                    containsMoreItems: false
-                })
+                blockId: 'Baru_Ditambahkan',
+                endMarkers: ['<section']
             }
         ]
 
-        for (const item of sections) {
-            sectionCallback(item.section)
-            try {
-                const response = await this.requestManager.schedule(item.request, 1)
-                const items = parseMangaList(response.data as string)
+        const catalogSection = App.createHomeSection({
+            id: 'catalog',
+            title: 'Daftar Komik',
+            type: HomeSectionType.singleRowNormal,
+            containsMoreItems: true
+        })
+
+        for (const item of homeSections) sectionCallback(item.section)
+        sectionCallback(catalogSection)
+
+        try {
+            const response = await this.requestManager.schedule(createRequestObject({ url: `${BASE_URL}/` }), 1)
+            const html = response.data as string
+
+            for (const item of homeSections) {
+                const items = parseArticleCards(sliceBlock(html, item.blockId, item.endMarkers))
                 item.section.items = item.section.id === 'featured' ? items.slice(0, 12) : items
                 sectionCallback(item.section)
-            } catch (e) {
-                console.log(`Error loading section ${item.section.id}:`, e)
             }
+        } catch (e) {
+            console.log('Error loading homepage sections:', e)
+        }
+
+        try {
+            const response = await this.requestManager.schedule(createRequestObject({ url: `${BASE_URL}/daftar-komik/` }), 1)
+            catalogSection.items = parseArticleCards(response.data as string)
+            sectionCallback(catalogSection)
+        } catch (e) {
+            console.log('Error loading section catalog:', e)
         }
     }
 
@@ -192,6 +213,20 @@ export class Komiku extends Source {
 
     override async getViewMoreItems(homepageSectionId: string, metadata: any): Promise<PagedResults> {
         const page = metadata?.page ?? 1
+
+        // Only /daftar-komik/ paginates with real covers; the rest fall back to
+        // api.komiku.org, whose banners get cropped to cover shape by toCoverUrl.
+        if (homepageSectionId === 'catalog') {
+            const request = createRequestObject({ url: `${BASE_URL}/daftar-komik/?halaman=${page}` })
+            const response = await this.requestManager.schedule(request, 1)
+            const results = parseArticleCards(response.data as string)
+
+            return App.createPagedResults({
+                results,
+                metadata: results.length >= 50 ? { page: page + 1 } : undefined
+            })
+        }
+
         let url: string
 
         switch (homepageSectionId) {

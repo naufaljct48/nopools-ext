@@ -1,5 +1,5 @@
 import { Chapter, ChapterDetails, PartialSourceManga, SourceManga, Tag, TagSection } from '@paperback/types'
-import { cleanText, decodeHTMLEntity, parseStatus, convertRelativeDate, BASE_URL } from './KomikuHelper'
+import { cleanText, decodeHTMLEntity, parseStatus, convertRelativeDate, toCoverUrl, BASE_URL } from './KomikuHelper'
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -39,13 +39,64 @@ export const parseMangaList = (html: string): PartialSourceManga[] => {
         seen.add(mangaId)
         results.push(App.createPartialSourceManga({
             mangaId,
-            image: image || '',
+            image: toCoverUrl(image),
             title,
             subtitle
         }))
     }
 
     return results
+}
+
+// ─── Article cards (komiku.org homepage + /daftar-komik/) ───────────────────
+// Both use <article> blocks holding a /manga/<slug>/ link, a lazy-loaded cover in
+// data-src, and a title in <h3>/<h4>. Same shape, so one parser covers both.
+
+export const parseArticleCards = (html: string): PartialSourceManga[] => {
+    const results: PartialSourceManga[] = []
+    const seen = new Set<string>()
+
+    for (const card of extractAll(html, /<article[^>]*>([\s\S]*?)<\/article>/gi)) {
+        const cardHtml = card[1] ?? ''
+
+        const mangaId = extractText(cardHtml, /href=["'](?:https?:\/\/komiku\.org)?\/manga\/([^/"']+)\/?["']/)
+        if (!mangaId || seen.has(mangaId)) continue
+
+        let image = extractText(cardHtml, /data-src=["']([^"']+)["']/)
+        if (!image || image.includes('lazy.jpg')) image = extractText(cardHtml, /<img[^>]*\bsrc=["']([^"']+)["']/)
+        if (!image || image.includes('lazy.jpg')) continue
+
+        const title = cleanText(extractText(cardHtml, /<h[34][^>]*>([\s\S]*?)<\/h[34]>/i)) || mangaId
+
+        // "Chapter 14" link on homepage cards, "Manga • Drama" meta line in the catalogue
+        const chapter = cleanText(extractText(cardHtml, /<a[^>]*href=["'][^"']*chapter[^"']*["'][^>]*>([\s\S]*?)<\/a>/i))
+        const meta = cleanText(extractText(cardHtml, /<p[^>]*class=["'][^"']*meta[^"']*["'][^>]*>([\s\S]*?)(?:<br|<\/p>)/i))
+        const subtitle = chapter || meta
+
+        seen.add(mangaId)
+        results.push(App.createPartialSourceManga({
+            mangaId,
+            image: toCoverUrl(image),
+            title,
+            subtitle
+        }))
+    }
+
+    return results
+}
+
+// Homepage holds every section in one document, so slice out the one we want first.
+export const sliceBlock = (html: string, startId: string, endMarkers: string[]): string => {
+    const start = html.indexOf(`id="${startId}"`)
+    if (start < 0) return ''
+
+    let end = html.length
+    for (const marker of endMarkers) {
+        const index = html.indexOf(marker, start + 1)
+        if (index > start && index < end) end = index
+    }
+
+    return html.slice(start, end)
 }
 
 // ─── Manga Details ───────────────────────────────────────────────────────────

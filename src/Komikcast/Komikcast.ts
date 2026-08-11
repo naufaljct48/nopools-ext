@@ -25,13 +25,43 @@ import {
 } from './KomikcastParser'
 
 const API_URL = 'https://be.komikcast.cc'
-const BASE_URL = 'https://v2.komikcast.fit'
+const BASE_URL = 'https://v3.komikcast.fit'
 
 // Token from your curl request - might need to be dynamic/rotated
 const AUTH_TOKEN = 'oat_NTQwNjU.eVU0Tjc4aEhpNmlwcDJkNWlDSU9GT0w2VXJxR25UdFc5UnV0dHRGdzY1MDY1NjYyNw'
 
+const PRESIGN_HOST = 'minio.imgkc1.my.id'
+
+// Covers are presigned S3 links that die after X-Amz-Expires seconds (24h today), so any
+// URL the app kept from an earlier session points at a dead signature.
+export const isPresignExpired = (url: string): boolean => {
+    const signedAt = url.match(/X-Amz-Date=(\d{8}T\d{6}Z)/)?.[1]
+    const lifetime = Number(url.match(/X-Amz-Expires=(\d+)/)?.[1] ?? 0)
+    if (!signedAt || !lifetime) return false
+
+    const iso = `${signedAt.slice(0, 4)}-${signedAt.slice(4, 6)}-${signedAt.slice(6, 8)}T${signedAt.slice(9, 11)}:${signedAt.slice(11, 13)}:${signedAt.slice(13, 15)}Z`
+    const expiresAt = Date.parse(iso) + lifetime * 1000
+    if (isNaN(expiresAt)) return false
+
+    return Date.now() >= expiresAt - 60 * 1000
+}
+
+// /prod/series/<slug>/cover/... — ask the API for the same series to get a fresh signature
+const refreshCoverUrl = async (requestManager: any, url: string): Promise<string> => {
+    const slug = url.match(/\/series\/([^/]+)\//)?.[1]
+    if (!slug) return url
+
+    const response = await requestManager.schedule(createRequestObject({
+        url: `${API_URL}/series/${slug}?includeMeta=true`,
+        method: 'GET'
+    }), 1)
+    const data = JSON.parse(response.data as string)
+
+    return data?.data?.data?.coverImage || url
+}
+
 export const KomikcastInfo: SourceInfo = {
-    version: '4.0.8',
+    version: '4.0.9',
     name: 'Komikcast',
     icon: 'icon.png',
     author: 'NaufalJCT48',
@@ -49,7 +79,16 @@ export class Komikcast extends Source {
         requestTimeout: 15000,
         interceptor: {
             interceptRequest: async (request: Request): Promise<Request> => {
-                const isImage = /\.(png|jpe?g|webp|gif)$/i.test(request.url)
+                if (request.url.includes(PRESIGN_HOST) && isPresignExpired(request.url)) {
+                    try {
+                        request.url = await refreshCoverUrl(this.requestManager, request.url)
+                    } catch (error) {
+                        console.log('Failed to refresh expired cover URL:', error)
+                    }
+                }
+
+                // Cover URLs are presigned S3 links, so the extension check must ignore the query string
+                const isImage = /\.(png|jpe?g|webp|gif)$/i.test(request.url.split('?')[0] ?? '')
                 
                 if (isImage) {
                     request.headers = {

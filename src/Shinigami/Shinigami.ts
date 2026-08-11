@@ -22,7 +22,7 @@ const API_URL = 'https://api.shngm.io'
 const BASE_URL = 'https://app.shinigami.asia'
 
 export const ShinigamiInfo: SourceInfo = {
-    version: '1.2.5',
+    version: '1.2.6',
     name: 'Shinigami',
     icon: 'icon.png',
     author: 'NaufalJCT48',
@@ -46,7 +46,7 @@ export class Shinigami extends Source {
         interceptor: {
             interceptRequest: async (request: Request): Promise<Request> => {
                 // Add headers for image requests
-                if (request.url.includes('storage.shngm.id')) {
+                if (request.url.includes('assets.shngm.id')) {
                     request.headers = {
                         'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
                         'DNT': '1',

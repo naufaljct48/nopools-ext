@@ -32,6 +32,15 @@ export const createRequestObject = (requestObj: any): Request => {
     })
 }
 
+// Komiku listings link whichever crop suits their own layout — often the landscape
+// banner (?resize=450,235 / 240,150). thumbnail.komiku.org crops from the original,
+// so asking for a 2:3 box gives a cover-shaped image instead of a stretched banner.
+export const toCoverUrl = (url: string): string => {
+    if (!url) return ''
+    const path = url.split('?')[0] ?? ''
+    return path ? `${path}?resize=225,320` : ''
+}
+
 export const decodeHTMLEntity = (str: string): string => {
     if (!str) return ''
     return str

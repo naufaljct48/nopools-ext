@@ -24,7 +24,7 @@ import {
     parseSearchTags
 } from './IkiruParser'
 
-const WEBSITE_BASE = 'https://05.ikiru.wtf'
+const WEBSITE_BASE = 'https://07.ikiru.wtf'
 
 const getSearchNonce = async (requestManager: any): Promise<string> => {
     const request = createRequestObject({
@@ -72,7 +72,7 @@ const getIncludedTagsByPrefix = (query: SearchRequest, prefix: string): string[]
 }
 
 export const IkiruInfo: SourceInfo = {
-    version: '2.0.1',
+    version: '2.0.2',
     name: 'Ikiru',
     icon: 'icon.png',
     author: 'NaufalJCT48',
