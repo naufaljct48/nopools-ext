@@ -1002,7 +1002,7 @@ var _Sources = (() => {
     return `${WEBSITE_BASE}/browse${query ? `?${query}` : ""}`;
   };
   var LumosKomikInfo = {
-    version: "1.0.0",
+    version: "1.0.1",
     name: "LumosKomik",
     icon: "icon.png",
     author: "NaufalJCT48",
@@ -1057,7 +1057,7 @@ var _Sources = (() => {
           section: App.createHomeSection({
             id: "popular",
             title: "Popular",
-            type: import_types.HomeSectionType.featured,
+            type: import_types.HomeSectionType.singleRowNormal,
             containsMoreItems: true
           })
         },
