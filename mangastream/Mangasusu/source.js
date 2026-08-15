@@ -16290,10 +16290,10 @@ var _Sources = (() => {
         if (!section.enabled) {
           continue;
         }
-        promises.push(new Promise(async () => {
+        promises.push((async () => {
           section.section.items = await this.parser.parseHomeSection($2, section, this);
           sectionCallback(section.section);
-        }));
+        })());
       }
       await Promise.all(promises);
     }
@@ -16484,7 +16484,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
   // src/Mangasusu/Mangasusu.ts
   var DOMAIN = "https://mangasusuku.com";
   var MangasusuInfo = {
-    version: getExportVersion("0.0.8"),
+    version: getExportVersion("0.0.9"),
     name: "Mangasusu",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",

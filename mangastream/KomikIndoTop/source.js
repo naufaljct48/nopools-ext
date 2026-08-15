@@ -16290,10 +16290,10 @@ var _Sources = (() => {
         if (!section.enabled) {
           continue;
         }
-        promises.push(new Promise(async () => {
+        promises.push((async () => {
           section.section.items = await this.parser.parseHomeSection($2, section, this);
           sectionCallback(section.section);
-        }));
+        })());
       }
       await Promise.all(promises);
     }
@@ -16431,9 +16431,9 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
   };
 
   // src/KomikIndoTop/KomikIndoTop.ts
-  var DOMAIN = "https://komikindo.nl";
+  var DOMAIN = "https://komikindo.fit";
   var KomikIndoTopInfo = {
-    version: getExportVersion("0.0.1"),
+    version: getExportVersion("0.0.2"),
     name: "KomikIndoTop",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",

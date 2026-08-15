@@ -16290,10 +16290,10 @@ var _Sources = (() => {
         if (!section.enabled) {
           continue;
         }
-        promises.push(new Promise(async () => {
+        promises.push((async () => {
           section.section.items = await this.parser.parseHomeSection($2, section, this);
           sectionCallback(section.section);
-        }));
+        })());
       }
       await Promise.all(promises);
     }
@@ -16433,7 +16433,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
   // src/KomikuAsia/KomikuAsia.ts
   var DOMAIN = "https://01.komiku.asia";
   var KomikuAsiaInfo = {
-    version: getExportVersion("1.0.3"),
+    version: getExportVersion("1.0.4"),
     name: "KomikuAsia",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",

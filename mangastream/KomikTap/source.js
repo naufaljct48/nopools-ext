@@ -16290,10 +16290,10 @@ var _Sources = (() => {
         if (!section.enabled) {
           continue;
         }
-        promises.push(new Promise(async () => {
+        promises.push((async () => {
           section.section.items = await this.parser.parseHomeSection($2, section, this);
           sectionCallback(section.section);
-        }));
+        })());
       }
       await Promise.all(promises);
     }
@@ -16476,7 +16476,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
   // src/KomikTap/KomikTap.ts
   var DOMAIN = "https://komiktap.info";
   var KomikTapInfo = {
-    version: getExportVersion("3.0.5"),
+    version: getExportVersion("3.0.6"),
     name: "KomikTap",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",
