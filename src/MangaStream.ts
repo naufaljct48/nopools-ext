@@ -450,11 +450,11 @@ export abstract class MangaStream extends Source {
                 continue
             }
 
-            // eslint-disable-next-line no-async-promise-executor
-            promises.push(new Promise(async () => {
+            // IIFE async: `new Promise(async () => ...)` never calls resolve, hanging Promise.all
+            promises.push((async () => {
                 section.section.items = await this.parser.parseHomeSection($, section, this)
                 sectionCallback(section.section)
-            }))
+            })())
         }
 
         // Make sure the function completes

@@ -18,7 +18,7 @@ import {
 const DOMAIN = 'https://ainzscans.net'
 
 export const AinzScanInfo: SourceInfo = {
-    version: getExportVersion('0.0.1'),
+    version: getExportVersion('0.0.2'),
     name: 'AinzScans',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',

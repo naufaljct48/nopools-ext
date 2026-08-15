@@ -18,7 +18,7 @@ import {
 const DOMAIN = 'https://tenshi01.id'
 
 export const TenshiInfo: SourceInfo = {
-    version: getExportVersion('0.0.5'),
+    version: getExportVersion('0.0.6'),
     name: 'Tenshi',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
