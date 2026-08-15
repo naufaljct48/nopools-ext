@@ -50,7 +50,7 @@ const buildBrowseUrl = (params: Record<string, string | undefined>): string => {
 }
 
 export const LumosKomikInfo: SourceInfo = {
-    version: '1.0.0',
+    version: '1.0.1',
     name: 'LumosKomik',
     icon: 'icon.png',
     author: 'NaufalJCT48',
@@ -109,7 +109,7 @@ export class LumosKomik extends Source {
                 section: App.createHomeSection({
                     id: 'popular',
                     title: 'Popular',
-                    type: HomeSectionType.featured,
+                    type: HomeSectionType.singleRowNormal,
                     containsMoreItems: true
                 })
             },
