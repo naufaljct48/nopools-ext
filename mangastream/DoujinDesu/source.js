@@ -1045,12 +1045,12 @@ Please open ${BASE_URL} with the cloud icon first.`);
       const offset = (page - 1) * limit;
       const title = (query.title ?? "").trim();
       const genre = (query.includedTags ?? []).map((t) => String(t.id ?? "")).find((id) => id.startsWith("genre:"))?.replace("genre:", "") ?? "";
-      const params = new URLSearchParams();
-      if (title) params.set("search", title);
-      if (genre) params.set("genre", genre);
-      params.set("limit", String(limit));
-      params.set("offset", String(offset));
-      const data = await this.apiGet(`${API_URL}/manga?${params.toString()}`);
+      const parts = [];
+      if (title) parts.push(`search=${encodeURIComponent(title)}`);
+      if (genre) parts.push(`genre=${encodeURIComponent(genre)}`);
+      parts.push(`limit=${limit}`);
+      parts.push(`offset=${offset}`);
+      const data = await this.apiGet(`${API_URL}/manga?${parts.join("&")}`);
       const items = Array.isArray(data) ? data : data?.data ?? [];
       const results = parseMangaList(items);
       return App.createPagedResults({
