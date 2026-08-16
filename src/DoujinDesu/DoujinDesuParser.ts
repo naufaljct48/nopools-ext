@@ -2,7 +2,6 @@ import { Chapter, ChapterDetails, PartialSourceManga, SourceManga, Tag, TagSecti
 import { parseStatus } from './DoujinDesuHelper'
 
 const LANG = '🇮🇩'
-const DATE_LOCALE = 'id-ID'
 
 const stripLink = (value: string): string => (value ?? '').replace(/^\/manga\//, '').replace(/\/$/, '')
 
@@ -11,14 +10,24 @@ export const parseMangaList = (items: any[]): PartialSourceManga[] => {
     for (const item of items ?? []) {
         const slug = item?.slug ?? stripLink(item?.link_url ?? '')
         if (!slug || !item?.title) continue
+
+        const chapterNums = (item?.chapters ?? [])
+            .map((ch: any) => typeof ch?.chapter_number === 'number' ? ch.chapter_number : NaN)
+            .filter((n: number) => !Number.isNaN(n))
+        const latestChap = chapterNums.length > 0 ? Math.max(...chapterNums) : undefined
+        const chapterCount = typeof item?.chapter_count === 'number' ? item.chapter_count : chapterNums.length
+
+        const subtitleParts: string[] = []
+        if (latestChap !== undefined) subtitleParts.push(`CH. ${latestChap}`)
+        else if (chapterCount > 0) subtitleParts.push(`${chapterCount} Chapter`)
+        if (item?.type) subtitleParts.push(String(item.type).toUpperCase())
+        if (typeof item?.rating === 'number' && item.rating > 0) subtitleParts.push(`★ ${item.rating}`)
+
         results.push(App.createPartialSourceManga({
             mangaId: slug,
             image: item?.cover_url || item?.image_url || '',
             title: item.title,
-            subtitle: [
-                item?.type ? String(item.type).toUpperCase() : '',
-                item?.updated_at ? new Date(item.updated_at).toLocaleDateString(DATE_LOCALE) : ''
-            ].filter(Boolean).join(' • ')
+            subtitle: subtitleParts.join(' • ')
         }))
     }
     return results
