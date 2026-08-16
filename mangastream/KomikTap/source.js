@@ -15455,7 +15455,7 @@ var _Sources = (() => {
   }
 
   // src/MangaStream.ts
-  var BASE_VERSION = "3.1.1";
+  var BASE_VERSION = "3.1.2";
   var getExportVersion = (EXTENSION_VERSION) => {
     return BASE_VERSION.split(".").map((x, index2) => Number(x) + Number(EXTENSION_VERSION.split(".")[index2])).join(".");
   };
@@ -15952,25 +15952,35 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
 
   // src/KomikTap/KomikTapHelper.ts
   var getHomePageSectionsKomikTap = async (source, sectionCallback) => {
-    const request = App.createRequest({
-      url: `${source.baseUrl}/manga/?page=1&order=update`,
-      method: "GET"
-    });
-    const response = await source.requestManager.schedule(request, 1);
-    source.checkResponseError(response);
-    const $2 = load(response.data);
-    const section = source.homescreen_sections["latest_update"];
-    sectionCallback(section.section);
-    section.section.items = await source.parser.parseHomeSection($2, section, source);
-    sectionCallback(section.section);
+    const sections = [
+      {
+        request: App.createRequest({ url: `${source.baseUrl}/manga/?page=1&order=update`, method: "GET" }),
+        data: source.homescreen_sections["latest_update"]
+      },
+      {
+        request: App.createRequest({ url: `${source.baseUrl}/project/`, method: "GET" }),
+        data: source.homescreen_sections["project"]
+      }
+    ];
+    for (const item of sections) {
+      sectionCallback(item.data.section);
+      const response = await source.requestManager.schedule(item.request, 1);
+      source.checkResponseError(response);
+      item.data.section.items = await source.parser.parseHomeSection(
+        load(response.data),
+        item.data,
+        source
+      );
+      sectionCallback(item.data.section);
+    }
   };
   var getViewMoreItemsKomikTap = async (source, homepageSectionId, metadata) => {
-    if (homepageSectionId !== "latest_update") {
+    if (homepageSectionId !== "latest_update" && homepageSectionId !== "project") {
       return void 0;
     }
     const page = metadata?.page ?? 2;
     const request = App.createRequest({
-      url: `${source.baseUrl}/manga/?page=${page}&order=update`,
+      url: homepageSectionId === "project" ? `${source.baseUrl}/project/page/${page}/` : `${source.baseUrl}/manga/?page=${page}&order=update`,
       method: "GET"
     });
     const response = await source.requestManager.schedule(request, 1);
@@ -16043,6 +16053,10 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
       this.homescreen_sections["top_alltime"].enabled = false;
       this.homescreen_sections["top_monthly"].enabled = false;
       this.homescreen_sections["top_weekly"].enabled = false;
+      this.homescreen_sections["project"].enabled = true;
+      this.homescreen_sections["project"].selectorFunc = ($2) => $2("div.bsx");
+      this.homescreen_sections["project"].titleSelectorFunc = ($2, element) => $2("a", element).first().attr("title");
+      this.homescreen_sections["project"].subtitleSelectorFunc = ($2, element) => $2("div.epxs", element).first().text().trim();
       this.homescreen_sections["latest_update"].selectorFunc = ($2) => $2("div.bs", "div.listupd");
       this.homescreen_sections["latest_update"].titleSelectorFunc = ($2, element) => $2("a", element).first().attr("title");
       this.homescreen_sections["latest_update"].subtitleSelectorFunc = ($2, element) => $2("div.epxs", element).first().text().trim();

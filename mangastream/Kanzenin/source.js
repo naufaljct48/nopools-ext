@@ -15455,7 +15455,7 @@ var _Sources = (() => {
   }
 
   // src/MangaStream.ts
-  var BASE_VERSION = "3.1.1";
+  var BASE_VERSION = "3.1.2";
   var getExportVersion = (EXTENSION_VERSION) => {
     return BASE_VERSION.split(".").map((x, index2) => Number(x) + Number(EXTENSION_VERSION.split(".")[index2])).join(".");
   };
@@ -15960,6 +15960,10 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
       {
         request: App.createRequest({ url: `${source.baseUrl}/manga/?order=popular`, method: "GET" }),
         data: source.homescreen_sections["popular_today"]
+      },
+      {
+        request: App.createRequest({ url: `${source.baseUrl}/project/`, method: "GET" }),
+        data: source.homescreen_sections["project"]
       }
     ];
     for (const section of sections) {
@@ -15976,7 +15980,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
   };
   var getViewMoreItemsKanzenin = async (source, homepageSectionId, metadata) => {
     const page = metadata?.page ?? 2;
-    const path = homepageSectionId === "popular_today" ? `manga/?page=${page}&status=&type=&order=popular` : `manga/?page=${page}&status=&type=&order=update`;
+    const path = homepageSectionId === "popular_today" ? `manga/?page=${page}&status=&type=&order=popular` : homepageSectionId === "project" ? `project/page/${page}/` : `manga/?page=${page}&status=&type=&order=update`;
     const request = App.createRequest({
       url: `${source.baseUrl}/${path}`,
       method: "GET"
@@ -16054,6 +16058,10 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
       this.homescreen_sections["top_alltime"].enabled = false;
       this.homescreen_sections["top_monthly"].enabled = false;
       this.homescreen_sections["top_weekly"].enabled = false;
+      this.homescreen_sections["project"].enabled = true;
+      this.homescreen_sections["project"].selectorFunc = ($2) => $2("div.bsx");
+      this.homescreen_sections["project"].titleSelectorFunc = ($2, element) => $2("a", element).first().attr("title");
+      this.homescreen_sections["project"].subtitleSelectorFunc = ($2, element) => $2("div.epxs", element).first().text().trim();
       this.homescreen_sections["latest_update"].selectorFunc = ($2) => $2("div.bs", "div.listupd");
       this.homescreen_sections["latest_update"].titleSelectorFunc = ($2, element) => $2("a", element).first().attr("title");
       this.homescreen_sections["latest_update"].subtitleSelectorFunc = ($2, element) => $2("div.epxs", element).first().text().trim();
