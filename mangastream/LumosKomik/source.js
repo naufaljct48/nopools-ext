@@ -854,6 +854,7 @@ var _Sources = (() => {
     return html.slice(start, end < 0 ? void 0 : end);
   };
   var parseTotalResults = (html) => parseInt(extractText(html, /rounded-md">(\d+)<\/span>/i) || "0");
+  var parseTotalSeriesFound = (html) => parseInt(html.match(/(\d+)\s+series ditemukan/i)?.[1] ?? "0");
   var parseMangaDetails = (html, mangaId) => {
     const series = parseLinkedData(html);
     const localTitle = cleanText(extractText(html, /<h1[^>]*>[\s\S]*?<\/h1>\s*<p[^>]*>([\s\S]*?)<\/p>/i));
@@ -987,6 +988,7 @@ var _Sources = (() => {
 
   // src/LumosKomik/LumosKomik.ts
   var PAGE_SIZE = 24;
+  var PROJECT_PAGE_SIZE = 25;
   var getIncludedTagsByPrefix = (query, prefix) => {
     const tags = query?.includedTags;
     if (!Array.isArray(tags)) return [];
@@ -1002,7 +1004,7 @@ var _Sources = (() => {
     return `${WEBSITE_BASE}/browse${query ? `?${query}` : ""}`;
   };
   var LumosKomikInfo = {
-    version: "1.0.1",
+    version: "1.0.2",
     name: "LumosKomik",
     icon: "icon.png",
     author: "NaufalJCT48",
@@ -1068,7 +1070,7 @@ var _Sources = (() => {
             id: "project",
             title: "Project",
             type: import_types.HomeSectionType.singleRowNormal,
-            containsMoreItems: false
+            containsMoreItems: true
           })
         },
         {
@@ -1099,6 +1101,19 @@ var _Sources = (() => {
       }
     }
     async getViewMoreItems(homepageSectionId, metadata) {
+      const page = metadata?.page ?? 1;
+      if (homepageSectionId === "project") {
+        const request = createRequestObject({ url: `${WEBSITE_BASE}/project?page=${page}` });
+        const response = await this.requestManager.schedule(request, 1);
+        const html = response.data;
+        const results = parseMangaList(html);
+        const total = parseTotalSeriesFound(html);
+        const hasMore = total > 0 ? page * PROJECT_PAGE_SIZE < total : results.length >= PROJECT_PAGE_SIZE;
+        return App.createPagedResults({
+          results,
+          metadata: hasMore ? { page: page + 1 } : void 0
+        });
+      }
       const sorts = {
         popular: "popular",
         latest_update: "latest",
@@ -1106,7 +1121,6 @@ var _Sources = (() => {
       };
       const sort = sorts[homepageSectionId];
       if (!sort) throw new Error(`View more not supported for section: ${homepageSectionId}`);
-      const page = metadata?.page ?? 1;
       return this.browse({ sort, page: String(page) }, page);
     }
     async getSearchTags() {
