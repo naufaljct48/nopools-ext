@@ -1,9 +1,22 @@
 import { Chapter, ChapterDetails, PartialSourceManga, SourceManga, Tag, TagSection } from '@paperback/types'
+import { decode as decodeHTMLEntity } from 'html-entities'
 import { parseStatus } from './DoujinDesuHelper'
 
 const LANG = '🇮🇩'
 
 const stripLink = (value: string): string => (value ?? '').replace(/^\/manga\//, '').replace(/\/$/, '')
+
+// ponytail: regex strip, bukan cheerio — runtime iOS ini gak punya cheerio global; upgrade ke DOMPurify kalau desc jadi kompleks
+const stripHtml = (value: string): string =>
+    decodeHTMLEntity(
+        (value ?? '')
+            .replace(/<br\s*\/?>/gi, '\n')
+            .replace(/<\/(p|div|span|a|h[1-6]|li|font)>/gi, '\n')
+            .replace(/<[^>]*>/g, '')
+    )
+        .replace(/[ \t]+\n/g, '\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim()
 
 export const parseMangaList = (items: any[]): PartialSourceManga[] => {
     const results: PartialSourceManga[] = []
@@ -20,7 +33,6 @@ export const parseMangaList = (items: any[]): PartialSourceManga[] => {
         const subtitleParts: string[] = []
         if (latestChap !== undefined) subtitleParts.push(`CH. ${latestChap}`)
         else if (chapterCount > 0) subtitleParts.push(`${chapterCount} Chapter`)
-        if (item?.type) subtitleParts.push(String(item.type).toUpperCase())
         if (typeof item?.rating === 'number' && item.rating > 0) subtitleParts.push(`★ ${item.rating}`)
 
         results.push(App.createPartialSourceManga({
@@ -71,7 +83,7 @@ export const parseMangaDetails = (data: any, mangaId: string): SourceManga => {
             status: parseStatus(data?.status ?? ''),
             author: data?.author || data?.artist || 'Unknown',
             artist: data?.artist || data?.author || 'Unknown',
-            desc: [String(data?.description ?? '').trim(), infoParts.join('\n')].filter(Boolean).join('\n\n'),
+            desc: [stripHtml(String(data?.description ?? '')), infoParts.join('\n')].filter(Boolean).join('\n\n'),
             tags,
             covers: data?.cover_url ? [data.cover_url] : []
         })
