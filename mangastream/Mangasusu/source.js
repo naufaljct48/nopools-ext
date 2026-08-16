@@ -15109,7 +15109,7 @@ var _Sources = (() => {
       this.isLastPage = ($2, id) => {
         let isLast = true;
         if (id == "view_more") {
-          const hasNext = Boolean($2("a.r")[0]);
+          const hasNext = Boolean($2("a.r")[0] || $2("a.next.page-numbers")[0]);
           if (hasNext) {
             isLast = false;
           }
@@ -15455,7 +15455,7 @@ var _Sources = (() => {
   }
 
   // src/MangaStream.ts
-  var BASE_VERSION = "3.1.0";
+  var BASE_VERSION = "3.1.1";
   var getExportVersion = (EXTENSION_VERSION) => {
     return BASE_VERSION.split(".").map((x, index2) => Number(x) + Number(EXTENSION_VERSION.split(".")[index2])).join(".");
   };
@@ -15622,6 +15622,16 @@ var _Sources = (() => {
           subtitleSelectorFunc: ($2, element) => $2("span a", element).toArray().map((x) => $2(x).text().trim()).join(", "),
           getViewMoreItemsFunc: (page) => `${this.directoryPath}/?page=${page}&order=latest`,
           sortIndex: 30
+        },
+        "project": {
+          ...DefaultHomeSectionData,
+          section: createHomeSection("project", "Project Update"),
+          selectorFunc: ($2) => $2("div.bsx", $2("h2:contains(Project Update)")?.parent()?.next()),
+          titleSelectorFunc: ($2, element) => $2("a", element).attr("title"),
+          subtitleSelectorFunc: ($2, element) => $2("div.epxs", element).first().text().trim(),
+          getViewMoreItemsFunc: (page) => `project/page/${page}/`,
+          sortIndex: 35,
+          enabled: false
         },
         "top_alltime": {
           ...DefaultHomeSectionData,
@@ -15966,7 +15976,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
   };
   var getViewMoreItemsMangasusu = async (source, homepageSectionId, metadata) => {
     const page = metadata?.page ?? 2;
-    const path = homepageSectionId === "popular_today" ? `komik/page/${page}/?status=&type=&order=popular` : `komik/page/${page}/?order=update`;
+    const path = homepageSectionId === "popular_today" ? `komik/?page=${page}&status=&type=&order=popular` : `komik/?page=${page}&order=update`;
     const request = App.createRequest({
       url: `${source.baseUrl}/${path}`,
       method: "GET"
@@ -15974,9 +15984,10 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
     const response = await source.requestManager.schedule(request, 1);
     source.checkResponseError(response);
     const $2 = load(response.data);
+    const results = await source.parser.parseViewMore($2, source);
     return App.createPagedResults({
-      results: await source.parser.parseViewMore($2, source),
-      metadata: !source.parser.isLastPage($2, "view_more") ? { page: page + 1 } : void 0
+      results,
+      metadata: results.length > 0 && !source.parser.isLastPage($2, "view_more") ? { page: page + 1 } : void 0
     });
   };
   var getSearchTagsMangasusu = async (source) => {
@@ -16026,7 +16037,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
       this.homescreen_sections["popular_today"].selectorFunc = ($2) => $2("div.bs", "div.listupd");
       this.homescreen_sections["popular_today"].titleSelectorFunc = ($2, element) => $2("a", element).first().attr("title");
       this.homescreen_sections["popular_today"].subtitleSelectorFunc = ($2, element) => $2("div.epxs", element).first().text().trim();
-      this.homescreen_sections["popular_today"].getViewMoreItemsFunc = (page) => `komik/page/${page}/?status=&type=&order=popular`;
+      this.homescreen_sections["popular_today"].getViewMoreItemsFunc = (page) => `komik/?page=${page}&status=&type=&order=popular`;
       this.homescreen_sections["new_titles"].enabled = false;
       this.homescreen_sections["top_alltime"].enabled = false;
       this.homescreen_sections["top_monthly"].enabled = false;
@@ -16034,7 +16045,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
       this.homescreen_sections["latest_update"].selectorFunc = ($2) => $2("div.bs", "div.listupd");
       this.homescreen_sections["latest_update"].titleSelectorFunc = ($2, element) => $2("a", element).first().attr("title");
       this.homescreen_sections["latest_update"].subtitleSelectorFunc = ($2, element) => $2("div.epxs", element).first().text().trim();
-      this.homescreen_sections["latest_update"].getViewMoreItemsFunc = (page) => `komik/page/${page}/?order=update`;
+      this.homescreen_sections["latest_update"].getViewMoreItemsFunc = (page) => `komik/?page=${page}&order=update`;
     }
     async getHomePageSections(sectionCallback) {
       return getHomePageSectionsMangasusu(this, sectionCallback);

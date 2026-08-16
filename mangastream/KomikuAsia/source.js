@@ -15109,7 +15109,7 @@ var _Sources = (() => {
       this.isLastPage = ($2, id) => {
         let isLast = true;
         if (id == "view_more") {
-          const hasNext = Boolean($2("a.r")[0]);
+          const hasNext = Boolean($2("a.r")[0] || $2("a.next.page-numbers")[0]);
           if (hasNext) {
             isLast = false;
           }
@@ -15455,7 +15455,7 @@ var _Sources = (() => {
   }
 
   // src/MangaStream.ts
-  var BASE_VERSION = "3.1.0";
+  var BASE_VERSION = "3.1.1";
   var getExportVersion = (EXTENSION_VERSION) => {
     return BASE_VERSION.split(".").map((x, index2) => Number(x) + Number(EXTENSION_VERSION.split(".")[index2])).join(".");
   };
@@ -15622,6 +15622,16 @@ var _Sources = (() => {
           subtitleSelectorFunc: ($2, element) => $2("span a", element).toArray().map((x) => $2(x).text().trim()).join(", "),
           getViewMoreItemsFunc: (page) => `${this.directoryPath}/?page=${page}&order=latest`,
           sortIndex: 30
+        },
+        "project": {
+          ...DefaultHomeSectionData,
+          section: createHomeSection("project", "Project Update"),
+          selectorFunc: ($2) => $2("div.bsx", $2("h2:contains(Project Update)")?.parent()?.next()),
+          titleSelectorFunc: ($2, element) => $2("a", element).attr("title"),
+          subtitleSelectorFunc: ($2, element) => $2("div.epxs", element).first().text().trim(),
+          getViewMoreItemsFunc: (page) => `project/page/${page}/`,
+          sortIndex: 35,
+          enabled: false
         },
         "top_alltime": {
           ...DefaultHomeSectionData,
