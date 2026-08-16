@@ -817,21 +817,25 @@ var _Sources = (() => {
 
   // src/DoujinDesu/DoujinDesuParser.ts
   var LANG = "\u{1F1EE}\u{1F1E9}";
-  var DATE_LOCALE = "id-ID";
   var stripLink = (value) => (value ?? "").replace(/^\/manga\//, "").replace(/\/$/, "");
   var parseMangaList = (items) => {
     const results = [];
     for (const item of items ?? []) {
       const slug = item?.slug ?? stripLink(item?.link_url ?? "");
       if (!slug || !item?.title) continue;
+      const chapterNums = (item?.chapters ?? []).map((ch) => typeof ch?.chapter_number === "number" ? ch.chapter_number : NaN).filter((n) => !Number.isNaN(n));
+      const latestChap = chapterNums.length > 0 ? Math.max(...chapterNums) : void 0;
+      const chapterCount = typeof item?.chapter_count === "number" ? item.chapter_count : chapterNums.length;
+      const subtitleParts = [];
+      if (latestChap !== void 0) subtitleParts.push(`CH. ${latestChap}`);
+      else if (chapterCount > 0) subtitleParts.push(`${chapterCount} Chapter`);
+      if (item?.type) subtitleParts.push(String(item.type).toUpperCase());
+      if (typeof item?.rating === "number" && item.rating > 0) subtitleParts.push(`\u2605 ${item.rating}`);
       results.push(App.createPartialSourceManga({
         mangaId: slug,
         image: item?.cover_url || item?.image_url || "",
         title: item.title,
-        subtitle: [
-          item?.type ? String(item.type).toUpperCase() : "",
-          item?.updated_at ? new Date(item.updated_at).toLocaleDateString(DATE_LOCALE) : ""
-        ].filter(Boolean).join(" \u2022 ")
+        subtitle: subtitleParts.join(" \u2022 ")
       }));
     }
     return results;
@@ -919,7 +923,7 @@ var _Sources = (() => {
   // src/DoujinDesu/DoujinDesu.ts
   var USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36";
   var DoujinDesuInfo = {
-    version: "6.0.0",
+    version: "6.0.1",
     name: "DoujinDesu",
     icon: "icon.png",
     author: "NaufalJCT48",
