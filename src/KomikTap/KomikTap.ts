@@ -61,7 +61,7 @@ export class KomikTap extends MangaStream {
         this.homescreen_sections['latest_update'].selectorFunc = ($: cheerio.CheerioAPI) => $('div.bs', 'div.listupd')
         this.homescreen_sections['latest_update'].titleSelectorFunc = ($: cheerio.CheerioAPI, element: cheerio.BasicAcceptedElems<AnyNode>) => $('a', element).first().attr('title')
         this.homescreen_sections['latest_update'].subtitleSelectorFunc = ($: cheerio.CheerioAPI, element: cheerio.BasicAcceptedElems<AnyNode>) => $('div.epxs', element).first().text().trim()
-        this.homescreen_sections['latest_update'].getViewMoreItemsFunc = (page: string) => `manga/page/${page}/?order=update`
+        this.homescreen_sections['latest_update'].getViewMoreItemsFunc = (page: string) => `manga/?page=${page}&order=update`
     }
 
     override async getHomePageSections(sectionCallback: (section: HomeSection) => void): Promise<void> {

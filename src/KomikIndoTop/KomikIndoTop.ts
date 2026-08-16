@@ -51,6 +51,7 @@ export class KomikIndoTop extends MangaStream {
         this.homescreen_sections['top_alltime'].enabled = false
         this.homescreen_sections['top_monthly'].enabled = false
         this.homescreen_sections['top_weekly'].enabled = false
+        this.homescreen_sections['project'].enabled = true
         this.homescreen_sections['latest_update'].selectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('div.bsx', $('h2:contains(Latest Update)')?.parent()?.next())
         this.homescreen_sections['latest_update'].subtitleSelectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('span.fivchap', element).first().text().trim()
     }

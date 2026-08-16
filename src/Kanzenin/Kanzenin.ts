@@ -60,7 +60,7 @@ export class Kanzenin extends MangaStream {
         this.homescreen_sections['popular_today'].selectorFunc = ($: CheerioAPI) => $('div.bs', 'div.listupd')
         this.homescreen_sections['popular_today'].titleSelectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('a', element).first().attr('title')
         this.homescreen_sections['popular_today'].subtitleSelectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('div.epxs', element).first().text().trim()
-        this.homescreen_sections['popular_today'].getViewMoreItemsFunc = (page: string) => `manga/page/${page}/?status=&type=&order=popular`
+        this.homescreen_sections['popular_today'].getViewMoreItemsFunc = (page: string) => `manga/?page=${page}&status=&type=&order=popular`
         this.homescreen_sections['new_titles'].enabled = false
         this.homescreen_sections['top_alltime'].enabled = false
         this.homescreen_sections['top_monthly'].enabled = false
@@ -68,7 +68,7 @@ export class Kanzenin extends MangaStream {
         this.homescreen_sections['latest_update'].selectorFunc = ($: CheerioAPI) => $('div.bs', 'div.listupd')
         this.homescreen_sections['latest_update'].titleSelectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('a', element).first().attr('title')
         this.homescreen_sections['latest_update'].subtitleSelectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('div.epxs', element).first().text().trim()
-        this.homescreen_sections['latest_update'].getViewMoreItemsFunc = (page: string) => `manga/page/${page}/?order=update`
+        this.homescreen_sections['latest_update'].getViewMoreItemsFunc = (page: string) => `manga/?page=${page}&order=update`
     }
 
     override async getHomePageSections(sectionCallback: (section: HomeSection) => void): Promise<void> {

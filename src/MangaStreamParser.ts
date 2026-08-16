@@ -308,7 +308,8 @@ export class MangaStreamParser {
     isLastPage = ($: CheerioAPI, id: string): boolean => {
         let isLast = true
         if (id == 'view_more') {
-            const hasNext = Boolean($('a.r')[0])
+            // Some themes expose the next link as `a.r`, others as `a.next.page-numbers`
+            const hasNext = Boolean($('a.r')[0] || $('a.next.page-numbers')[0])
             if (hasNext) {
                 isLast = false
             }

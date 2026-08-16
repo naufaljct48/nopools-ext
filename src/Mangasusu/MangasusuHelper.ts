@@ -35,9 +35,11 @@ export const getViewMoreItemsMangasusu = async (
     metadata: any
 ): Promise<any> => {
     const page = metadata?.page ?? 2
+    // NOTE: path-style /komik/page/N/ is ignored by the server (always returns
+    // page 1) -> infinite loop. ?page=N is the working pagination.
     const path = homepageSectionId === 'popular_today'
-        ? `komik/page/${page}/?status=&type=&order=popular`
-        : `komik/page/${page}/?order=update`
+        ? `komik/?page=${page}&status=&type=&order=popular`
+        : `komik/?page=${page}&order=update`
 
     const request = App.createRequest({
         url: `${source.baseUrl}/${path}`,
@@ -48,9 +50,10 @@ export const getViewMoreItemsMangasusu = async (
     source.checkResponseError(response)
     const $ = cheerio.load(response.data as string)
 
+    const results = await source.parser.parseViewMore($, source)
     return App.createPagedResults({
-        results: await source.parser.parseViewMore($, source),
-        metadata: !source.parser.isLastPage($, 'view_more') ? { page: page + 1 } : undefined
+        results,
+        metadata: results.length > 0 && !source.parser.isLastPage($, 'view_more') ? { page: page + 1 } : undefined
     })
 }
 

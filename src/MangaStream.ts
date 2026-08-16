@@ -40,7 +40,7 @@ import {
 } from './MangaStreamInterfaces'
 
 // Set the version for the base, changing this version will change the versions of all sources
-const BASE_VERSION = '3.1.0'
+const BASE_VERSION = '3.1.1'
 export const getExportVersion = (EXTENSION_VERSION: string): string => {
     return BASE_VERSION.split('.').map((x, index) => Number(x) + Number(EXTENSION_VERSION.split('.')[index])).join('.')
 }
@@ -232,7 +232,7 @@ export abstract class MangaStream extends Source {
 
     configureSections(): void { return }
 
-    homescreen_sections: Record<'popular_today' | 'latest_update' | 'new_titles' | 'top_alltime' | 'top_monthly' | 'top_weekly', HomeSectionData> = {
+    homescreen_sections: Record<'popular_today' | 'latest_update' | 'new_titles' | 'project' | 'top_alltime' | 'top_monthly' | 'top_weekly', HomeSectionData> = {
         'popular_today': {
             ...DefaultHomeSectionData,
             section: createHomeSection('popular_today', 'Popular Today', false, HomeSectionType.featured),
@@ -258,6 +258,16 @@ export abstract class MangaStream extends Source {
             subtitleSelectorFunc: ($: cheerio.CheerioAPI, element: cheerio.BasicAcceptedElems<AnyNode>) => $('span a', element).toArray().map(x => $(x).text().trim()).join(', '),
             getViewMoreItemsFunc: (page: string) => `${this.directoryPath}/?page=${page}&order=latest`,
             sortIndex: 30
+        },
+        'project': {
+            ...DefaultHomeSectionData,
+            section: createHomeSection('project', 'Project Update'),
+            selectorFunc: ($: cheerio.CheerioAPI) => $('div.bsx', $('h2:contains(Project Update)')?.parent()?.next()),
+            titleSelectorFunc: ($: cheerio.CheerioAPI, element: cheerio.BasicAcceptedElems<AnyNode>) => $('a', element).attr('title'),
+            subtitleSelectorFunc: ($: cheerio.CheerioAPI, element: cheerio.BasicAcceptedElems<AnyNode>) => $('div.epxs', element).first().text().trim(),
+            getViewMoreItemsFunc: (page: string) => `project/page/${page}/`,
+            sortIndex: 35,
+            enabled: false
         },
         'top_alltime': {
             ...DefaultHomeSectionData,
