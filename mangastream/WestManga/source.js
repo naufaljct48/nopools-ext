@@ -1173,7 +1173,7 @@ var _Sources = (() => {
   var WEBSITE_BASE2 = "https://westmanga.co";
   var API_BASE = "https://data.mantweh.online";
   var WestMangaInfo = {
-    version: "1.1.12",
+    version: "1.1.13",
     name: "WestManga",
     icon: "icon.png",
     author: "NaufalJCT48",

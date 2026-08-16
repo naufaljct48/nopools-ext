@@ -1078,7 +1078,7 @@ var _Sources = (() => {
     return results;
   };
   var KiryuuInfo = {
-    version: "2.2.10",
+    version: "2.2.11",
     name: "Kiryuu",
     icon: "icon.png",
     author: "NaufalJCT48",

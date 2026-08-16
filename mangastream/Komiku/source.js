@@ -999,7 +999,7 @@ var _Sources = (() => {
 
   // src/Komiku/Komiku.ts
   var KomikuInfo = {
-    version: "1.1.0",
+    version: "1.1.1",
     name: "Komiku",
     icon: "icon.png",
     author: "NaufalJCT48",

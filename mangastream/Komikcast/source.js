@@ -916,7 +916,7 @@ var _Sources = (() => {
     return data?.data?.data?.coverImage || url;
   };
   var KomikcastInfo = {
-    version: "4.0.9",
+    version: "4.0.10",
     name: "Komikcast",
     icon: "icon.png",
     author: "NaufalJCT48",

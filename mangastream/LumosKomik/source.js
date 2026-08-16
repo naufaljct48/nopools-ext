@@ -1004,7 +1004,7 @@ var _Sources = (() => {
     return `${WEBSITE_BASE}/browse${query ? `?${query}` : ""}`;
   };
   var LumosKomikInfo = {
-    version: "1.0.2",
+    version: "1.0.3",
     name: "LumosKomik",
     icon: "icon.png",
     author: "NaufalJCT48",

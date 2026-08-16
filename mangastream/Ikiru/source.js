@@ -1065,7 +1065,7 @@ var _Sources = (() => {
     return results;
   };
   var IkiruInfo = {
-    version: "2.0.3",
+    version: "2.0.4",
     name: "Ikiru",
     icon: "icon.png",
     author: "NaufalJCT48",
