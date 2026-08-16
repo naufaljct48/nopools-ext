@@ -1,138 +1,114 @@
-import { Chapter, ChapterDetails, PartialSourceManga, SourceManga, Tag } from '@paperback/types'
-import * as cheerio from 'cheerio'
-import {
-    getTableValue,
-    imageFromElement,
-    parseDate,
-    parseStatus,
-    slugFromUrl,
-    TYPES
-} from './DoujinDesuHelper'
+import { Chapter, ChapterDetails, PartialSourceManga, SourceManga, Tag, TagSection } from '@paperback/types'
+import { parseStatus } from './DoujinDesuHelper'
 
-export const parseMangaDetails = ($: cheerio.CheerioAPI, mangaId: string): SourceManga => {
-    const titleElement = $('section.metadata h1.title').first().clone()
-    const alternativeTitle = titleElement.find('span.alter').text().trim()
-    titleElement.find('span.alter').remove()
-    const title = titleElement.text().trim().replace(/\s+/g, ' ')
-    const titles = [title]
-    if (alternativeTitle) titles.push(alternativeTitle)
+const LANG = '🇮🇩'
+const DATE_LOCALE = 'id-ID'
 
-    const author = getTableValue($, 'Author') || getTableValue($, 'Group') || 'Unknown'
-    const artist = getTableValue($, 'Artist') || author
-    const status = parseStatus(getTableValue($, 'Status'))
-    const series = getTableValue($, 'Series') || getTableValue($, 'Serialization')
-    const description = $('section.metadata div.pb-2').text().trim().replace(/\s+/g, ' ')
-    const image = imageFromElement($, $('figure.thumbnail img').first())
-    const tags: Tag[] = []
+const stripLink = (value: string): string => (value ?? '').replace(/^\/manga\//, '').replace(/\/$/, '')
 
-    for (const tag of $('section.metadata div.tags a').toArray()) {
-        const label = $(tag).text().trim()
-        const id = slugFromUrl($(tag).attr('href') ?? '')
-        if (id && label) tags.push(App.createTag({ id, label }))
+export const parseMangaList = (items: any[]): PartialSourceManga[] => {
+    const results: PartialSourceManga[] = []
+    for (const item of items ?? []) {
+        const slug = item?.slug ?? stripLink(item?.link_url ?? '')
+        if (!slug || !item?.title) continue
+        results.push(App.createPartialSourceManga({
+            mangaId: slug,
+            image: item?.cover_url || item?.image_url || '',
+            title: item.title,
+            subtitle: [
+                item?.type ? String(item.type).toUpperCase() : '',
+                item?.updated_at ? new Date(item.updated_at).toLocaleDateString(DATE_LOCALE) : ''
+            ].filter(Boolean).join(' • ')
+        }))
+    }
+    return results
+}
+
+export const parseMangaDetails = (data: any, mangaId: string): SourceManga => {
+    const titles = [data?.title]
+    const altTitles = String(data?.alt_titles ?? '')
+    if (altTitles) {
+        for (const alt of altTitles.split('|').map((x: string) => x.trim()).filter(Boolean)) {
+            titles.push(alt)
+        }
     }
 
-    const descParts = []
-    if (description) descParts.push(description)
-    if (alternativeTitle) descParts.push(`Judul Alternatif: ${alternativeTitle}`)
-    if (series) descParts.push(`Seri: ${series}`)
+    const genres: Tag[] = []
+    for (const entry of data?.manga_genres ?? []) {
+        const slug = entry?.genres?.slug
+        const name = entry?.genres?.name
+        if (slug && name) genres.push(App.createTag({ id: `genre:${slug}`, label: name }))
+    }
+
+    const tags: TagSection[] = []
+    if (genres.length > 0) {
+        tags.push(App.createTagSection({ id: 'genres', label: 'Genres', tags: genres }))
+    }
+
+    const infoParts = [
+        data?.author ? `Author: ${data.author}` : '',
+        data?.artist ? `Artist: ${data.artist}` : '',
+        data?.type ? `Type: ${String(data.type).toUpperCase()}` : '',
+        typeof data?.rating === 'number' && data.rating > 0 ? `Rating: ${data.rating}` : '',
+        typeof data?.views === 'number' && data.views > 0 ? `Views: ${data.views}` : '',
+        data?.serialization ? `Serialization: ${data.serialization}` : ''
+    ].filter(Boolean)
 
     return App.createSourceManga({
         id: mangaId,
         mangaInfo: App.createMangaInfo({
             titles,
-            image,
-            status,
-            author,
-            artist,
-            desc: descParts.join('\n\n'),
-            tags: [App.createTagSection({ id: 'genres', label: 'Genres', tags })]
+            image: data?.cover_url || '',
+            status: parseStatus(data?.status ?? ''),
+            author: data?.author || data?.artist || 'Unknown',
+            artist: data?.artist || data?.author || 'Unknown',
+            desc: [String(data?.description ?? '').trim(), infoParts.join('\n')].filter(Boolean).join('\n\n'),
+            tags,
+            covers: data?.cover_url ? [data.cover_url] : []
         })
     })
 }
 
-export const parseChapterList = ($: cheerio.CheerioAPI, mangaId: string): Chapter[] => {
-    const chapters: Chapter[] = []
+export const parseChapterList = (chapters: any[], mangaId: string): Chapter[] => {
+    const result: Chapter[] = []
+    const sorted = [...(chapters ?? [])].sort((a, b) => (b?.chapter_number ?? 0) - (a?.chapter_number ?? 0))
     let sortingIndex = 0
-
-    for (const element of $('#chapter_list li').toArray()) {
-        const $chapter = $(element)
-        const href = $chapter.find('span.lchx a').first().attr('href')
-            ?? $chapter.find('a[href*="chapter"]').first().attr('href') ?? ''
-        const id = slugFromUrl(href)
-        const chapterText = $chapter.find('div.epsright chapter').first().text().trim()
-            || $chapter.find('span.eps').first().text().trim()
-        const chapNum = Number(chapterText.match(/\d+(?:\.\d+)?/)?.[0] ?? '0')
-        const name = $chapter.find('span.lchx a').first().text().trim() || `Chapter ${chapterText}`
-        const time = parseDate($chapter.find('span.date').first().text().trim())
-
+    for (const ch of sorted) {
+        const id = ch?.id
         if (!id) continue
-
-        chapters.push(App.createChapter({
+        const num = ch?.chapter_number
+        result.push(App.createChapter({
             id,
-            chapNum,
-            name,
-            time,
-            langCode: '🇮🇩',
-            sortingIndex: sortingIndex--
+            chapNum: typeof num === 'number' ? num : 0,
+            name: typeof num === 'number' ? `Chapter ${num}` : (ch?.title ?? 'Chapter'),
+            langCode: LANG,
+            time: ch?.created_at ? new Date(ch.created_at) : new Date(),
+            sortingIndex
         }))
+        sortingIndex--
     }
-
-    return chapters
+    return result
 }
 
-export const parseChapterDetails = (
-    _$: cheerio.CheerioAPI,
-    mangaId: string,
-    chapterId: string
-): ChapterDetails => {
-    const pages = _$('img').toArray()
-        .map((img) => imageFromElement(_$, _$(img)))
-        .filter(Boolean)
-
-    if (pages.length === 0) throw new Error(`Unable to find pages for ${chapterId}`)
-
-    return App.createChapterDetails({ id: chapterId, mangaId, pages })
+export const parseChapterDetails = (data: any, mangaId: string, chapterId: string): ChapterDetails => {
+    const pages: string[] = []
+    for (const url of data?.content_urls ?? []) {
+        if (typeof url === 'string' && url) pages.push(url)
+    }
+    if (pages.length === 0) throw new Error(`No pages found for chapter ${chapterId}`)
+    return App.createChapterDetails({
+        id: chapterId,
+        mangaId,
+        pages
+    })
 }
 
-export const parseMangaList = ($: cheerio.CheerioAPI): PartialSourceManga[] => {
-    const results: PartialSourceManga[] = []
-
-    for (const element of $('#archives div.entries article.entry').toArray()) {
-        const $entry = $(element)
-        const href = $entry.find('a[href*="/manga/"]').first().attr('href') ?? ''
-        const mangaId = slugFromUrl(href)
-        const title = $entry.find('h3.title').first().text().trim()
-            || $entry.find('a').first().attr('title') || ''
-        const image = imageFromElement($, $entry.find('figure.thumbnail img').first())
-        const subtitle = $entry.find('div.artists span').first().text().trim()
-
-        if (!mangaId || !title || !image) continue
-
-        results.push(App.createPartialSourceManga({ mangaId, image, title, subtitle }))
+export const parseSearchTags = (genres: any[]): TagSection[] => {
+    const tags: Tag[] = []
+    for (const g of genres ?? []) {
+        if (g?.slug && g?.name) tags.push(App.createTag({ id: `genre:${g.slug}`, label: g.name }))
     }
-
-    return results
-}
-
-export const parseSearchTags = ($: cheerio.CheerioAPI) => {
-    const genres: any[] = []
-
-    for (const element of $('section#taxonomy div.entry a[href*="/genre/"]').toArray()) {
-        const label = $(element).find('span.name').text().trim() || $(element).attr('title') || ''
-        const id = slugFromUrl($(element).attr('href') ?? '')
-        if (id && label) genres.push(App.createTag({ id: `genre:${id}`, label }))
-    }
-
-    return [
-        App.createTagSection({
-            id: 'type',
-            label: 'Type',
-            tags: TYPES.map((type) => App.createTag({ id: `type:${type}`, label: type }))
-        }),
-        App.createTagSection({
-            id: 'genre',
-            label: 'Genres',
-            tags: genres
-        })
-    ]
+    return tags.length > 0
+        ? [App.createTagSection({ id: 'genres', label: 'Genres', tags })]
+        : []
 }
