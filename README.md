@@ -9,7 +9,8 @@
 
 > Add to Paperback: open the link above on your device and press **Add to Paperback**, or add the base URL manually in the app.
 
-## 📱 Available Sources (17)
+## 📱 Available Sources
+<!-- SOURCES:BEGIN — auto-synced from versioning.json by scripts/generate-site.js; do not edit between markers -->
 | Source | Status | Adult (18+) |
 |--------|:------:|:-----------:|
 | AinzScans 🇮🇩 | ✅ Working | No |
@@ -17,11 +18,11 @@
 | Ikiru 🇮🇩 | ✅ Working | Mature |
 | Kanzenin 🇮🇩 | ✅ Working | **Yes** |
 | Kiryuu 🇮🇩 | ✅ Working | Mature |
-| KomikIndo.Top 🇮🇩 | ✅ Working | **Yes** |
-| KomikTap 🇮🇩 | ✅ Working | **Yes** |
-| Komikcast 🇮🇩 | ✅ Working | Mature |
+| Komikcast 🇮🇩 | ⚠️ Backend Down | Mature |
+| KomikIndoTop 🇮🇩 | ✅ Working | **Yes** |
 | Komiknesia 🇮🇩 | ✅ Working | Mature |
 | Komiksin 🇮🇩 | ✅ Working | No |
+| KomikTap 🇮🇩 | ✅ Working | **Yes** |
 | Komiku 🇮🇩 | ✅ Working | Mature |
 | KomikuAsia 🇮🇩 | ✅ Working | No |
 | LumosKomik 🇮🇩 | ✅ Working | Mature |
@@ -32,7 +33,8 @@
 
 ## 📅 Last Update
 - **Date:** August 16, 2026
-- **Status:** 16/17 working — Tenshi backend (`tenshi01.id`) is unreachable, pending upstream fix.
+- **Status:** 15/17 working — Komikcast (Backend Down), Tenshi (Backend Down).
+<!-- SOURCES:END -->
 
 ## 📝 Notes
 - Sources marked **Yes** are NSFW (18+) only.
