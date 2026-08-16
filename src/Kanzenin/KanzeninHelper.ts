@@ -13,6 +13,10 @@ export const getHomePageSectionsKanzenin = async (
         {
             request: App.createRequest({ url: `${source.baseUrl}/manga/?order=popular`, method: 'GET' }),
             data: source.homescreen_sections['popular_today']
+        },
+        {
+            request: App.createRequest({ url: `${source.baseUrl}/project/`, method: 'GET' }),
+            data: source.homescreen_sections['project']
         }
     ]
 
@@ -39,7 +43,9 @@ export const getViewMoreItemsKanzenin = async (
     // page 1) -> infinite loop. ?page=N is the working pagination.
     const path = homepageSectionId === 'popular_today'
         ? `manga/?page=${page}&status=&type=&order=popular`
-        : `manga/?page=${page}&status=&type=&order=update`
+        : homepageSectionId === 'project'
+            ? `project/page/${page}/`
+            : `manga/?page=${page}&status=&type=&order=update`
 
     const request = App.createRequest({
         url: `${source.baseUrl}/${path}`,

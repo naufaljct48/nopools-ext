@@ -13,6 +13,10 @@ export const getHomePageSectionsMangasusu = async (
         {
             request: App.createRequest({ url: `${source.baseUrl}/komik/?status=&type=&order=popular`, method: 'GET' }),
             data: source.homescreen_sections['popular_today']
+        },
+        {
+            request: App.createRequest({ url: `${source.baseUrl}/project/`, method: 'GET' }),
+            data: source.homescreen_sections['project']
         }
     ]
 
@@ -39,7 +43,9 @@ export const getViewMoreItemsMangasusu = async (
     // page 1) -> infinite loop. ?page=N is the working pagination.
     const path = homepageSectionId === 'popular_today'
         ? `komik/?page=${page}&status=&type=&order=popular`
-        : `komik/?page=${page}&order=update`
+        : homepageSectionId === 'project'
+            ? `project/page/${page}/`
+            : `komik/?page=${page}&order=update`
 
     const request = App.createRequest({
         url: `${source.baseUrl}/${path}`,

@@ -7,19 +7,28 @@ export const getHomePageSectionsKomikTap = async (
     source: MangaStream,
     sectionCallback: (section: any) => void
 ): Promise<void> => {
-    const request = App.createRequest({
-        url: `${source.baseUrl}/manga/?page=1&order=update`,
-        method: 'GET'
-    })
+    const sections = [
+        {
+            request: App.createRequest({ url: `${source.baseUrl}/manga/?page=1&order=update`, method: 'GET' }),
+            data: source.homescreen_sections['latest_update']
+        },
+        {
+            request: App.createRequest({ url: `${source.baseUrl}/project/`, method: 'GET' }),
+            data: source.homescreen_sections['project']
+        }
+    ]
 
-    const response = await source.requestManager.schedule(request, 1)
-    source.checkResponseError(response)
-    const $ = cheerio.load(response.data as string)
-    const section = source.homescreen_sections['latest_update']
-
-    sectionCallback(section.section)
-    section.section.items = await source.parser.parseHomeSection($, section, source)
-    sectionCallback(section.section)
+    for (const item of sections) {
+        sectionCallback(item.data.section)
+        const response = await source.requestManager.schedule(item.request, 1)
+        source.checkResponseError(response)
+        item.data.section.items = await source.parser.parseHomeSection(
+            cheerio.load(response.data as string),
+            item.data,
+            source
+        )
+        sectionCallback(item.data.section)
+    }
 }
 
 export const getViewMoreItemsKomikTap = async (
@@ -27,7 +36,7 @@ export const getViewMoreItemsKomikTap = async (
     homepageSectionId: string,
     metadata: any
 ): Promise<any> => {
-    if (homepageSectionId !== 'latest_update') {
+    if (homepageSectionId !== 'latest_update' && homepageSectionId !== 'project') {
         return undefined // fallback to base
     }
 
@@ -35,7 +44,9 @@ export const getViewMoreItemsKomikTap = async (
     // NOTE: path-style /manga/page/N/ is ignored by the server (always returns
     // page 1) -> infinite loop. ?page=N is the working pagination.
     const request = App.createRequest({
-        url: `${source.baseUrl}/manga/?page=${page}&order=update`,
+        url: homepageSectionId === 'project'
+            ? `${source.baseUrl}/project/page/${page}/`
+            : `${source.baseUrl}/manga/?page=${page}&order=update`,
         method: 'GET'
     })
 
