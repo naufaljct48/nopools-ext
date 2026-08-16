@@ -61,7 +61,7 @@ const refreshCoverUrl = async (requestManager: any, url: string): Promise<string
 }
 
 export const KomikcastInfo: SourceInfo = {
-    version: '4.0.9',
+    version: '4.0.10',
     name: 'Komikcast',
     icon: 'icon.png',
     author: 'NaufalJCT48',

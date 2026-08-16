@@ -30,7 +30,7 @@ import {
 const DOMAIN = 'https://mangasusuku.com'
 
 export const MangasusuInfo: SourceInfo = {
-    version: getExportVersion('0.0.9'),
+    version: getExportVersion('0.0.10'),
     name: 'Mangasusu',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',

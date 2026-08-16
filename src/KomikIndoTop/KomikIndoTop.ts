@@ -19,7 +19,7 @@ import {
 const DOMAIN = 'https://komikindo.fit'
 
 export const KomikIndoTopInfo: SourceInfo = {
-    version: getExportVersion('0.0.2'),
+    version: getExportVersion('0.0.3'),
     name: 'KomikIndoTop',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',

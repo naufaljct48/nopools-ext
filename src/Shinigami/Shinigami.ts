@@ -22,7 +22,7 @@ const API_URL = 'https://api.shngm.io'
 const BASE_URL = 'https://app.shinigami.asia'
 
 export const ShinigamiInfo: SourceInfo = {
-    version: '1.2.6',
+    version: '1.2.7',
     name: 'Shinigami',
     icon: 'icon.png',
     author: 'NaufalJCT48',

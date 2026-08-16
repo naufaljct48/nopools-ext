@@ -23,7 +23,7 @@
   "dependencies": {
     "@paperback/toolchain": "^0.8.7",
     "@paperback/types": "^0.8.7",
-    "cheerio": "^1.0.0",
+    "cheerio": "1.0.0-rc.12",
     "html-entities": "^2.5.2"
   }
 }

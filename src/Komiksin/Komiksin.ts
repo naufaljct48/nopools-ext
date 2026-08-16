@@ -19,7 +19,7 @@ import {
 const DOMAIN = 'https://komiksin.net'
 
 export const KomiksinInfo: SourceInfo = {
-    version: getExportVersion('0.0.3'),
+    version: getExportVersion('0.0.4'),
     name: 'Komiksin',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',

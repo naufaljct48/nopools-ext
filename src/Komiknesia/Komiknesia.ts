@@ -28,7 +28,7 @@ const API_URL = 'https://api-be.komiknesia.my.id/api'
 const BASE_URL = 'https://02.komiknesia.asia'
 
 export const KomiknesiaInfo: SourceInfo = {
-    version: '1.0.2',
+    version: '1.0.3',
     name: 'Komiknesia',
     icon: 'icon.png',
     author: 'NaufalJCT48',

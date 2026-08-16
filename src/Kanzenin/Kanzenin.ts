@@ -30,7 +30,7 @@ import {
 const DOMAIN = 'https://kanzenin.info'
 
 export const KanzeninInfo: SourceInfo = {
-    version: getExportVersion('0.1.2'),
+    version: getExportVersion('0.1.3'),
     name: 'Kanzenin',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
