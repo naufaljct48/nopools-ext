@@ -70,6 +70,10 @@ export const sliceSection = (html: string, containerId: string): string => {
 export const parseTotalResults = (html: string): number =>
     parseInt(extractText(html, /rounded-md">(\d+)<\/span>/i) || '0')
 
+// /project page reports "<p>N series ditemukan</p>" instead of the browse pagination markup
+export const parseTotalSeriesFound = (html: string): number =>
+    parseInt(html.match(/(\d+)\s+series ditemukan/i)?.[1] ?? '0')
+
 export const parseMangaDetails = (html: string, mangaId: string): SourceManga => {
     const series = parseLinkedData(html)
 

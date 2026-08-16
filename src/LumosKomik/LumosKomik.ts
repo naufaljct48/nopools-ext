@@ -23,10 +23,12 @@ import {
     parseMangaList,
     parseSearchTags,
     parseTotalResults,
+    parseTotalSeriesFound,
     sliceSection
 } from './LumosKomikParser'
 
 const PAGE_SIZE = 24
+const PROJECT_PAGE_SIZE = 25
 
 const getIncludedTagsByPrefix = (query: SearchRequest, prefix: string): string[] => {
     const tags = (query as any)?.includedTags as Array<{ id: string }> | undefined
@@ -50,7 +52,7 @@ const buildBrowseUrl = (params: Record<string, string | undefined>): string => {
 }
 
 export const LumosKomikInfo: SourceInfo = {
-    version: '1.0.1',
+    version: '1.0.2',
     name: 'LumosKomik',
     icon: 'icon.png',
     author: 'NaufalJCT48',
@@ -120,7 +122,7 @@ export class LumosKomik extends Source {
                     id: 'project',
                     title: 'Project',
                     type: HomeSectionType.singleRowNormal,
-                    containsMoreItems: false
+                    containsMoreItems: true
                 })
             },
             {
@@ -155,6 +157,24 @@ export class LumosKomik extends Source {
     }
 
     override async getViewMoreItems(homepageSectionId: string, metadata: any): Promise<PagedResults> {
+        const page: number = metadata?.page ?? 1
+
+        // Project list lives on its own paginated page, separate from /browse
+        if (homepageSectionId === 'project') {
+            const request = createRequestObject({ url: `${WEBSITE_BASE}/project?page=${page}` })
+            const response = await this.requestManager.schedule(request, 1)
+            const html = response.data as string
+
+            const results = parseMangaList(html)
+            const total = parseTotalSeriesFound(html)
+            const hasMore = total > 0 ? page * PROJECT_PAGE_SIZE < total : results.length >= PROJECT_PAGE_SIZE
+
+            return App.createPagedResults({
+                results,
+                metadata: hasMore ? { page: page + 1 } : undefined
+            })
+        }
+
         const sorts: Record<string, string> = {
             popular: 'popular',
             latest_update: 'latest',
@@ -164,7 +184,6 @@ export class LumosKomik extends Source {
         const sort = sorts[homepageSectionId]
         if (!sort) throw new Error(`View more not supported for section: ${homepageSectionId}`)
 
-        const page: number = metadata?.page ?? 1
         return this.browse({ sort, page: String(page) }, page)
     }
 
