@@ -27,12 +27,12 @@
 | LumosKomik 🇮🇩 | ✅ Working | Mature |
 | Mangasusu 🇮🇩 | ✅ Working | **Yes** |
 | Shinigami 🇮🇩 | ✅ Working | No |
-| Tenshi 🇮🇩 | ✅ Working | No |
-| WestManga 🇮🇩 | ⚠️ Backend Down | No |
+| Tenshi 🇮🇩 | ⚠️ Backend Down | No |
+| WestManga 🇮🇩 | ✅ Working | No |
 
 ## 📅 Last Update
 - **Date:** August 16, 2026
-- **Status:** 16/17 working — WestManga backend (`tenshi01.id`) is unreachable, pending upstream fix.
+- **Status:** 16/17 working — Tenshi backend (`tenshi01.id`) is unreachable, pending upstream fix.
 
 ## 📝 Notes
 - Sources marked **Yes** are NSFW (18+) only.
