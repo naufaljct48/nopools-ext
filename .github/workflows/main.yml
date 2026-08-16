@@ -7,6 +7,8 @@ on:
 concurrency:
   group: pages-${{ github.ref }}
   cancel-in-progress: true
+permissions:
+  contents: write
 jobs:
   build:
     name: Bundle and Publish Sources
@@ -19,6 +21,8 @@ jobs:
     steps:
       - name: Checkout Branch
         uses: actions/checkout@v4.1.2
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js environment
         uses: actions/setup-node@v4.0.2
@@ -40,6 +44,19 @@ jobs:
 
       - run: npm install
       - run: npm run bundle -- --folder=${{ steps.extract_branch.outputs.branch }}
+
+      - name: Generate site + sync READMEs
+        run: node scripts/generate-site.js bundles/${{ steps.extract_branch.outputs.branch }} --readme bundles/README.md
+
+      - name: Commit README changes back to source branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet -- README.md; then
+            git add README.md
+            git commit -m "docs: auto-sync README source table [skip ci]"
+            git push
+          fi
 
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4.5.0
