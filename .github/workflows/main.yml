@@ -46,7 +46,7 @@ jobs:
       - run: npm run bundle -- --folder=${{ steps.extract_branch.outputs.branch }}
 
       - name: Generate site + sync READMEs
-        run: node scripts/generate-site.js bundles/${{ steps.extract_branch.outputs.branch }} --readme bundles/README.md
+        run: node scripts/generate-site.js bundles/${{ steps.extract_branch.outputs.branch }} --readme bundles/README.md --root bundles
 
       - name: Commit README changes back to source branch
         run: |

@@ -22,7 +22,7 @@ const API_URL = 'https://api.shngm.io'
 const BASE_URL = 'https://app.shinigami.asia'
 
 export const ShinigamiInfo: SourceInfo = {
-    version: '1.2.7',
+    version: '1.2.8',
     name: 'Shinigami',
     icon: 'icon.png',
     author: 'NaufalJCT48',
@@ -208,74 +208,99 @@ export class Shinigami extends Source {
                     url: `${API_URL}/v1/format/list`,
                     method: 'GET'
                 }),
-                section: 'types'
+                section: 'formats'
             }
         ]
-    
+
         const tags: TagSection[] = []
-    
+
         for (const req of requests) {
             const response = await this.requestManager.schedule(req.request, 1)
             const data = JSON.parse(response.data as string)
-    
+
             if (data.retcode !== 0) continue
-    
+
+            // Ids are prefixed per section so getSearchResults can tell a genre from a
+            // format in the single flat includedTags list the app hands back
+            const prefix = req.section === 'genres' ? 'genre' : 'format'
+
             tags.push(App.createTagSection({
                 id: req.section,
                 label: req.section.charAt(0).toUpperCase() + req.section.slice(1),
                 tags: data.data.map((item: any) => App.createTag({
-                    id: item.slug,
+                    id: `${prefix}:${item.slug}`,
                     label: item.name
                 }))
             }))
         }
-    
+
         return tags
     }
 
-    override async getSearchResults(query: SearchRequest): Promise<PagedResults> {
+    // The API filters on taxonomy SLUGS (`genre_include=action`, `format=manhwa`);
+    // numeric taxonomy_ids return zero results / a validation error.
+    private getTagSlugs(query: SearchRequest, prefix: string): string[] {
+        const tags = (query as any)?.includedTags as Array<{ id: string }> | undefined
+        if (!Array.isArray(tags)) return []
+
+        const slugs: string[] = []
+        for (const tag of tags) {
+            const value = String(tag?.id ?? '')
+            if (value.startsWith(`${prefix}:`)) slugs.push(value.replace(`${prefix}:`, ''))
+        }
+        return slugs
+    }
+
+    override async getSearchResults(query: SearchRequest, metadata: any): Promise<PagedResults> {
+        const page: number = metadata?.page ?? 1
+        const pageSize = 24
+
         const params = [
-            'page=1',
-            'page_size=24',
+            `page=${page}`,
+            `page_size=${pageSize}`,
             'genre_include_mode=or',
             'genre_exclude_mode=or',
             'sort=popularity',
             'sort_order=desc'
         ]
-    
+
         if (query.title) {
             params.push(`q=${encodeURIComponent(query.title)}`)
         }
-    
-        if (query.includedTags?.length) {
-            const genres = query.includedTags.filter(tag => tag.id === 'genres').map(tag => tag.id)
-            const formats = query.includedTags.filter(tag => tag.id === 'types').map(tag => tag.id)
-            
-            if (genres.length) {
-                params.push(`genre_include=${genres.join(',')}`)
-            }
-            if (formats.length) {
-                params.push(`format=${formats.join(',')}`)
-            }
+
+        const genres = this.getTagSlugs(query, 'genre')
+        if (genres.length) {
+            params.push(`genre_include=${genres.map(slug => encodeURIComponent(slug)).join(',')}`)
         }
-    
+
+        const formats = this.getTagSlugs(query, 'format')
+        if (formats.length) {
+            params.push(`format=${formats.map(slug => encodeURIComponent(slug)).join(',')}`)
+        }
+
         const request = createRequestObject({
             url: `${API_URL}/v1/manga/list`,
             param: `?${params.join('&')}`,
             method: 'GET'
         })
-    
+
         const response = await this.requestManager.schedule(request, 1)
         const data = JSON.parse(response.data as string)
-    
+
         if (data.retcode !== 0) {
             return App.createPagedResults({
                 results: []
             })
         }
-    
+
+        const totalPage = Number(data?.meta?.total_page ?? 0)
+        const hasMore = totalPage > 0
+            ? page < totalPage
+            : (data.data?.length ?? 0) >= pageSize
+
         return App.createPagedResults({
-            results: parseMangaList(data)
+            results: parseMangaList(data),
+            metadata: hasMore ? { page: page + 1 } : undefined
         })
     }
 

@@ -108,8 +108,11 @@ export class MangaStreamParser {
                 chapterNumber = Number(chapterNumberRegex[1])
             }
 
-            if (!id || typeof id === 'undefined') {
-                throw new Error(`Could not parse out ID when getting chapters for postId: ${mangaId}`)
+            // Some themes ship a hidden template row with an empty data-num — skip it
+            // instead of failing the whole list (the empty-list guard below still catches
+            // a genuinely unparsable page)
+            if (!id) {
+                continue
             }
 
             chapters.push({
