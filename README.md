@@ -9,7 +9,7 @@
 |--------|------|
 | `omakase` | [Click Here!](https://naufaljct48.github.io/nopools-ext/omakase) |
 
-> Previously published as `mangastream`. That folder still works but is frozen — it stops receiving new sources, so add the `omakase` repository instead.
+> Previously published as `mangastream`. That branch is deprecated — still online so existing installs keep working, but it receives no new sources or fixes. Add the `omakase` repository instead.
 
 > Add to Paperback: open the link above on your device and press **Add to Paperback**, or add the base URL manually in the app.
 
