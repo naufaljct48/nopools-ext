@@ -19,8 +19,8 @@
 | Ikiru 🇮🇩 | ✅ Working | Mature |
 | Kanzenin 🇮🇩 | ✅ Working | **Yes** |
 | Kiryuu 🇮🇩 | ✅ Working | Mature |
-| Komikcast 🇮🇩 | ✅ Working | Mature |
-| KomikIndoTop 🇮🇩 | ✅ Working | **Yes** |
+| Komikcast 🇮🇩 | ⚠️ Backend Down | Mature |
+| KomikIndoTop 🇮🇩 | ⚠️ Backend Down | **Yes** |
 | Komiknesia 🇮🇩 | ✅ Working | Mature |
 | Komiksin 🇮🇩 | ✅ Working | No |
 | KomikTap 🇮🇩 | ✅ Working | **Yes** |
@@ -30,13 +30,13 @@
 | Mangasusu 🇮🇩 | ✅ Working | **Yes** |
 | Manhwalist 🇮🇩 | ✅ Working | Mature |
 | Shinigami 🇮🇩 | ✅ Working | No |
-| Tenshi 🇮🇩 | ✅ Working | No |
+| Tenshi 🇮🇩 | ⚠️ Backend Down | No |
 | Voratoon 🇮🇩 | ✅ Working | Mature |
 | WestManga 🇮🇩 | ✅ Working | No |
 
 ## 📅 Last Update
 - **Date:** August 17, 2026
-- **Status:** All 20 sources working.
+- **Status:** 17/20 working — KomikIndoTop (Backend Down), Komikcast (Backend Down), Tenshi (Backend Down).
 <!-- SOURCES:END -->
 
 ## 📝 Notes
