@@ -20,13 +20,13 @@
 | Kiryuu 🇮🇩 | ✅ Working | Mature |
 | Komikcast 🇮🇩 | ⚠️ Backend Down | Mature |
 | KomikIndoTop 🇮🇩 | ✅ Working | **Yes** |
-| Komiknesia 🇮🇩 | ⚠️ Backend Down | Mature |
+| Komiknesia 🇮🇩 | ✅ Working | Mature |
 | Komiksin 🇮🇩 | ✅ Working | No |
 | KomikTap 🇮🇩 | ✅ Working | **Yes** |
 | Komiku 🇮🇩 | ✅ Working | Mature |
 | KomikuAsia 🇮🇩 | ✅ Working | No |
 | LumosKomik 🇮🇩 | ✅ Working | Mature |
-| Mangasusu 🇮🇩 | ⚠️ Backend Down | **Yes** |
+| Mangasusu 🇮🇩 | ✅ Working | **Yes** |
 | Manhwalist 🇮🇩 | ✅ Working | Mature |
 | Shinigami 🇮🇩 | ✅ Working | No |
 | Tenshi 🇮🇩 | ⚠️ Backend Down | No |
@@ -35,7 +35,7 @@
 
 ## 📅 Last Update
 - **Date:** August 17, 2026
-- **Status:** 15/19 working — Komikcast (Backend Down), Komiknesia (Backend Down), Mangasusu (Backend Down), Tenshi (Backend Down).
+- **Status:** 17/19 working — Komikcast (Backend Down), Tenshi (Backend Down).
 <!-- SOURCES:END -->
 
 ## 📝 Notes
