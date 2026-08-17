@@ -14,6 +14,7 @@
 | Source | Status | Adult (18+) |
 |--------|:------:|:-----------:|
 | AinzScans 🇮🇩 | ✅ Working | No |
+| Comick 🇮🇩 | ✅ Working | Mature |
 | DoujinDesu 🇮🇩 | ✅ Working | **Yes** |
 | Ikiru 🇮🇩 | ✅ Working | Mature |
 | Kanzenin 🇮🇩 | ✅ Working | **Yes** |
@@ -35,7 +36,7 @@
 
 ## 📅 Last Update
 - **Date:** August 17, 2026
-- **Status:** 17/19 working — Komikcast (Backend Down), Tenshi (Backend Down).
+- **Status:** 18/20 working — Komikcast (Backend Down), Tenshi (Backend Down).
 <!-- SOURCES:END -->
 
 ## 📝 Notes
