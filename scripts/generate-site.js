@@ -111,9 +111,8 @@ body{
 a{color:inherit}
 .wrap{max-width:1080px;margin:0 auto;padding:56px 20px 96px}
 .hero{text-align:center;margin-bottom:40px}
-.logo{width:74px;height:74px;border-radius:20px;margin:0 auto 18px;display:grid;place-items:center;
-  background:linear-gradient(150deg, color-mix(in srgb, var(--accent) 85%, #fff), var(--accent));
-  box-shadow:var(--shadow);font-size:34px}
+.logo{width:78px;height:78px;border-radius:22px;margin:0 auto 18px;display:block;object-fit:cover;
+  box-shadow:var(--shadow);background:var(--panel)}
 h1{font-size:clamp(1.9rem,4.6vw,2.7rem);letter-spacing:-.03em;font-weight:800;line-height:1.1}
 h1 .grad{background:linear-gradient(92deg,var(--accent),var(--accent-2));-webkit-background-clip:text;background-clip:text;color:transparent}
 .tagline{color:var(--muted);margin-top:12px;font-size:1rem}
@@ -193,7 +192,7 @@ const head = (title, description) => `<!DOCTYPE html>
 <meta name="description" content="${esc(description)}">
 <meta name="color-scheme" content="dark light">
 <title>${esc(title)}</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%93%9A%3C/text%3E%3C/svg%3E">
+<link rel="icon" href="./paperback-logo.svg" type="image/svg+xml">
 <style>${STYLE}</style>
 </head>
 <body>`
@@ -232,7 +231,8 @@ function buildBranchHtml(status) {
     return `${head(`Nopools ${folderName} (0.8)`, `${sources.length} Indonesian Paperback 0.8 sources`)}
 <div class="wrap">
   <header class="hero">
-    <div class="logo">📚</div>
+    <img class="logo" src="./paperback-logo.svg" alt="Paperback" width="78" height="78">
+
     <h1>Nopools <span class="grad">${esc(folderName)}</span></h1>
     <p class="tagline">Indonesian Paperback 0.8 extensions by <a href="https://github.com/${GITHUB_USER}">NaufalJCT48</a></p>
     <div class="cta">
@@ -348,7 +348,8 @@ function buildRootHtml(rootPath, currentStatus) {
     return `${head('Nopools Extensions (0.8)', 'Indonesian Paperback 0.8 extension repositories')}
 <div class="wrap">
   <header class="hero">
-    <div class="logo">📚</div>
+    <img class="logo" src="./paperback-logo.svg" alt="Paperback" width="78" height="78">
+
     <h1>Nopools <span class="grad">Extensions</span></h1>
     <p class="tagline">Indonesian Paperback 0.8 extensions by <a href="https://github.com/${GITHUB_USER}">NaufalJCT48</a></p>
     <div class="stats">
@@ -415,18 +416,32 @@ function patchReadme(file, status) {
     return true
 }
 
+// The Paperback logo ships with the repo and is copied next to each page, so the
+// pages stay same-origin (no request to paperback.moe) while still showing it.
+const LOGO_SOURCE = path.join(__dirname, 'assets', 'paperback-logo.svg')
+
+function copyLogo(targetDir) {
+    if (!fs.existsSync(LOGO_SOURCE)) {
+        console.log(`!! ${LOGO_SOURCE} missing — pages will show a broken logo`)
+        return
+    }
+    fs.copyFileSync(LOGO_SOURCE, path.join(targetDir, 'paperback-logo.svg'))
+}
+
 // ── main ──────────────────────────────────────────────────────────────────
 ;(async () => {
     const status = await resolveStatuses()
 
     const indexPath = path.join(bundleFolder, 'index.html')
     fs.writeFileSync(indexPath, buildBranchHtml(status))
+    copyLogo(bundleFolder)
     console.log(`wrote ${indexPath}`)
 
     if (rootDir) {
         if (fs.existsSync(rootDir)) {
             const rootIndex = path.join(rootDir, 'index.html')
             fs.writeFileSync(rootIndex, buildRootHtml(rootDir, status))
+            copyLogo(rootDir)
             console.log(`wrote ${rootIndex}`)
         } else {
             console.log(`skipped root index (${rootDir} not found)`)

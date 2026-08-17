@@ -1,6 +1,6 @@
 import { Request } from '@paperback/types'
 
-const BASE_URL = 'https://02.komiknesia.asia'
+const BASE_URL = 'https://v1.komiknesiaku.com'
 
 // Komiknesia hotlinks a chunk of its covers from other sites (v6.kiryuu.to and
 // friends), and those block foreign referers. Sending the image's own origin keeps

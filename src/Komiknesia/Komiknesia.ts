@@ -25,10 +25,10 @@ import {
 } from './KomiknesiaParser'
 
 const API_URL = 'https://api-be.komiknesia.my.id/api'
-const BASE_URL = 'https://02.komiknesia.asia'
+const BASE_URL = 'https://v1.komiknesiaku.com'
 
 export const KomiknesiaInfo: SourceInfo = {
-    version: '1.0.3',
+    version: '1.0.4',
     name: 'Komiknesia',
     icon: 'icon.png',
     author: 'NaufalJCT48',

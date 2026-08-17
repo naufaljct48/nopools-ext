@@ -18,7 +18,7 @@ import {
 const DOMAIN = 'https://manhwalist02.asia'
 
 export const ManhwalistInfo: SourceInfo = {
-    version: getExportVersion('0.0.0'),
+    version: getExportVersion('0.0.1'),
     name: 'Manhwalist',
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: 'NaufalJCT48',
@@ -51,7 +51,8 @@ export class Manhwalist extends MangaStream {
         // Project Update renders utao/uta cards, not the bsx cards the base assumes
         this.homescreen_sections['project'].selectorFunc = ($: CheerioAPI) => $('div.uta', $('h2:contains(Project Update)')?.parent()?.next())
         this.homescreen_sections['project'].titleSelectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('a', element).first().attr('title')
-        this.homescreen_sections['project'].subtitleSelectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('div.epxs', element).first().text().trim()
+        // utao cards keep the chapter label in div.luf/div.bigor, not in div.epxs
+        this.homescreen_sections['project'].subtitleSelectorFunc = ($: CheerioAPI, element: BasicAcceptedElems<AnyNode>) => $('li > a, div.epxs', $('span.eggchap, div.luf, div.bigor', element)).first().text().trim()
         // Listing pages honour `?page=N`; path-style /manga/page/N/ is ignored by this theme
         this.homescreen_sections['project'].getViewMoreItemsFunc = (page: string) => `manga/?page=${page}&status=&type=&order=update`
 
