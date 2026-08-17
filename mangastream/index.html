@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<meta name="description" content="20 Indonesian Paperback 0.8 sources">
+<meta name="description" content="20 curated Paperback 0.8 sources">
 <meta name="color-scheme" content="dark light">
-<title>Nopools mangastream (0.8)</title>
+<title>Nopools Mangastream (0.8)</title>
 <link rel="icon" href="./paperback-logo.svg" type="image/svg+xml">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -88,6 +88,14 @@ h1 .grad{background:linear-gradient(92deg,var(--accent),var(--accent-2));-webkit
 .site{color:var(--muted);text-decoration:none;font-size:1rem;padding:8px;border-radius:10px;transition:.15s;align-self:flex-start}
 .site:hover{color:var(--accent);background:var(--panel-2)}
 .empty{display:none;text-align:center;color:var(--muted);padding:48px 0;font-size:.92rem}
+.notice{margin:8px 0 4px;padding:20px 22px;border-radius:var(--radius);text-align:center;
+  border:1px solid color-mix(in srgb,var(--down) 45%, var(--border));
+  background:color-mix(in srgb,var(--down) 10%, var(--panel))}
+.notice strong{font-size:1.02rem;letter-spacing:-.01em}
+.notice p{color:var(--muted);font-size:.87rem;margin:8px auto 14px;max-width:56ch}
+.notice p.small{font-size:.78rem;margin:12px 0 0}
+.repo.moved{opacity:.68}
+.chip.moved{color:var(--down);border-color:color-mix(in srgb,var(--down) 45%, transparent)}
 .section-title{font-size:.78rem;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);font-weight:700;margin:8px 0 14px}
 .repo-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
 .repo{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:22px;transition:.15s;text-decoration:none;display:block}
@@ -112,20 +120,21 @@ footer a{color:var(--accent);text-decoration:none}
   <header class="hero">
     <img class="logo" src="./paperback-logo.svg" alt="Paperback" width="78" height="78">
 
-    <h1>Nopools <span class="grad">mangastream</span></h1>
+    <h1>Nopools <span class="grad">Mangastream</span></h1>
     <p class="tagline">Indonesian Paperback 0.8 extensions by <a href="https://github.com/naufaljct48">NaufalJCT48</a></p>
     <div class="cta">
-      <a class="btn primary" href="paperback://addRepo?displayName=Nopools%20mangastream%20(0.8)&url=https%3A%2F%2Fnaufaljct48.github.io%2Fnopools-ext%2Fmangastream">＋ Add to Paperback</a>
+      <a class="btn primary" href="paperback://addRepo?displayName=Nopools%20Mangastream%20(0.8)&url=https%3A%2F%2Fnaufaljct48.github.io%2Fnopools-ext%2Fmangastream">＋ Add to Paperback</a>
       <a class="btn ghost" href="https://naufaljct48.github.io/nopools-ext/">All repositories</a>
     </div>
     <div class="stats">
       <span class="stat"><b>20</b> sources</span>
-      <span class="stat"><span class="dot ok"></span><b>18</b> working</span>
-      <span class="stat"><span class="dot down"></span><b>2</b> down</span>
+      <span class="stat"><span class="dot ok"></span><b>17</b> working</span>
+      <span class="stat"><span class="dot down"></span><b>3</b> down</span>
       <span class="stat"><b>5</b> adult</span>
       <span class="stat">updated <b>August 17, 2026</b></span>
     </div>
   </header>
+
 
   <div class="toolbar">
     <div class="search">
@@ -234,7 +243,7 @@ footer a{color:var(--accent);text-decoration:none}
         </div>
         <a class="site" href="https://v3.komikcast.fit" target="_blank" rel="noopener" title="Open Komikcast" aria-label="Open Komikcast">↗</a>
       </article>
-      <article class="card" data-name="komikindotop" data-rating="adult" data-status="ok">
+      <article class="card is-down" data-name="komikindotop" data-rating="adult" data-status="down">
         <img class="icon" src="./KomikIndoTop/includes/icon.png" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
         <div class="body">
           <h3 class="name">KomikIndoTop <span aria-hidden="true">🇮🇩</span></h3>
@@ -242,7 +251,7 @@ footer a{color:var(--accent);text-decoration:none}
           <div class="meta">
             <span class="chip ver">v3.1.6</span>
             <span class="chip adult">18+</span>
-            <span class="chip status ok">● Working</span>
+            <span class="chip status down">▲ Backend Down</span>
           </div>
         </div>
         <a class="site" href="https://komikindo.fit" target="_blank" rel="noopener" title="Open KomikIndoTop" aria-label="Open KomikIndoTop">↗</a>

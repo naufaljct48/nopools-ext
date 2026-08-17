@@ -88,6 +88,14 @@ h1 .grad{background:linear-gradient(92deg,var(--accent),var(--accent-2));-webkit
 .site{color:var(--muted);text-decoration:none;font-size:1rem;padding:8px;border-radius:10px;transition:.15s;align-self:flex-start}
 .site:hover{color:var(--accent);background:var(--panel-2)}
 .empty{display:none;text-align:center;color:var(--muted);padding:48px 0;font-size:.92rem}
+.notice{margin:8px 0 4px;padding:20px 22px;border-radius:var(--radius);text-align:center;
+  border:1px solid color-mix(in srgb,var(--down) 45%, var(--border));
+  background:color-mix(in srgb,var(--down) 10%, var(--panel))}
+.notice strong{font-size:1.02rem;letter-spacing:-.01em}
+.notice p{color:var(--muted);font-size:.87rem;margin:8px auto 14px;max-width:56ch}
+.notice p.small{font-size:.78rem;margin:12px 0 0}
+.repo.moved{opacity:.68}
+.chip.moved{color:var(--down);border-color:color-mix(in srgb,var(--down) 45%, transparent)}
 .section-title{font-size:.78rem;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);font-weight:700;margin:8px 0 14px}
 .repo-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
 .repo{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:22px;transition:.15s;text-decoration:none;display:block}
@@ -125,10 +133,10 @@ footer a{color:var(--accent);text-decoration:none}
     <p class="section-title">Repositories</p>
     <div class="repo-grid">
       <div class="repo">
-        <h3>mangastream <span class="chip ver">0.8</span></h3>
-        <p>20 Indonesian sources · <span class="dot ok"></span>18 working · <span class="dot down"></span>2 down · updated August 17, 2026</p>
+        <h3>Mangastream <span class="chip ver">0.8</span></h3>
+        <p>20 sources · <span class="dot ok"></span>17 working · <span class="dot down"></span>3 down · updated August 17, 2026</p>
         <div class="row">
-          <a class="btn primary" href="paperback://addRepo?displayName=Nopools%20mangastream%20(0.8)&url=https%3A%2F%2Fnaufaljct48.github.io%2Fnopools-ext%2Fmangastream">＋ Add to Paperback</a>
+          <a class="btn primary" href="paperback://addRepo?displayName=Nopools%20Mangastream%20(0.8)&url=https%3A%2F%2Fnaufaljct48.github.io%2Fnopools-ext%2Fmangastream">＋ Add to Paperback</a>
           <a class="btn ghost" href="https://naufaljct48.github.io/nopools-ext/mangastream/">Browse sources</a>
         </div>
         <div class="thumbs"><img src="./mangastream/AinzScan/includes/icon.jpg" alt="" loading="lazy" onerror="this.style.visibility='hidden'"><img src="./mangastream/Comick/includes/icon.png" alt="" loading="lazy" onerror="this.style.visibility='hidden'"><img src="./mangastream/DoujinDesu/includes/icon.png" alt="" loading="lazy" onerror="this.style.visibility='hidden'"><img src="./mangastream/Ikiru/includes/icon.png" alt="" loading="lazy" onerror="this.style.visibility='hidden'"><img src="./mangastream/Kanzenin/includes/icon.png" alt="" loading="lazy" onerror="this.style.visibility='hidden'"><img src="./mangastream/Kiryuu/includes/icon.png" alt="" loading="lazy" onerror="this.style.visibility='hidden'"><span class="more">+14</span></div>
