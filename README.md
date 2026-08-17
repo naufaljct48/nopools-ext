@@ -28,7 +28,7 @@ This `mangastream` copy keeps working so nothing breaks on your device, but it i
 | Kiryuu 🇮🇩 | ✅ Working | Mature |
 | Komikcast 🇮🇩 | ⚠️ Backend Down | Mature |
 | KomikIndoTop 🇮🇩 | ⚠️ Backend Down | **Yes** |
-| Komiknesia 🇮🇩 | ✅ Working | Mature |
+| Komiknesia 🇮🇩 | ⚠️ Backend Down | Mature |
 | Komiksin 🇮🇩 | ✅ Working | No |
 | KomikTap 🇮🇩 | ✅ Working | **Yes** |
 | Komiku 🇮🇩 | ✅ Working | Mature |
@@ -43,7 +43,7 @@ This `mangastream` copy keeps working so nothing breaks on your device, but it i
 
 ## 📅 Last Update
 - **Date:** August 17, 2026
-- **Status:** 17/20 working — KomikIndoTop (Backend Down), Komikcast (Backend Down), Tenshi (Backend Down).
+- **Status:** 16/20 working — KomikIndoTop (Backend Down), Komikcast (Backend Down), Komiknesia (Backend Down), Tenshi (Backend Down).
 <!-- SOURCES:END -->
 
 ## 📝 Notes
