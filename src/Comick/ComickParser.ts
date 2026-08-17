@@ -13,7 +13,8 @@ import {
     LANGUAGE_FLAGS,
     parseDate,
     parseStatus,
-    stripHtml
+    stripHtml,
+    toArray
 } from './ComickHelper'
 
 export const parseMangaDetails = (html: string, mangaId: string): SourceManga => {
@@ -21,7 +22,7 @@ export const parseMangaDetails = (html: string, mangaId: string): SourceManga =>
 
     const titles: string[] = []
     if (data.title) titles.push(String(data.title))
-    for (const alt of data.md_titles ?? []) {
+    for (const alt of toArray<any>(data.md_titles)) {
         const title = String(alt?.title ?? '').trim()
         if (title && !titles.includes(title)) titles.push(title)
     }
@@ -33,7 +34,7 @@ export const parseMangaDetails = (html: string, mangaId: string): SourceManga =>
     if (data.content_rating === 'suggestive') genreNames.push('Suggestive')
     if (data.content_rating === 'erotica') genreNames.push('Erotica')
     if (data.demographic_name) genreNames.push(String(data.demographic_name))
-    for (const entry of data.md_comic_md_genres ?? []) {
+    for (const entry of toArray<any>(data.md_comic_md_genres)) {
         const name = String(entry?.md_genres?.name ?? '').trim()
         if (name && !genreNames.includes(name)) genreNames.push(name)
     }
@@ -46,8 +47,8 @@ export const parseMangaDetails = (html: string, mangaId: string): SourceManga =>
             titles,
             image: data.default_thumbnail || '',
             status: parseStatus(Number(data.status), data.translation_completed),
-            author: (data.authors ?? []).map((a: any) => a?.name).filter(Boolean).join(', ') || 'Unknown',
-            artist: (data.artists ?? []).map((a: any) => a?.name).filter(Boolean).join(', ') || 'Unknown',
+            author: toArray<any>(data.authors).map((a: any) => a?.name).filter(Boolean).join(', ') || 'Unknown',
+            artist: toArray<any>(data.artists).map((a: any) => a?.name).filter(Boolean).join(', ') || 'Unknown',
             desc: stripHtml(data.desc || ''),
             tags: [
                 App.createTagSection({
@@ -69,7 +70,7 @@ export const parseChapterList = (chapters: any[], mangaId: string): Chapter[] =>
     const seen = new Set<string>()
     let sortingIndex = 0
 
-    for (const chapter of chapters ?? []) {
+    for (const chapter of toArray<any>(chapters)) {
         if (!chapter?.hid) continue
 
         const id = buildChapterId(chapter)
@@ -77,7 +78,7 @@ export const parseChapterList = (chapters: any[], mangaId: string): Chapter[] =>
         seen.add(id)
 
         const chapNum = Number(String(chapter.chap ?? '').match(/\d+(?:\.\d+)?/)?.[0] ?? 0)
-        const groups = (chapter.group_name ?? []).filter(Boolean).join(', ')
+        const groups = toArray<string>(chapter.group_name).filter(Boolean).join(', ')
 
         let name = `Chapter ${chapter.chap ?? chapNum}`
         if (chapter.title) name += `: ${chapter.title}`
@@ -104,7 +105,7 @@ export const parseChapterList = (chapters: any[], mangaId: string): Chapter[] =>
 export const parseChapterDetails = (html: string, mangaId: string, chapterId: string): ChapterDetails => {
     const data = extractEmbeddedJson(html, 'sv-data')
 
-    const pages: string[] = (data?.chapter?.images ?? [])
+    const pages: string[] = toArray<any>(data?.chapter?.images)
         .map((image: any) => String(image?.url ?? ''))
         .filter((url: string) => url)
 
@@ -124,14 +125,14 @@ export const parseChapterDetails = (html: string, mangaId: string, chapterId: st
 export const parseMangaList = (items: any[]): PartialSourceManga[] => {
     const results: PartialSourceManga[] = []
 
-    for (const item of items ?? []) {
+    for (const item of toArray<any>(items)) {
         const mangaId = String(item?.slug ?? '')
         if (!mangaId) continue
 
         // Browse rows expose the latest chapter as `chapter_number`; the top
         // leaderboards carry no chapter info at all, so those stay subtitle-less
         const byLang = item?.chapter_latest_by_langs ?? {}
-        const latest = (item?.recent_chapters ?? [])[0]?.chapter_number
+        const latest = toArray<any>(item?.recent_chapters)[0]?.chapter_number
             ?? Object.keys(byLang).map(key => byLang[key]?.chapter_number).find(Boolean)
             ?? item?.last_chapter
 
@@ -151,7 +152,7 @@ export const parseSearchTags = (metadata: any): TagSection[] => {
     const genres: Tag[] = []
     const formats: Tag[] = []
 
-    for (const genre of metadata?.genres ?? []) {
+    for (const genre of toArray<any>(metadata?.genres)) {
         const slug = String(genre?.slug ?? '')
         const name = String(genre?.name ?? '')
         if (!slug || !name) continue

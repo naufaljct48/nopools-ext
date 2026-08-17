@@ -25,7 +25,8 @@ import {
     DEFAULT_LANGUAGE,
     DOMAINS,
     LANGUAGES,
-    refererFor
+    refererFor,
+    toArray
 } from './ComickHelper'
 import {
     parseChapterDetails,
@@ -40,7 +41,7 @@ const UPDATES_PAGE_SIZE = 100
 const MAX_CHAPTER_PAGES = 25
 
 export const ComickInfo: SourceInfo = {
-    version: '1.0.0',
+    version: '1.0.1',
     name: 'Comick',
     icon: 'icon.png',
     author: 'NaufalJCT48',
@@ -207,7 +208,7 @@ export class Comick extends Source {
         let lastPage = 1
         do {
             const data = await this.fetchJson(`/api/comics/${encodeURIComponent(mangaId)}/chapter-list?lang=${encodeURIComponent(language)}&page=${page}`)
-            chapters.push(...(data?.data ?? []))
+            chapters.push(...toArray<any>(data?.data))
             lastPage = Number(data?.pagination?.last_page ?? 1)
             page++
         } while (page <= lastPage && page <= MAX_CHAPTER_PAGES)

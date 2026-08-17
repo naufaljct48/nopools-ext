@@ -93,6 +93,19 @@ export const extractEmbeddedJson = (html: string, id: string): any => {
     return JSON.parse(match[1].trim())
 }
 
+/**
+ * The backend is PHP: a list whose keys stop being 0..n-1 (an entry removed, a manual
+ * re-key) is serialised as a JSON OBJECT, not an array — e.g. md_titles arrives as
+ * {"1":{...},"2":{...}} on some comics. Iterating that with for...of throws
+ * "object is not iterable", which used to kill the whole details parse: no cover, no
+ * title, no synopsis, no chapters. Always funnel list-shaped fields through this.
+ */
+export const toArray = <T>(value: any): T[] => {
+    if (Array.isArray(value)) return value as T[]
+    if (value && typeof value === 'object') return Object.values(value) as T[]
+    return []
+}
+
 export const parseStatus = (status: number, translationCompleted?: boolean): string => {
     switch (status) {
         case 1: return 'Ongoing'
