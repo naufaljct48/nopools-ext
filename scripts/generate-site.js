@@ -83,6 +83,16 @@ const esc = (value) => String(value ?? '')
 const formatDate = (value) => new Date(value || Date.now())
     .toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
 
+const titleCase = (value) => String(value).charAt(0).toUpperCase() + String(value).slice(1)
+
+// A branch that has been superseded carries repo-notice.json at the repo root:
+// { "movedTo": "omakase", "message": "..." }. The banner it produces is the only
+// warning a user of the old repo URL will ever see, so it is rendered on the branch
+// page and mirrored into meta.json for the root index.
+const notice = fs.existsSync('repo-notice.json')
+    ? JSON.parse(fs.readFileSync('repo-notice.json', 'utf8'))
+    : null
+
 // ── shared page chrome ────────────────────────────────────────────────────
 const STYLE = `
 *{box-sizing:border-box;margin:0;padding:0}
@@ -164,6 +174,14 @@ h1 .grad{background:linear-gradient(92deg,var(--accent),var(--accent-2));-webkit
 .site{color:var(--muted);text-decoration:none;font-size:1rem;padding:8px;border-radius:10px;transition:.15s;align-self:flex-start}
 .site:hover{color:var(--accent);background:var(--panel-2)}
 .empty{display:none;text-align:center;color:var(--muted);padding:48px 0;font-size:.92rem}
+.notice{margin:8px 0 4px;padding:20px 22px;border-radius:var(--radius);text-align:center;
+  border:1px solid color-mix(in srgb,var(--down) 45%, var(--border));
+  background:color-mix(in srgb,var(--down) 10%, var(--panel))}
+.notice strong{font-size:1.02rem;letter-spacing:-.01em}
+.notice p{color:var(--muted);font-size:.87rem;margin:8px auto 14px;max-width:56ch}
+.notice p.small{font-size:.78rem;margin:12px 0 0}
+.repo.moved{opacity:.68}
+.chip.moved{color:var(--down);border-color:color-mix(in srgb,var(--down) 45%, transparent)}
 .section-title{font-size:.78rem;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);font-weight:700;margin:8px 0 14px}
 .repo-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
 .repo{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:22px;transition:.15s;text-decoration:none;display:block}
@@ -201,7 +219,17 @@ const head = (title, description) => `<!DOCTYPE html>
 function buildBranchHtml(status) {
     const folderName = path.basename(path.resolve(bundleFolder))
     const repoUrl = `${PAGES_ROOT}/${folderName}`
-    const addUrl = `paperback://addRepo?displayName=${encodeURIComponent(`Nopools ${folderName} (0.8)`)}&url=${encodeURIComponent(repoUrl)}`
+    const addUrl = `paperback://addRepo?displayName=${encodeURIComponent(`Nopools ${titleCase(folderName)} (0.8)`)}&url=${encodeURIComponent(repoUrl)}`
+
+    const banner = notice?.movedTo
+        ? `    <div class="notice">
+      <strong>This repository has moved.</strong>
+      <p>${esc(notice.message || `It is now published as “${titleCase(notice.movedTo)}”. This copy still works but no longer receives new sources — please add the new one in Paperback.`)}</p>
+      <a class="btn primary" href="paperback://addRepo?displayName=${encodeURIComponent(`Nopools ${titleCase(notice.movedTo)} (0.8)`)}&amp;url=${encodeURIComponent(`${PAGES_ROOT}/${notice.movedTo}`)}">＋ Add the new repository</a>
+      <p class="small">New base URL: <code>${PAGES_ROOT}/${esc(notice.movedTo)}</code></p>
+    </div>
+`
+        : ''
 
     const cards = sources
         .slice().sort((a, b) => a.name.localeCompare(b.name))
@@ -228,12 +256,12 @@ function buildBranchHtml(status) {
     const working = sources.filter(s => status[s.name] === 'Working').length
     const adult = sources.filter(s => s.contentRating === 'ADULT').length
 
-    return `${head(`Nopools ${folderName} (0.8)`, `${sources.length} Indonesian Paperback 0.8 sources`)}
+    return `${head(`Nopools ${titleCase(folderName)} (0.8)`, `${sources.length} curated Paperback 0.8 sources`)}
 <div class="wrap">
   <header class="hero">
     <img class="logo" src="./paperback-logo.svg" alt="Paperback" width="78" height="78">
 
-    <h1>Nopools <span class="grad">${esc(folderName)}</span></h1>
+    <h1>Nopools <span class="grad">${esc(titleCase(folderName))}</span></h1>
     <p class="tagline">Indonesian Paperback 0.8 extensions by <a href="https://github.com/${GITHUB_USER}">NaufalJCT48</a></p>
     <div class="cta">
       <a class="btn primary" href="${addUrl}">＋ Add to Paperback</a>
@@ -248,6 +276,7 @@ function buildBranchHtml(status) {
     </div>
   </header>
 
+${banner}
   <div class="toolbar">
     <div class="search">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -323,17 +352,23 @@ function buildRootHtml(rootPath, currentStatus) {
         const status = folder === currentFolder ? currentStatus : {}
         const working = list.filter(s => (status[s.name] ?? 'Working') === 'Working').length
         const repoUrl = `${PAGES_ROOT}/${folder}`
-        const addUrl = `paperback://addRepo?displayName=${encodeURIComponent(`Nopools ${folder} (0.8)`)}&url=${encodeURIComponent(repoUrl)}`
+        const addUrl = `paperback://addRepo?displayName=${encodeURIComponent(`Nopools ${titleCase(folder)} (0.8)`)}&url=${encodeURIComponent(repoUrl)}`
+
+        // meta.json is written next to each bundle so this page knows which folders
+        // have been superseded, even though it only ever builds one of them
+        const metaPath = path.join(rootPath, folder, 'meta.json')
+        const meta = fs.existsSync(metaPath) ? JSON.parse(fs.readFileSync(metaPath, 'utf8')) : {}
+        const movedTo = folder === currentFolder ? notice?.movedTo : meta?.movedTo
         const thumbs = list.slice(0, 6)
             .map(s => `<img src="./${esc(folder)}/${esc(s.id)}/includes/${esc(s.icon || 'icon.png')}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">`)
             .join('')
         const rest = list.length - Math.min(list.length, 6)
 
-        return `      <div class="repo">
-        <h3>${esc(folder)} <span class="chip ver">0.8</span></h3>
-        <p>${list.length} Indonesian source${list.length === 1 ? '' : 's'} · <span class="dot ok"></span>${working} working${working < list.length ? ` · <span class="dot down"></span>${list.length - working} down` : ''} · updated ${formatDate(data.buildTime)}</p>
+        return `      <div class="repo${movedTo ? ' moved' : ''}">
+        <h3>${esc(titleCase(folder))} <span class="chip ver">0.8</span>${movedTo ? ` <span class="chip moved">moved → ${esc(titleCase(movedTo))}</span>` : ''}</h3>
+        <p>${list.length} source${list.length === 1 ? '' : 's'} · <span class="dot ok"></span>${working} working${working < list.length ? ` · <span class="dot down"></span>${list.length - working} down` : ''} · updated ${formatDate(data.buildTime)}</p>
         <div class="row">
-          <a class="btn primary" href="${addUrl}">＋ Add to Paperback</a>
+          <a class="btn ${movedTo ? 'ghost' : 'primary'}" href="${addUrl}">＋ Add to Paperback</a>
           <a class="btn ghost" href="${repoUrl}/">Browse sources</a>
         </div>
         <div class="thumbs">${thumbs}${rest > 0 ? `<span class="more">+${rest}</span>` : ''}</div>
@@ -435,7 +470,13 @@ function copyLogo(targetDir) {
     const indexPath = path.join(bundleFolder, 'index.html')
     fs.writeFileSync(indexPath, buildBranchHtml(status))
     copyLogo(bundleFolder)
-    console.log(`wrote ${indexPath}`)
+    fs.writeFileSync(path.join(bundleFolder, 'meta.json'), JSON.stringify({
+        folder: path.basename(path.resolve(bundleFolder)),
+        buildTime: buildTime ?? null,
+        sourceCount: sources.length,
+        movedTo: notice?.movedTo ?? null
+    }, null, 2))
+    console.log(`wrote ${indexPath}${notice?.movedTo ? ` (moved-to notice → ${notice.movedTo})` : ''}`)
 
     if (rootDir) {
         if (fs.existsSync(rootDir)) {
