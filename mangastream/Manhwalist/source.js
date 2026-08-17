@@ -15953,7 +15953,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
   // src/Manhwalist/Manhwalist.ts
   var DOMAIN = "https://manhwalist02.asia";
   var ManhwalistInfo = {
-    version: getExportVersion("0.0.0"),
+    version: getExportVersion("0.0.1"),
     name: "Manhwalist",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",
@@ -15984,7 +15984,7 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
       this.homescreen_sections["project"].enabled = true;
       this.homescreen_sections["project"].selectorFunc = ($2) => $2("div.uta", $2("h2:contains(Project Update)")?.parent()?.next());
       this.homescreen_sections["project"].titleSelectorFunc = ($2, element) => $2("a", element).first().attr("title");
-      this.homescreen_sections["project"].subtitleSelectorFunc = ($2, element) => $2("div.epxs", element).first().text().trim();
+      this.homescreen_sections["project"].subtitleSelectorFunc = ($2, element) => $2("li > a, div.epxs", $2("span.eggchap, div.luf, div.bigor", element)).first().text().trim();
       this.homescreen_sections["project"].getViewMoreItemsFunc = (page) => `manga/?page=${page}&status=&type=&order=update`;
       this.homescreen_sections["popular_today"].getViewMoreItemsFunc = (page) => `manga/?page=${page}&status=&type=&order=popular`;
       this.homescreen_sections["latest_update"].getViewMoreItemsFunc = (page) => `manga/?page=${page}&status=&type=&order=update`;

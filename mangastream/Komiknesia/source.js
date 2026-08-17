@@ -730,7 +730,7 @@ var _Sources = (() => {
   var import_types = __toESM(require_lib());
 
   // src/Komiknesia/KomiknesiaHelper.ts
-  var BASE_URL = "https://02.komiknesia.asia";
+  var BASE_URL = "https://v1.komiknesiaku.com";
   var imageReferer = (url) => {
     const origin = url.match(/^https?:\/\/[^/]+/)?.[0];
     return origin ? `${origin}/` : `${BASE_URL}/`;
@@ -880,9 +880,9 @@ var _Sources = (() => {
 
   // src/Komiknesia/Komiknesia.ts
   var API_URL = "https://api-be.komiknesia.my.id/api";
-  var BASE_URL2 = "https://02.komiknesia.asia";
+  var BASE_URL2 = "https://v1.komiknesiaku.com";
   var KomiknesiaInfo = {
-    version: "1.0.3",
+    version: "1.0.4",
     name: "Komiknesia",
     icon: "icon.png",
     author: "NaufalJCT48",
