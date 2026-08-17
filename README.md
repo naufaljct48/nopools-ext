@@ -14,7 +14,7 @@
 | Source | Status | Adult (18+) |
 |--------|:------:|:-----------:|
 | AinzScans 🇮🇩 | ✅ Working | No |
-| Comick 🌐 | ✅ Working | Mature |
+| Comick 🇮🇩 | ✅ Working | Mature |
 | DoujinDesu 🇮🇩 | ✅ Working | **Yes** |
 | Ikiru 🇮🇩 | ✅ Working | Mature |
 | Kanzenin 🇮🇩 | ✅ Working | **Yes** |
