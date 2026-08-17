@@ -24,7 +24,7 @@
 | Kanzenin 🇮🇩 | ✅ Working | **Yes** |
 | Kiryuu 🇮🇩 | ✅ Working | Mature |
 | Komikcast 🇮🇩 | ⚠️ Backend Down | Mature |
-| KomikIndoTop 🇮🇩 | ✅ Working | **Yes** |
+| KomikIndoTop 🇮🇩 | ⚠️ Backend Down | **Yes** |
 | Komiknesia 🇮🇩 | ✅ Working | Mature |
 | Komiksin 🇮🇩 | ✅ Working | No |
 | KomikTap 🇮🇩 | ✅ Working | **Yes** |
@@ -40,7 +40,7 @@
 
 ## 📅 Last Update
 - **Date:** August 17, 2026
-- **Status:** 18/20 working — Komikcast (Backend Down), Tenshi (Backend Down).
+- **Status:** 17/20 working — KomikIndoTop (Backend Down), Komikcast (Backend Down), Tenshi (Backend Down).
 <!-- SOURCES:END -->
 
 ## 📝 Notes
