@@ -2,10 +2,17 @@
 > Indonesian Paperback (0.8) extensions by [NaufalJCT48](https://github.com/naufaljct48)
 > Originally cloned from [TheNetsky Repo](https://github.com/TheNetsky)
 
+## ⚠️ This repository moved
+
+It is now published as **Omakase** — <https://naufaljct48.github.io/nopools-ext/omakase>
+
+This `mangastream` copy keeps working so nothing breaks on your device, but it is frozen: new sources and fixes only land in the new repository. Add the Omakase URL in Paperback when you get a chance.
+
 ## 🔍 Repository Links
-| Branch | Toolchain | Link |
-|--------|-----------|------|
-| `mangastream` | MangaStream 0.8 | [Click Here!](https://naufaljct48.github.io/nopools-ext/mangastream) |
+| Branch | Link |
+|--------|------|
+| `omakase` (current) | [Click Here!](https://naufaljct48.github.io/nopools-ext/omakase) |
+| `mangastream` (frozen) | [Click Here!](https://naufaljct48.github.io/nopools-ext/mangastream) |
 
 > Add to Paperback: open the link above on your device and press **Add to Paperback**, or add the base URL manually in the app.
 
