@@ -7,14 +7,17 @@ const LANG = '🇮🇩'
 const stripLink = (value: string): string => (value ?? '').replace(/^\/manga\//, '').replace(/\/$/, '')
 
 // ponytail: regex strip, bukan cheerio — runtime iOS ini gak punya cheerio global; upgrade ke DOMPurify kalau desc jadi kompleks
+// Opening + closing block tags sama-sama jadi \n — kalau cuma closing, teks antar <div> nempel tanpa spasi
+const BLOCK = '(?:p|div|span|a|h[1-6]|li|ul|ol|font|section|table|tr|blockquote|strong|b|em|i|u)'
 const stripHtml = (value: string): string =>
     decodeHTMLEntity(
         (value ?? '')
             .replace(/<br\s*\/?>/gi, '\n')
-            .replace(/<\/(p|div|span|a|h[1-6]|li|font)>/gi, '\n')
+            .replace(new RegExp(`</?${BLOCK}(?:\\s[^>]*)?>`, 'gi'), '\n')
             .replace(/<[^>]*>/g, '')
     )
         .replace(/[ \t]+\n/g, '\n')
+        .replace(/\n[ \t]+/g, '\n')
         .replace(/\n{3,}/g, '\n\n')
         .trim()
 
