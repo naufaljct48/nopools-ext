@@ -977,9 +977,10 @@ var _Sources = (() => {
   // src/DoujinDesu/DoujinDesuParser.ts
   var LANG = "\u{1F1EE}\u{1F1E9}";
   var stripLink = (value) => (value ?? "").replace(/^\/manga\//, "").replace(/\/$/, "");
+  var BLOCK = "(?:p|div|span|a|h[1-6]|li|ul|ol|font|section|table|tr|blockquote|strong|b|em|i|u)";
   var stripHtml = (value) => decode(
-    (value ?? "").replace(/<br\s*\/?>/gi, "\n").replace(/<\/(p|div|span|a|h[1-6]|li|font)>/gi, "\n").replace(/<[^>]*>/g, "")
-  ).replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+    (value ?? "").replace(/<br\s*\/?>/gi, "\n").replace(new RegExp(`</?${BLOCK}(?:\\s[^>]*)?>`, "gi"), "\n").replace(/<[^>]*>/g, "")
+  ).replace(/[ \t]+\n/g, "\n").replace(/\n[ \t]+/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
   var parseMangaList = (items) => {
     const results = [];
     for (const item of items ?? []) {
@@ -1084,7 +1085,7 @@ var _Sources = (() => {
   // src/DoujinDesu/DoujinDesu.ts
   var USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36";
   var DoujinDesuInfo = {
-    version: "6.0.3",
+    version: "6.0.4",
     name: "DoujinDesu",
     icon: "icon.png",
     author: "NaufalJCT48",
