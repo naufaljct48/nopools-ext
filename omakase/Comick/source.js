@@ -804,6 +804,11 @@ var _Sources = (() => {
     }
     return JSON.parse(match[1].trim());
   };
+  var toArray = (value) => {
+    if (Array.isArray(value)) return value;
+    if (value && typeof value === "object") return Object.values(value);
+    return [];
+  };
   var parseStatus = (status, translationCompleted) => {
     switch (status) {
       case 1:
@@ -846,7 +851,7 @@ var _Sources = (() => {
     const data = extractEmbeddedJson(html, "comic-data");
     const titles = [];
     if (data.title) titles.push(String(data.title));
-    for (const alt of data.md_titles ?? []) {
+    for (const alt of toArray(data.md_titles)) {
       const title = String(alt?.title ?? "").trim();
       if (title && !titles.includes(title)) titles.push(title);
     }
@@ -857,7 +862,7 @@ var _Sources = (() => {
     if (data.content_rating === "suggestive") genreNames.push("Suggestive");
     if (data.content_rating === "erotica") genreNames.push("Erotica");
     if (data.demographic_name) genreNames.push(String(data.demographic_name));
-    for (const entry of data.md_comic_md_genres ?? []) {
+    for (const entry of toArray(data.md_comic_md_genres)) {
       const name = String(entry?.md_genres?.name ?? "").trim();
       if (name && !genreNames.includes(name)) genreNames.push(name);
     }
@@ -868,8 +873,8 @@ var _Sources = (() => {
         titles,
         image: data.default_thumbnail || "",
         status: parseStatus(Number(data.status), data.translation_completed),
-        author: (data.authors ?? []).map((a) => a?.name).filter(Boolean).join(", ") || "Unknown",
-        artist: (data.artists ?? []).map((a) => a?.name).filter(Boolean).join(", ") || "Unknown",
+        author: toArray(data.authors).map((a) => a?.name).filter(Boolean).join(", ") || "Unknown",
+        artist: toArray(data.artists).map((a) => a?.name).filter(Boolean).join(", ") || "Unknown",
         desc: stripHtml(data.desc || ""),
         tags: [
           App.createTagSection({
@@ -886,13 +891,13 @@ var _Sources = (() => {
     const parsed = [];
     const seen = /* @__PURE__ */ new Set();
     let sortingIndex = 0;
-    for (const chapter of chapters ?? []) {
+    for (const chapter of toArray(chapters)) {
       if (!chapter?.hid) continue;
       const id = buildChapterId(chapter);
       if (seen.has(id)) continue;
       seen.add(id);
       const chapNum = Number(String(chapter.chap ?? "").match(/\d+(?:\.\d+)?/)?.[0] ?? 0);
-      const groups = (chapter.group_name ?? []).filter(Boolean).join(", ");
+      const groups = toArray(chapter.group_name).filter(Boolean).join(", ");
       let name = `Chapter ${chapter.chap ?? chapNum}`;
       if (chapter.title) name += `: ${chapter.title}`;
       parsed.push(App.createChapter({
@@ -913,7 +918,7 @@ var _Sources = (() => {
   };
   var parseChapterDetails = (html, mangaId, chapterId) => {
     const data = extractEmbeddedJson(html, "sv-data");
-    const pages = (data?.chapter?.images ?? []).map((image) => String(image?.url ?? "")).filter((url) => url);
+    const pages = toArray(data?.chapter?.images).map((image) => String(image?.url ?? "")).filter((url) => url);
     if (pages.length === 0) {
       throw new Error(`Failed to find any pages for chapter ${chapterId} of ${mangaId}`);
     }
@@ -925,11 +930,11 @@ var _Sources = (() => {
   };
   var parseMangaList = (items) => {
     const results = [];
-    for (const item of items ?? []) {
+    for (const item of toArray(items)) {
       const mangaId = String(item?.slug ?? "");
       if (!mangaId) continue;
       const byLang = item?.chapter_latest_by_langs ?? {};
-      const latest = (item?.recent_chapters ?? [])[0]?.chapter_number ?? Object.keys(byLang).map((key) => byLang[key]?.chapter_number).find(Boolean) ?? item?.last_chapter;
+      const latest = toArray(item?.recent_chapters)[0]?.chapter_number ?? Object.keys(byLang).map((key) => byLang[key]?.chapter_number).find(Boolean) ?? item?.last_chapter;
       results.push(App.createPartialSourceManga({
         mangaId,
         image: item?.default_thumbnail || "",
@@ -943,7 +948,7 @@ var _Sources = (() => {
     const sections = [];
     const genres = [];
     const formats = [];
-    for (const genre of metadata?.genres ?? []) {
+    for (const genre of toArray(metadata?.genres)) {
       const slug = String(genre?.slug ?? "");
       const name = String(genre?.name ?? "");
       if (!slug || !name) continue;
@@ -980,7 +985,7 @@ var _Sources = (() => {
   var UPDATES_PAGE_SIZE = 100;
   var MAX_CHAPTER_PAGES = 25;
   var ComickInfo = {
-    version: "1.0.0",
+    version: "1.0.1",
     name: "Comick",
     icon: "icon.png",
     author: "NaufalJCT48",
@@ -1131,7 +1136,7 @@ Please go to the homepage of <${domain}> and press the cloud icon.`);
       let lastPage = 1;
       do {
         const data = await this.fetchJson(`/api/comics/${encodeURIComponent(mangaId)}/chapter-list?lang=${encodeURIComponent(language)}&page=${page}`);
-        chapters.push(...data?.data ?? []);
+        chapters.push(...toArray(data?.data));
         lastPage = Number(data?.pagination?.last_page ?? 1);
         page++;
       } while (page <= lastPage && page <= MAX_CHAPTER_PAGES);
