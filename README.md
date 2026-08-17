@@ -1,18 +1,18 @@
-# 📚 Nopools Extensions (0.8)
+# 📚 Nopools Extensions (0.8) — DEPRECATED
 > Indonesian Paperback (0.8) extensions by [NaufalJCT48](https://github.com/naufaljct48)
 > Originally cloned from [TheNetsky Repo](https://github.com/TheNetsky)
 
-## ⚠️ This repository moved
+## ⚠️ This branch is deprecated
 
-It is now published as **Omakase** — <https://naufaljct48.github.io/nopools-ext/omakase>
+Replaced by **Omakase** — <https://naufaljct48.github.io/nopools-ext/omakase>
 
-This `mangastream` copy keeps working so nothing breaks on your device, but it is frozen: new sources and fixes only land in the new repository. Add the Omakase URL in Paperback when you get a chance.
+Development moved there entirely. This `mangastream` copy stays online only so devices that already added its URL keep working; it gets no new sources and no fixes, and the source table below will drift out of date. Add the Omakase URL in Paperback and remove this one.
 
 ## 🔍 Repository Links
 | Branch | Link |
 |--------|------|
-| `omakase` (current) | [Click Here!](https://naufaljct48.github.io/nopools-ext/omakase) |
-| `mangastream` (frozen) | [Click Here!](https://naufaljct48.github.io/nopools-ext/mangastream) |
+| `omakase` (active) | [Click Here!](https://naufaljct48.github.io/nopools-ext/omakase) |
+| `mangastream` (deprecated) | [Click Here!](https://naufaljct48.github.io/nopools-ext/mangastream) |
 
 > Add to Paperback: open the link above on your device and press **Add to Paperback**, or add the base URL manually in the app.
 
