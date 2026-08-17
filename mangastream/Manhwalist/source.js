@@ -637,13 +637,13 @@ var _Sources = (() => {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
       exports.HomeSectionType = void 0;
-      var HomeSectionType4;
-      (function(HomeSectionType5) {
-        HomeSectionType5["singleRowNormal"] = "singleRowNormal";
-        HomeSectionType5["singleRowLarge"] = "singleRowLarge";
-        HomeSectionType5["doubleRow"] = "doubleRow";
-        HomeSectionType5["featured"] = "featured";
-      })(HomeSectionType4 = exports.HomeSectionType || (exports.HomeSectionType = {}));
+      var HomeSectionType3;
+      (function(HomeSectionType4) {
+        HomeSectionType4["singleRowNormal"] = "singleRowNormal";
+        HomeSectionType4["singleRowLarge"] = "singleRowLarge";
+        HomeSectionType4["doubleRow"] = "doubleRow";
+        HomeSectionType4["featured"] = "featured";
+      })(HomeSectionType3 = exports.HomeSectionType || (exports.HomeSectionType = {}));
     }
   });
 
@@ -735,11 +735,11 @@ var _Sources = (() => {
     }
   });
 
-  // src/Mangasusu/Mangasusu.ts
-  var Mangasusu_exports = {};
-  __export(Mangasusu_exports, {
-    Mangasusu: () => Mangasusu,
-    MangasusuInfo: () => MangasusuInfo
+  // src/Manhwalist/Manhwalist.ts
+  var Manhwalist_exports = {};
+  __export(Manhwalist_exports, {
+    Manhwalist: () => Manhwalist,
+    ManhwalistInfo: () => ManhwalistInfo
   });
   var import_types4 = __toESM(require_lib());
 
@@ -15950,145 +15950,46 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
     }
   };
 
-  // src/Mangasusu/MangasusuHelper.ts
-  var getHomePageSectionsMangasusu = async (source, sectionCallback) => {
-    const sections = [
-      {
-        request: App.createRequest({ url: `${source.baseUrl}/komik/?page=1&order=update`, method: "GET" }),
-        data: source.homescreen_sections["latest_update"]
-      },
-      {
-        request: App.createRequest({ url: `${source.baseUrl}/komik/?status=&type=&order=popular`, method: "GET" }),
-        data: source.homescreen_sections["popular_today"]
-      },
-      {
-        request: App.createRequest({ url: `${source.baseUrl}/project/`, method: "GET" }),
-        data: source.homescreen_sections["project"]
-      }
-    ];
-    for (const section of sections) {
-      sectionCallback(section.data.section);
-      const response = await source.requestManager.schedule(section.request, 1);
-      source.checkResponseError(response);
-      section.data.section.items = await source.parser.parseHomeSection(
-        load(response.data),
-        section.data,
-        source
-      );
-      sectionCallback(section.data.section);
-    }
-  };
-  var getViewMoreItemsMangasusu = async (source, homepageSectionId, metadata) => {
-    const page = metadata?.page ?? 2;
-    const path = homepageSectionId === "popular_today" ? `komik/?page=${page}&status=&type=&order=popular` : homepageSectionId === "project" ? `project/page/${page}/` : `komik/?page=${page}&order=update`;
-    const request = App.createRequest({
-      url: `${source.baseUrl}/${path}`,
-      method: "GET"
-    });
-    const response = await source.requestManager.schedule(request, 1);
-    source.checkResponseError(response);
-    const $2 = load(response.data);
-    const results = await source.parser.parseViewMore($2, source);
-    return App.createPagedResults({
-      results,
-      metadata: results.length > 0 && !source.parser.isLastPage($2, "view_more") ? { page: page + 1 } : void 0
-    });
-  };
-  var getSearchTagsMangasusu = async (source) => {
-    const request = App.createRequest({
-      url: `${source.baseUrl}/komik/?page=1&order=update`,
-      method: "GET"
-    });
-    const response = await source.requestManager.schedule(request, 1);
-    source.checkResponseError(response);
-    const $2 = load(response.data);
-    return source.parser.parseTags($2);
-  };
-  var getCloudflareBypassUrlMangasusu = (baseUrl) => `${baseUrl}/komik/?page=1&order=update`;
-
-  // src/Mangasusu/Mangasusu.ts
-  var DOMAIN = "https://mangasusuku.com";
-  var MangasusuInfo = {
-    version: getExportVersion("0.0.10"),
-    name: "Mangasusu",
+  // src/Manhwalist/Manhwalist.ts
+  var DOMAIN = "https://manhwalist02.asia";
+  var ManhwalistInfo = {
+    version: getExportVersion("0.0.0"),
+    name: "Manhwalist",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",
     authorWebsite: "http://github.com/NaufalJCT48",
     icon: "icon.png",
-    contentRating: import_types4.ContentRating.ADULT,
+    contentRating: import_types4.ContentRating.MATURE,
     websiteBaseURL: DOMAIN,
     intents: import_types4.SourceIntents.MANGA_CHAPTERS | import_types4.SourceIntents.HOMEPAGE_SECTIONS | import_types4.SourceIntents.CLOUDFLARE_BYPASS_REQUIRED | import_types4.SourceIntents.SETTINGS_UI,
     sourceTags: [
       {
         text: "Indonesia",
         type: import_types4.BadgeColor.GREY
-      },
-      {
-        text: "18+",
-        type: import_types4.BadgeColor.RED
       }
     ]
   };
-  var Mangasusu = class extends MangaStream {
+  var Manhwalist = class extends MangaStream {
     constructor() {
       super(...arguments);
       this.baseUrl = DOMAIN;
-      this.manga_tag_selector_box = "div.seriestugenre";
-      this.directoryPath = "komik";
     }
+    // Themesia "mangareader" theme: default `manga` directory, `span.mgen` tag box and
+    // English month names all match the base class, so only sections need wiring.
     configureSections() {
-      this.homescreen_sections["popular_today"].section = createHomeSection("popular_today", "Featured", true, import_types4.HomeSectionType.featured);
-      this.homescreen_sections["popular_today"].selectorFunc = ($2) => $2("div.bs", "div.listupd");
-      this.homescreen_sections["popular_today"].titleSelectorFunc = ($2, element) => $2("a", element).first().attr("title");
-      this.homescreen_sections["popular_today"].subtitleSelectorFunc = ($2, element) => $2("div.epxs", element).first().text().trim();
-      this.homescreen_sections["popular_today"].getViewMoreItemsFunc = (page) => `komik/?page=${page}&status=&type=&order=popular`;
       this.homescreen_sections["new_titles"].enabled = false;
       this.homescreen_sections["top_alltime"].enabled = false;
       this.homescreen_sections["top_monthly"].enabled = false;
       this.homescreen_sections["top_weekly"].enabled = false;
       this.homescreen_sections["project"].enabled = true;
-      this.homescreen_sections["project"].selectorFunc = ($2) => $2("div.bsx");
+      this.homescreen_sections["project"].selectorFunc = ($2) => $2("div.uta", $2("h2:contains(Project Update)")?.parent()?.next());
       this.homescreen_sections["project"].titleSelectorFunc = ($2, element) => $2("a", element).first().attr("title");
       this.homescreen_sections["project"].subtitleSelectorFunc = ($2, element) => $2("div.epxs", element).first().text().trim();
-      this.homescreen_sections["latest_update"].selectorFunc = ($2) => $2("div.bs", "div.listupd");
-      this.homescreen_sections["latest_update"].titleSelectorFunc = ($2, element) => $2("a", element).first().attr("title");
-      this.homescreen_sections["latest_update"].subtitleSelectorFunc = ($2, element) => $2("div.epxs", element).first().text().trim();
-      this.homescreen_sections["latest_update"].getViewMoreItemsFunc = (page) => `komik/?page=${page}&order=update`;
-    }
-    async getHomePageSections(sectionCallback) {
-      return getHomePageSectionsMangasusu(this, sectionCallback);
-    }
-    async getHomePageSection(sectionCallback) {
-      return this.getHomePageSections(sectionCallback);
-    }
-    async getViewMoreItems(homepageSectionId, metadata) {
-      return getViewMoreItemsMangasusu(this, homepageSectionId, metadata);
-    }
-    async getSearchTags() {
-      return getSearchTagsMangasusu(this);
-    }
-    async getCloudflareBypassRequestAsync() {
-      return App.createRequest({
-        url: getCloudflareBypassUrlMangasusu(this.baseUrl),
-        method: "GET",
-        headers: {
-          "referer": `${this.baseUrl}/`,
-          "origin": `${this.baseUrl}/`,
-          "user-agent": await this.requestManager.getDefaultUserAgent()
-        }
-      });
-    }
-    getCloudflareBypassRequest() {
-      return App.createRequest({
-        url: getCloudflareBypassUrlMangasusu(this.baseUrl),
-        method: "GET",
-        headers: {
-          "referer": `${this.baseUrl}/`,
-          "origin": `${this.baseUrl}/`
-        }
-      });
+      this.homescreen_sections["project"].getViewMoreItemsFunc = (page) => `manga/?page=${page}&status=&type=&order=update`;
+      this.homescreen_sections["popular_today"].getViewMoreItemsFunc = (page) => `manga/?page=${page}&status=&type=&order=popular`;
+      this.homescreen_sections["latest_update"].getViewMoreItemsFunc = (page) => `manga/?page=${page}&status=&type=&order=update`;
     }
   };
-  return __toCommonJS(Mangasusu_exports);
+  return __toCommonJS(Manhwalist_exports);
 })();
 this.Sources = _Sources; if (typeof exports === 'object' && typeof module !== 'undefined') {module.exports.Sources = this.Sources;}

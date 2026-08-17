@@ -721,25 +721,25 @@ var _Sources = (() => {
     }
   });
 
-  // src/Shinigami/Shinigami.ts
-  var Shinigami_exports = {};
-  __export(Shinigami_exports, {
-    Shinigami: () => Shinigami,
-    ShinigamiInfo: () => ShinigamiInfo
+  // src/Voratoon/Voratoon.ts
+  var Voratoon_exports = {};
+  __export(Voratoon_exports, {
+    Voratoon: () => Voratoon,
+    VoratoonInfo: () => VoratoonInfo
   });
   var import_types = __toESM(require_lib());
 
-  // src/Shinigami/ShinigamiHelper.ts
-  var BASE_URL = "https://app.shinigami.asia";
+  // src/Voratoon/VoratoonHelper.ts
+  var BASE_URL = "https://v1.voratoon.com";
+  var API_URL = "https://api.voratoon.com";
+  var PRESIGN_HOST = "cvr.voratoon.id";
   var createRequestObject = (requestObj) => {
+    const isImage = /\.(png|jpe?g|webp|gif|avif)$/i.test((requestObj.url || "").split("?")[0] ?? "");
     const headers = {
-      "Accept": "application/json",
+      "Accept": isImage ? "image/avif,image/webp,image/apng,image/*,*/*;q=0.8" : "application/json, text/plain, */*",
+      "Referer": `${BASE_URL}/`,
       "Origin": BASE_URL,
-      "DNT": "1",
-      "Sec-GPC": "1",
-      "Accept-Encoding": "gzip, deflate, br",
-      "Accept-Language": "en-US,en;q=0.9",
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+      "Sec-GPC": "1"
     };
     return App.createRequest({
       ...requestObj,
@@ -750,34 +750,71 @@ var _Sources = (() => {
     });
   };
   var parseStatus = (status) => {
-    switch (status) {
-      case 1:
+    switch ((status ?? "").toLowerCase()) {
+      case "ongoing":
         return "Ongoing";
-      case 2:
+      case "completed":
         return "Completed";
+      case "hiatus":
+        return "Hiatus";
+      case "cancelled":
+      case "dropped":
+        return "Dropped";
       default:
         return "Unknown";
     }
   };
+  var parseDate = (dateStr) => {
+    if (!dateStr) return /* @__PURE__ */ new Date();
+    const date = new Date(dateStr);
+    return isNaN(date.getTime()) ? /* @__PURE__ */ new Date() : date;
+  };
+  var stripHtml = (raw) => {
+    if (!raw) return "";
+    return raw.replace(/<br\s*\/?>/gi, "\n").replace(/<\/(p|div|li|h[1-6])>/gi, "\n").replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#0?39;|&apos;/g, "'").replace(/\n{3,}/g, "\n\n").trim();
+  };
+  var isPresignExpired = (url) => {
+    const signedAt = url.match(/X-Amz-Date=(\d{8}T\d{6}Z)/)?.[1];
+    const lifetime = Number(url.match(/X-Amz-Expires=(\d+)/)?.[1] ?? 0);
+    if (!signedAt || !lifetime) return false;
+    const iso = `${signedAt.slice(0, 4)}-${signedAt.slice(4, 6)}-${signedAt.slice(6, 8)}T${signedAt.slice(9, 11)}:${signedAt.slice(11, 13)}:${signedAt.slice(13, 15)}Z`;
+    const expiresAt = Date.parse(iso) + lifetime * 1e3;
+    if (isNaN(expiresAt)) return false;
+    return Date.now() >= expiresAt - 60 * 1e3;
+  };
+  var refreshCoverUrl = async (requestManager, url) => {
+    const slug = url.match(/\/series\/([^/]+)\//)?.[1];
+    if (!slug) return url;
+    const response = await requestManager.schedule(createRequestObject({
+      url: `${API_URL}/series/${slug}?includeMeta=true`,
+      method: "GET"
+    }), 1);
+    const data = JSON.parse(response.data);
+    return data?.data?.data?.coverImage || url;
+  };
 
-  // src/Shinigami/ShinigamiParser.ts
+  // src/Voratoon/VoratoonParser.ts
   var parseMangaDetails = (data, mangaId) => {
-    const mangaInfo = data.data;
-    const taxonomy = mangaInfo.taxonomy;
-    const titles = [mangaInfo.title, mangaInfo.alternative_title].filter(Boolean);
-    const genreTags = (taxonomy.Genre ?? []).map((item) => App.createTag({
-      id: item.slug,
-      label: item.name
-    }));
+    const mangaData = data?.data ?? {};
+    const titles = [];
+    if (mangaData.title) titles.push(mangaData.title);
+    for (const alt of String(mangaData.nativeTitle ?? "").split(",")) {
+      const title = alt.trim();
+      if (title && title.toLowerCase() !== "field kosong" && !titles.includes(title)) {
+        titles.push(title);
+      }
+    }
+    if (titles.length === 0) titles.push(mangaId);
+    const genreTags = (mangaData.genres ?? []).map((genre) => String(genre?.data?.name ?? "").trim()).filter((name) => name).map((name) => App.createTag({ id: name, label: name }));
     return App.createSourceManga({
       id: mangaId,
       mangaInfo: App.createMangaInfo({
         titles,
-        image: mangaInfo.cover_portrait_url || mangaInfo.cover_image_url,
-        status: parseStatus(mangaInfo.status),
-        author: (taxonomy.Author ?? []).map((item) => item.name).join(", ") || "Unknown",
-        artist: (taxonomy.Artist ?? []).map((item) => item.name).join(", ") || "Unknown",
-        desc: mangaInfo.description,
+        image: mangaData.coverImage || "",
+        status: parseStatus(mangaData.status),
+        author: mangaData.author || "Unknown",
+        artist: mangaData.author || "Unknown",
+        desc: stripHtml(mangaData.synopsis || ""),
         tags: [
           App.createTagSection({
             id: "genres",
@@ -789,20 +826,33 @@ var _Sources = (() => {
     });
   };
   var parseChapterList = (data, mangaId) => {
-    return data.data.map((chapter) => App.createChapter({
-      id: chapter.chapter_id,
-      chapNum: chapter.chapter_number,
-      name: `Chapter ${chapter.chapter_number}`,
-      time: new Date(chapter.release_date),
-      langCode: "\u{1F1EE}\u{1F1E9}"
-    }));
+    const chapters = [];
+    let sortingIndex = 0;
+    for (const chapter of data ?? []) {
+      const chapterData = chapter?.data ?? {};
+      const index = chapterData.index;
+      if (index === void 0 || index === null) continue;
+      chapters.push(App.createChapter({
+        id: String(index),
+        chapNum: Number(index) || 0,
+        name: chapterData.title || `Chapter ${index}`,
+        time: parseDate(chapter?.createdAt),
+        langCode: "\u{1F1EE}\u{1F1E9}",
+        volume: 0,
+        group: "",
+        sortingIndex: sortingIndex--
+      }));
+    }
+    if (chapters.length === 0) {
+      throw new Error(`Couldn't find any chapters for mangaId: ${mangaId}!`);
+    }
+    return chapters;
   };
   var parseChapterDetails = (data, mangaId, chapterId) => {
-    const chapterData = data.data;
-    const chapter = chapterData.chapter;
-    const pages = chapter.data.map(
-      (page) => `${chapterData.base_url}${chapter.path}${page}`
-    );
+    const pages = (data?.data?.images ?? []).filter((page) => typeof page === "string" && page);
+    if (pages.length === 0) {
+      throw new Error(`Failed to find any pages for chapter ${chapterId} of manga ${mangaId}`);
+    }
     return App.createChapterDetails({
       id: chapterId,
       mangaId,
@@ -810,35 +860,89 @@ var _Sources = (() => {
     });
   };
   var parseMangaList = (data) => {
-    return data.data.map((item) => App.createPartialSourceManga({
-      mangaId: String(item.manga_id),
-      image: item.cover_image_url ?? "",
-      title: item.title ?? "",
-      subtitle: `Ch. ${item.latest_chapter_number ?? "N/A"}`
+    const results = [];
+    for (const item of data ?? []) {
+      const mangaData = item?.data ?? {};
+      const mangaId = mangaData.slug || String(item?.id ?? "");
+      if (!mangaId) continue;
+      const latestChapter = (item?.chapters ?? [])[0]?.data?.index;
+      const rating = Number(mangaData.rating ?? 0);
+      const parts = [];
+      if (latestChapter !== void 0 && latestChapter !== null) parts.push(`Ch. ${latestChapter}`);
+      else if (mangaData.totalChapters) parts.push(`Ch. ${mangaData.totalChapters}`);
+      if (rating > 0) parts.push(`\u2605 ${rating}`);
+      results.push(App.createPartialSourceManga({
+        mangaId,
+        image: mangaData.coverImage || "",
+        title: mangaData.title || mangaId,
+        subtitle: parts.join(" \u2022 ")
+      }));
+    }
+    return results;
+  };
+  var parseSearchTags = (data) => {
+    const genres = [];
+    for (const genre of data ?? []) {
+      const name = String(genre?.data?.name ?? "").trim();
+      const id = genre?.id;
+      if (!name || id === void 0 || id === null) continue;
+      genres.push(App.createTag({ id: `genre:${id}`, label: name }));
+    }
+    const tagSections = [];
+    if (genres.length > 0) {
+      tagSections.push(App.createTagSection({
+        id: "genres",
+        label: "Genres",
+        tags: genres
+      }));
+    }
+    tagSections.push(App.createTagSection({
+      id: "status",
+      label: "Status",
+      tags: [
+        { id: "status:ongoing", label: "Ongoing" },
+        { id: "status:completed", label: "Completed" },
+        { id: "status:hiatus", label: "Hiatus" },
+        { id: "status:cancelled", label: "Cancelled" }
+      ].map((tag) => App.createTag(tag))
     }));
+    tagSections.push(App.createTagSection({
+      id: "format",
+      label: "Format",
+      tags: [
+        { id: "format:manga", label: "Manga" },
+        { id: "format:manhwa", label: "Manhwa" },
+        { id: "format:manhua", label: "Manhua" }
+      ].map((tag) => App.createTag(tag))
+    }));
+    return tagSections;
   };
 
-  // src/Shinigami/Shinigami.ts
-  var API_URL = "https://api.shngm.io";
-  var BASE_URL2 = "https://app.shinigami.asia";
-  var ShinigamiInfo = {
-    version: "1.2.8",
-    name: "Shinigami",
+  // src/Voratoon/Voratoon.ts
+  var PAGE_SIZE = 24;
+  var VoratoonInfo = {
+    version: "1.0.0",
+    name: "Voratoon",
     icon: "icon.png",
     author: "NaufalJCT48",
     authorWebsite: "https://github.com/naufaljct48",
-    description: "Extension that pulls manga from Shinigami",
-    contentRating: import_types.ContentRating.EVERYONE,
-    websiteBaseURL: BASE_URL2,
-    sourceTags: [
-      {
-        text: "Indonesian",
-        type: import_types.BadgeColor.GREY
-      }
-    ],
+    description: "Extension that pulls manga from Voratoon (API-based)",
+    contentRating: import_types.ContentRating.MATURE,
+    websiteBaseURL: BASE_URL,
+    sourceTags: [{ text: "Indonesian", type: import_types.BadgeColor.GREY }],
     intents: import_types.SourceIntents.MANGA_CHAPTERS | import_types.SourceIntents.HOMEPAGE_SECTIONS | import_types.SourceIntents.CLOUDFLARE_BYPASS_REQUIRED | import_types.SourceIntents.SETTINGS_UI
   };
-  var Shinigami = class extends import_types.Source {
+  var getTagValues = (query, prefix) => {
+    const tags = query?.includedTags;
+    if (!Array.isArray(tags)) return [];
+    const values = [];
+    for (const tag of tags) {
+      const value = String(tag?.id ?? "");
+      if (value.startsWith(prefix)) values.push(value.replace(prefix, ""));
+    }
+    return values;
+  };
+  var Voratoon = class extends import_types.Source {
     constructor() {
       super(...arguments);
       this.requestManager = App.createRequestManager({
@@ -846,22 +950,25 @@ var _Sources = (() => {
         requestTimeout: 15e3,
         interceptor: {
           interceptRequest: async (request) => {
-            if (request.url.includes("assets.shngm.id")) {
-              request.headers = {
-                "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
-                "DNT": "1",
-                "Referer": BASE_URL2 + "/",
-                "Sec-Fetch-Dest": "empty",
-                "Sec-GPC": "1"
-              };
-            } else {
-              request.headers = {
-                "Accept": "application/json",
-                "Origin": BASE_URL2,
-                "DNT": "1",
-                "Sec-GPC": "1"
-              };
+            if (request.url.includes(PRESIGN_HOST) && isPresignExpired(request.url)) {
+              try {
+                request.url = await refreshCoverUrl(this.requestManager, request.url);
+              } catch (error) {
+                console.log("Failed to refresh expired cover URL:", error);
+              }
             }
+            const isImage = /\.(png|jpe?g|webp|gif|avif)$/i.test(request.url.split("?")[0] ?? "");
+            request.headers = isImage ? {
+              ...request.headers ?? {},
+              "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+              "Referer": `${BASE_URL}/`
+            } : {
+              ...request.headers ?? {},
+              "Accept": "application/json, text/plain, */*",
+              "Origin": BASE_URL,
+              "Referer": `${BASE_URL}/`,
+              "Sec-GPC": "1"
+            };
             return request;
           },
           interceptResponse: async (response) => {
@@ -870,255 +977,159 @@ var _Sources = (() => {
         }
       });
     }
-    async getMangaDetails(mangaId) {
-      const request = createRequestObject({
-        url: `${API_URL}/v1/manga/detail/${mangaId}`,
-        method: "GET"
-      });
-      const response = await this.requestManager.schedule(request, 1);
-      const data = JSON.parse(response.data);
-      if (data.retcode !== 0) {
-        throw new Error("Failed to get manga details");
+    async apiGet(url) {
+      const response = await this.requestManager.schedule(createRequestObject({ url, method: "GET" }), 1);
+      if (response.status === 403 || response.status === 503) {
+        throw new Error(`CLOUDFLARE BYPASS ERROR:
+Please go to the homepage of <${BASE_URL}> and press the cloud icon.`);
       }
-      return parseMangaDetails(data, mangaId);
+      const data = JSON.parse(response.data);
+      if (data?.status !== 200) {
+        throw new Error(`Voratoon API error: ${data?.message ?? "unknown response"}`);
+      }
+      return data;
+    }
+    async getMangaDetails(mangaId) {
+      const data = await this.apiGet(`${API_URL}/series/${mangaId}?includeMeta=true`);
+      return parseMangaDetails(data.data, mangaId);
     }
     async getChapters(mangaId) {
-      const request = createRequestObject({
-        url: `${API_URL}/v1/chapter/${mangaId}/list`,
-        param: "?page=1&page_size=3000&sort_by=chapter_number&sort_order=desc",
-        method: "GET"
-      });
-      const response = await this.requestManager.schedule(request, 1);
-      const data = JSON.parse(response.data);
-      if (data.retcode !== 0) return [];
-      return parseChapterList(data, mangaId);
+      const data = await this.apiGet(`${API_URL}/series/${mangaId}/chapters`);
+      return parseChapterList(data.data, mangaId);
     }
     async getChapterDetails(mangaId, chapterId) {
-      const request = createRequestObject({
-        url: `${API_URL}/v1/chapter/detail/${chapterId}`,
-        method: "GET"
-      });
-      const response = await this.requestManager.schedule(request, 1);
-      const data = JSON.parse(response.data);
-      if (data.retcode !== 0) {
-        throw new Error("Failed to get chapter details");
-      }
-      return parseChapterDetails(data, mangaId, chapterId);
+      const data = await this.apiGet(`${API_URL}/series/${mangaId}/chapters/${chapterId}`);
+      return parseChapterDetails(data.data, mangaId, chapterId);
     }
     async getHomePageSections(sectionCallback) {
       const sections = [
         {
-          request: createRequestObject({
-            url: `${API_URL}/v1/manga/list?type=project&page=1&page_size=24&is_update=true&sort=latest&sort_order=desc`,
-            method: "GET"
-          }),
-          section: App.createHomeSection({
-            id: "latest",
-            title: "Project Updates",
-            type: import_types.HomeSectionType.singleRowNormal,
-            containsMoreItems: true
-          })
-        },
-        {
-          request: createRequestObject({
-            url: `${API_URL}/v1/manga/list?format=manhwa&page=1&page_size=10&is_recommended=true`,
-            method: "GET"
-          }),
+          url: `${API_URL}/series?preset=banner&includeMeta=true`,
           section: App.createHomeSection({
             id: "featured",
-            title: "Featured Series",
+            title: "Featured",
             type: import_types.HomeSectionType.featured,
-            containsMoreItems: true
+            containsMoreItems: false
           })
         },
         {
-          request: createRequestObject({
-            url: `${API_URL}/v1/manga/list?type=mirror&page=1&page_size=15&is_update=true&sort=latest&sort_order=desc`,
-            method: "GET"
-          }),
+          url: `${API_URL}/series?takeChapter=2&includeMeta=true&sort=latest&sortOrder=desc&take=${PAGE_SIZE}&page=1`,
           section: App.createHomeSection({
-            id: "mirror",
-            title: "Mirror Project",
+            id: "latest_update",
+            title: "Latest Update",
             type: import_types.HomeSectionType.singleRowNormal,
             containsMoreItems: true
           })
         },
         {
-          request: createRequestObject({
-            url: `${API_URL}/v1/manga/list?page=1&page_size=24&genre_include_mode=or&genre_exclude_mode=or&format=manga&sort=popularity&sort_order=desc`,
-            method: "GET"
-          }),
+          url: `${API_URL}/series?takeChapter=1&includeMeta=true&sort=popular&sortOrder=desc&take=${PAGE_SIZE}&page=1`,
           section: App.createHomeSection({
-            id: "manga",
-            title: "Popular Manga",
+            id: "popular",
+            title: "Popular",
             type: import_types.HomeSectionType.singleRowNormal,
             containsMoreItems: true
           })
         },
         {
-          request: createRequestObject({
-            url: `${API_URL}/v1/manga/list?page=1&page_size=24&genre_include_mode=or&genre_exclude_mode=or&format=manhua&sort=popularity&sort_order=desc`,
-            method: "GET"
-          }),
+          url: `${API_URL}/series/recommendations?take=10&page=1&method=all`,
           section: App.createHomeSection({
-            id: "manhua",
-            title: "Popular Manhua",
+            id: "recommendations",
+            title: "Recommendations",
             type: import_types.HomeSectionType.singleRowNormal,
             containsMoreItems: true
           })
         }
       ];
-      for (const section of sections) {
-        sectionCallback(section.section);
-        const response = await this.requestManager.schedule(section.request, 1);
-        const data = JSON.parse(response.data);
-        if (data.retcode !== 0) continue;
-        section.section.items = parseMangaList(data);
-        sectionCallback(section.section);
+      for (const item of sections) {
+        sectionCallback(item.section);
+        try {
+          const data = await this.apiGet(item.url);
+          item.section.items = parseMangaList(data.data);
+          sectionCallback(item.section);
+        } catch (error) {
+          console.log(`Error loading section ${item.section.id}:`, error);
+        }
       }
+    }
+    async getHomePageSection(sectionCallback) {
+      return this.getHomePageSections(sectionCallback);
     }
     async getSearchTags() {
-      const requests = [
-        {
-          request: createRequestObject({
-            url: `${API_URL}/v1/genre/list`,
-            method: "GET"
-          }),
-          section: "genres"
-        },
-        {
-          request: createRequestObject({
-            url: `${API_URL}/v1/format/list`,
-            method: "GET"
-          }),
-          section: "formats"
-        }
-      ];
-      const tags = [];
-      for (const req of requests) {
-        const response = await this.requestManager.schedule(req.request, 1);
-        const data = JSON.parse(response.data);
-        if (data.retcode !== 0) continue;
-        const prefix = req.section === "genres" ? "genre" : "format";
-        tags.push(App.createTagSection({
-          id: req.section,
-          label: req.section.charAt(0).toUpperCase() + req.section.slice(1),
-          tags: data.data.map((item) => App.createTag({
-            id: `${prefix}:${item.slug}`,
-            label: item.name
-          }))
-        }));
-      }
-      return tags;
-    }
-    // The API filters on taxonomy SLUGS (`genre_include=action`, `format=manhwa`);
-    // numeric taxonomy_ids return zero results / a validation error.
-    getTagSlugs(query, prefix) {
-      const tags = query?.includedTags;
-      if (!Array.isArray(tags)) return [];
-      const slugs = [];
-      for (const tag of tags) {
-        const value = String(tag?.id ?? "");
-        if (value.startsWith(`${prefix}:`)) slugs.push(value.replace(`${prefix}:`, ""));
-      }
-      return slugs;
+      const data = await this.apiGet(`${API_URL}/genres`);
+      return parseSearchTags(data.data);
     }
     async getSearchResults(query, metadata) {
       const page = metadata?.page ?? 1;
-      const pageSize = 24;
-      const params = [
-        `page=${page}`,
-        `page_size=${pageSize}`,
-        "genre_include_mode=or",
-        "genre_exclude_mode=or",
-        "sort=popularity",
-        "sort_order=desc"
-      ];
-      if (query.title) {
-        params.push(`q=${encodeURIComponent(query.title)}`);
+      const params = [`page=${page}`, `take=${PAGE_SIZE}`, "includeMeta=true"];
+      const title = query.title?.trim();
+      const genres = getTagValues(query, "genre:");
+      if (title) {
+        const term = encodeURIComponent(title);
+        params.push(`filter=title=like="${term}",nativeTitle=like="${term}"`);
+      } else if (genres.length) {
+        params.push(`filter=${encodeURIComponent(`genreIds=in=(${genres.join(",")})`)}`);
       }
-      const genres = this.getTagSlugs(query, "genre");
-      if (genres.length) {
-        params.push(`genre_include=${genres.map((slug) => encodeURIComponent(slug)).join(",")}`);
-      }
-      const formats = this.getTagSlugs(query, "format");
-      if (formats.length) {
-        params.push(`format=${formats.map((slug) => encodeURIComponent(slug)).join(",")}`);
-      }
-      const request = createRequestObject({
-        url: `${API_URL}/v1/manga/list`,
-        param: `?${params.join("&")}`,
-        method: "GET"
-      });
-      const response = await this.requestManager.schedule(request, 1);
-      const data = JSON.parse(response.data);
-      if (data.retcode !== 0) {
-        return App.createPagedResults({
-          results: []
-        });
-      }
-      const totalPage = Number(data?.meta?.total_page ?? 0);
-      const hasMore = totalPage > 0 ? page < totalPage : (data.data?.length ?? 0) >= pageSize;
+      const status = getTagValues(query, "status:")[0];
+      if (status) params.push(`status=${encodeURIComponent(status)}`);
+      const format = getTagValues(query, "format:")[0];
+      if (format) params.push(`format=${encodeURIComponent(format)}`);
+      params.push("sort=latest");
+      params.push("sortOrder=desc");
+      const data = await this.apiGet(`${API_URL}/series?${params.join("&")}`);
+      const results = parseMangaList(data.data);
       return App.createPagedResults({
-        results: parseMangaList(data),
-        metadata: hasMore ? { page: page + 1 } : void 0
+        results,
+        metadata: results.length >= PAGE_SIZE ? { page: page + 1 } : void 0
       });
     }
     async getViewMoreItems(homepageSectionId, metadata) {
       const page = metadata?.page ?? 1;
-      let param = "";
+      let url;
       switch (homepageSectionId) {
-        case "latest":
-          param = `?type=project&page=${page}&page_size=24&is_update=true&sort=latest&sort_order=desc`;
+        case "latest_update":
+          url = `${API_URL}/series?takeChapter=2&includeMeta=true&sort=latest&sortOrder=desc&take=${PAGE_SIZE}&page=${page}`;
           break;
-        case "featured":
-          param = `?format=manhwa&page=${page}&page_size=30&is_recommended=true`;
+        case "popular":
+          url = `${API_URL}/series?takeChapter=1&includeMeta=true&sort=popular&sortOrder=desc&take=${PAGE_SIZE}&page=${page}`;
           break;
-        case "mirror":
-          param = `?type=mirror&page=${page}&page_size=30&is_update=true&sort=latest&sort_order=desc`;
-          break;
-        case "manga":
-          param = `?page=${page}&page_size=24&genre_include_mode=or&genre_exclude_mode=or&format=manga&sort=popularity&sort_order=desc`;
-          break;
-        case "manhua":
-          param = `?page=${page}&page_size=24&genre_include_mode=or&genre_exclude_mode=or&format=manhua&sort=popularity&sort_order=desc`;
+        case "recommendations":
+          url = `${API_URL}/series/recommendations?take=${PAGE_SIZE}&page=${page}&method=all`;
           break;
         default:
-          throw new Error(`Invalid homepage section id: ${homepageSectionId}`);
+          throw new Error(`View more not supported for section: ${homepageSectionId}`);
       }
-      const request = createRequestObject({
-        url: `${API_URL}/v1/manga/list${param}`,
-        method: "GET"
-      });
-      const response = await this.requestManager.schedule(request, 1);
-      const data = JSON.parse(response.data);
-      if (data.retcode !== 0) {
-        return App.createPagedResults({
-          results: []
-        });
-      }
-      const pageSize = homepageSectionId === "latest" ? 24 : 30;
-      const hasNextPage = data.data.length === pageSize;
+      const data = await this.apiGet(url);
+      const results = parseMangaList(data.data);
       return App.createPagedResults({
-        results: parseMangaList(data),
-        metadata: hasNextPage ? { page: page + 1 } : void 0
+        results,
+        metadata: results.length >= PAGE_SIZE ? { page: page + 1 } : void 0
       });
     }
     async getCloudflareBypassRequestAsync() {
       return App.createRequest({
-        url: `${BASE_URL2}/`,
+        url: `${BASE_URL}/`,
         method: "GET",
         headers: {
-          "referer": `${BASE_URL2}/`,
-          "origin": `${BASE_URL2}/`,
+          "referer": `${BASE_URL}/`,
+          "origin": `${BASE_URL}/`,
           "user-agent": await this.requestManager.getDefaultUserAgent()
         }
       });
     }
+    getCloudflareBypassRequest() {
+      return App.createRequest({
+        url: `${BASE_URL}/`,
+        method: "GET",
+        headers: {
+          "referer": `${BASE_URL}/`,
+          "origin": `${BASE_URL}/`
+        }
+      });
+    }
     getMangaShareUrl(mangaId) {
-      return `${BASE_URL2}/series/${mangaId}`;
+      return `${BASE_URL}/series/${mangaId}`;
     }
   };
-  return __toCommonJS(Shinigami_exports);
+  return __toCommonJS(Voratoon_exports);
 })();
 this.Sources = _Sources; if (typeof exports === 'object' && typeof module !== 'undefined') {module.exports.Sources = this.Sources;}

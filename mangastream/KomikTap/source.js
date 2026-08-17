@@ -15193,8 +15193,8 @@ var _Sources = (() => {
         if (chapterNumberRegex && chapterNumberRegex[1]) {
           chapterNumber = Number(chapterNumberRegex[1]);
         }
-        if (!id || typeof id === "undefined") {
-          throw new Error(`Could not parse out ID when getting chapters for postId: ${mangaId}`);
+        if (!id) {
+          continue;
         }
         chapters.push({
           id,
@@ -15455,7 +15455,7 @@ var _Sources = (() => {
   }
 
   // src/MangaStream.ts
-  var BASE_VERSION = "3.1.2";
+  var BASE_VERSION = "3.1.3";
   var getExportVersion = (EXTENSION_VERSION) => {
     return BASE_VERSION.split(".").map((x, index2) => Number(x) + Number(EXTENSION_VERSION.split(".")[index2])).join(".");
   };
