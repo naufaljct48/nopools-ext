@@ -85,6 +85,12 @@ const formatDate = (value) => new Date(value || Date.now())
 
 const titleCase = (value) => String(value).charAt(0).toUpperCase() + String(value).slice(1)
 
+// Most sources are Indonesian-only, but not all of them any more (Comick ships every
+// language), so the flag comes from the source's own tags rather than being assumed
+const languageFlag = (source) => (source.tags ?? []).some(tag => /multi/i.test(tag?.text ?? ''))
+    ? '🌐'
+    : '🇮🇩'
+
 // A branch that has been superseded carries repo-notice.json at the repo root:
 // { "movedTo": "omakase", "message": "..." }. The banner it produces is the only
 // warning a user of the old repo URL will ever see, so it is rendered on the branch
@@ -241,7 +247,7 @@ function buildBranchHtml(status) {
             return `      <article class="card${ok ? '' : ' is-down'}" data-name="${esc(s.name.toLowerCase())}" data-rating="${r.flag}" data-status="${ok ? 'ok' : 'down'}">
         <img class="icon" src="${esc(icon)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
         <div class="body">
-          <h3 class="name">${esc(s.name)} <span aria-hidden="true">🇮🇩</span></h3>
+          <h3 class="name">${esc(s.name)} <span aria-hidden="true">${languageFlag(s)}</span></h3>
           <p class="desc">${esc(s.desc || '')}</p>
           <div class="meta">
             <span class="chip ver">v${esc(s.version)}</span>
@@ -423,7 +429,7 @@ function buildTable(status) {
             const adult = s.contentRating === 'ADULT' ? '**Yes**' : (s.contentRating === 'MATURE' ? 'Mature' : 'No')
             const st = status[s.name] ?? 'Working'
             const icon = st === 'Working' ? '✅' : '⚠️'
-            return `| ${s.name} 🇮🇩 | ${icon} ${st} | ${adult} |`
+            return `| ${s.name} ${languageFlag(s)} | ${icon} ${st} | ${adult} |`
         }).join('\n')
     const working = sources.filter(s => status[s.name] === 'Working').length
     const broken = sources.filter(s => status[s.name] !== 'Working').map(s => `${s.name} (${status[s.name]})`).join(', ')

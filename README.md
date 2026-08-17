@@ -18,13 +18,13 @@
 | Source | Status | Adult (18+) |
 |--------|:------:|:-----------:|
 | AinzScans 🇮🇩 | ✅ Working | No |
-| Comick 🇮🇩 | ✅ Working | Mature |
+| Comick 🌐 | ✅ Working | Mature |
 | DoujinDesu 🇮🇩 | ✅ Working | **Yes** |
 | Ikiru 🇮🇩 | ✅ Working | Mature |
 | Kanzenin 🇮🇩 | ✅ Working | **Yes** |
 | Kiryuu 🇮🇩 | ✅ Working | Mature |
-| Komikcast 🇮🇩 | ⚠️ Backend Down | Mature |
-| KomikIndoTop 🇮🇩 | ⚠️ Backend Down | **Yes** |
+| Komikcast 🇮🇩 | ✅ Working | Mature |
+| KomikIndoTop 🇮🇩 | ✅ Working | **Yes** |
 | Komiknesia 🇮🇩 | ✅ Working | Mature |
 | Komiksin 🇮🇩 | ✅ Working | No |
 | KomikTap 🇮🇩 | ✅ Working | **Yes** |
@@ -34,18 +34,18 @@
 | Mangasusu 🇮🇩 | ✅ Working | **Yes** |
 | Manhwalist 🇮🇩 | ✅ Working | Mature |
 | Shinigami 🇮🇩 | ✅ Working | No |
-| Tenshi 🇮🇩 | ⚠️ Backend Down | No |
+| Tenshi 🇮🇩 | ✅ Working | No |
 | Voratoon 🇮🇩 | ✅ Working | Mature |
 | WestManga 🇮🇩 | ✅ Working | No |
 
 ## 📅 Last Update
 - **Date:** August 17, 2026
-- **Status:** 17/20 working — KomikIndoTop (Backend Down), Komikcast (Backend Down), Tenshi (Backend Down).
+- **Status:** All 20 sources working.
 <!-- SOURCES:END -->
 
 ## 📝 Notes
 - Sources marked **Yes** are NSFW (18+) only.
-- All sources serve Indonesian-language content.
+- 🇮🇩 sources serve Indonesian content; 🌐 sources are multi-language (pick the chapter language in the source's settings).
 - Report issues via [GitHub Issues](https://github.com/naufaljct48/nopools-ext/issues).
 
 ## 📜 License
