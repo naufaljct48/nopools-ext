@@ -14,14 +14,14 @@
 | Source | Status | Adult (18+) |
 |--------|:------:|:-----------:|
 | AinzScans 🇮🇩 | ✅ Working | No |
-| Comick 🇮🇩 | ✅ Working | Mature |
+| Comick 🌐 | ✅ Working | Mature |
 | DoujinDesu 🇮🇩 | ✅ Working | **Yes** |
 | Ikiru 🇮🇩 | ✅ Working | Mature |
 | Kanzenin 🇮🇩 | ✅ Working | **Yes** |
 | Kiryuu 🇮🇩 | ✅ Working | Mature |
 | Komikcast 🇮🇩 | ⚠️ Backend Down | Mature |
 | KomikIndoTop 🇮🇩 | ⚠️ Backend Down | **Yes** |
-| Komiknesia 🇮🇩 | ⚠️ Backend Down | Mature |
+| Komiknesia 🇮🇩 | ✅ Working | Mature |
 | Komiksin 🇮🇩 | ✅ Working | No |
 | KomikTap 🇮🇩 | ✅ Working | **Yes** |
 | Komiku 🇮🇩 | ✅ Working | Mature |
@@ -36,7 +36,7 @@
 
 ## 📅 Last Update
 - **Date:** August 17, 2026
-- **Status:** 16/20 working — KomikIndoTop (Backend Down), Komikcast (Backend Down), Komiknesia (Backend Down), Tenshi (Backend Down).
+- **Status:** 17/20 working — KomikIndoTop (Backend Down), Komikcast (Backend Down), Tenshi (Backend Down).
 <!-- SOURCES:END -->
 
 ## 📝 Notes
