@@ -1,11 +1,15 @@
-# 📚 Nopools Extensions (0.8)
-> Indonesian Paperback (0.8) extensions by [NaufalJCT48](https://github.com/naufaljct48)
+# 📚 Nopools Omakase (0.8)
+> A curated Paperback (0.8) source collection by [NaufalJCT48](https://github.com/naufaljct48)
 > Originally cloned from [TheNetsky Repo](https://github.com/TheNetsky)
 
+*Omakase* — “I leave it to you” — the chef picks the menu. Every source here is hand-picked and kept working, mostly Indonesian plus multi-language Comick.
+
 ## 🔍 Repository Links
-| Branch | Toolchain | Link |
-|--------|-----------|------|
-| `mangastream` | MangaStream 0.8 | [Click Here!](https://naufaljct48.github.io/nopools-ext/mangastream) |
+| Branch | Link |
+|--------|------|
+| `omakase` | [Click Here!](https://naufaljct48.github.io/nopools-ext/omakase) |
+
+> Previously published as `mangastream`. That folder still works but is frozen — it stops receiving new sources, so add the `omakase` repository instead.
 
 > Add to Paperback: open the link above on your device and press **Add to Paperback**, or add the base URL manually in the app.
 
