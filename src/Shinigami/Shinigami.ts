@@ -1,28 +1,27 @@
 import {
-    Source,
+    BadgeColor,
     Chapter,
     ChapterDetails,
-    HomeSection,
-    SearchRequest,
-    PagedResults,
-    HomeSectionType,
-    SourceInfo,
     ContentRating,
-    BadgeColor,
-    SourceIntents,
-    TagSection,
+    HomeSection,
+    HomeSectionType,
+    PagedResults,
     Request,
     Response,
-    SourceManga
+    SearchRequest,
+    Source,
+    SourceInfo,
+    SourceIntents,
+    SourceManga,
+    TagSection
 } from '@paperback/types'
-import { createRequestObject } from './ShinigamiHelper'
-import { parseMangaDetails, parseChapterList, parseChapterDetails, parseMangaList } from './ShinigamiParser'
+import { API_URL, BASE_URL, createRequestObject } from './ShinigamiHelper'
+import { parseChapterDetails, parseChapterList, parseMangaDetails, parseMangaList } from './ShinigamiParser'
 
-const API_URL = 'https://api.shngm.io'
-const BASE_URL = 'https://app.shinigami.asia'
+const PAGE_SIZE = 24
 
 export const ShinigamiInfo: SourceInfo = {
-    version: '1.2.8',
+    version: '1.3.0',
     name: 'Shinigami',
     icon: 'icon.png',
     author: 'NaufalJCT48',
@@ -45,22 +44,25 @@ export class Shinigami extends Source {
         requestTimeout: 15000,
         interceptor: {
             interceptRequest: async (request: Request): Promise<Request> => {
-                // Add headers for image requests
-                if (request.url.includes('assets.shngm.id')) {
+                const isImage = /\.(png|jpe?g|webp|gif|avif)$/i.test((request.url || '').split('?')[0] ?? '')
+                    || /cdn\.shinigami\.gg|assets\.shngm\.id/i.test(request.url || '')
+
+                if (isImage) {
                     request.headers = {
-                        'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+                        'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
                         'DNT': '1',
-                        'Referer': BASE_URL + '/',
-                        'Sec-Fetch-Dest': 'empty',
-                        'Sec-GPC': '1'
+                        'Referer': `${BASE_URL}/`,
+                        'Sec-GPC': '1',
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36'
                     }
                 } else {
-                    // For API requests
                     request.headers = {
                         'Accept': 'application/json',
                         'Origin': BASE_URL,
+                        'Referer': `${BASE_URL}/`,
                         'DNT': '1',
-                        'Sec-GPC': '1'
+                        'Sec-GPC': '1',
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36'
                     }
                 }
                 return request
@@ -71,60 +73,61 @@ export class Shinigami extends Source {
         }
     })
 
-    override async getMangaDetails(mangaId: string): Promise<SourceManga> {
+    private async apiGet(pathAndQuery: string): Promise<any> {
         const request = createRequestObject({
-            url: `${API_URL}/v1/manga/detail/${mangaId}`,
+            url: `${API_URL}${pathAndQuery}`,
             method: 'GET'
         })
-
         const response = await this.requestManager.schedule(request, 1)
-        const data = JSON.parse(response.data as string)
-
-        if (data.retcode !== 0) {
-            throw new Error('Failed to get manga details')
+        if (response.status === 403 || response.status === 503) {
+            throw new Error(`CLOUDFLARE BYPASS ERROR:\nPlease go to the homepage of <${BASE_URL}> and press the cloud icon.`)
         }
+        return JSON.parse(response.data as string)
+    }
 
+    override async getMangaDetails(mangaId: string): Promise<SourceManga> {
+        const data = await this.apiGet(`/v1/manga/detail/${encodeURIComponent(mangaId)}`)
+        if (data.retcode !== 0) {
+            throw new Error(`Failed to get manga details: ${data.message ?? 'unknown error'}`)
+        }
         return parseMangaDetails(data, mangaId)
     }
 
     override async getChapters(mangaId: string): Promise<Chapter[]> {
-        const request = createRequestObject({
-            url: `${API_URL}/v1/chapter/${mangaId}/list`,
-            param: '?page=1&page_size=3000&sort_by=chapter_number&sort_order=desc',
-            method: 'GET'
-        })
+        const allChapters: any[] = []
+        let cursor = ''
+        const maxPages = 30
 
-        const response = await this.requestManager.schedule(request, 1)
-        const data = JSON.parse(response.data as string)
+        for (let i = 0; i < maxPages; i++) {
+            const cursorParam = cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''
+            const data = await this.apiGet(`/v1/chapter/${encodeURIComponent(mangaId)}/list?limit=100&sort_by=chapter_number&sort_order=desc${cursorParam}`)
+            if (data.retcode !== 0) break
 
-        if (data.retcode !== 0) return []
+            const batch = Array.isArray(data.data) ? data.data : []
+            allChapters.push(...batch)
 
-        return parseChapterList(data, mangaId)
+            const nextCursor = String(data?.meta?.next_cursor ?? '')
+            if (!data?.meta?.has_next || !nextCursor || nextCursor === cursor || batch.length === 0) {
+                break
+            }
+            cursor = nextCursor
+        }
+
+        return parseChapterList(allChapters, mangaId)
     }
 
     override async getChapterDetails(mangaId: string, chapterId: string): Promise<ChapterDetails> {
-        const request = createRequestObject({
-            url: `${API_URL}/v1/chapter/detail/${chapterId}`,
-            method: 'GET'
-        })
-
-        const response = await this.requestManager.schedule(request, 1)
-        const data = JSON.parse(response.data as string)
-
+        const data = await this.apiGet(`/v1/chapter/detail/${encodeURIComponent(chapterId)}`)
         if (data.retcode !== 0) {
-            throw new Error('Failed to get chapter details')
+            throw new Error(`Failed to get chapter details: ${data.message ?? 'unknown error'}`)
         }
-
         return parseChapterDetails(data, mangaId, chapterId)
     }
 
     override async getHomePageSections(sectionCallback: (section: HomeSection) => void): Promise<void> {
         const sections = [
             {
-                request: createRequestObject({
-                    url: `${API_URL}/v1/manga/list?type=project&page=1&page_size=24&is_update=true&sort=latest&sort_order=desc`,
-                    method: 'GET'
-                }),
+                path: `/v1/manga/list?type=project&limit=${PAGE_SIZE}&offset=0&is_update=true&sort=latest&sort_order=desc`,
                 section: App.createHomeSection({
                     id: 'latest',
                     title: 'Project Updates',
@@ -133,10 +136,7 @@ export class Shinigami extends Source {
                 })
             },
             {
-                request: createRequestObject({
-                    url: `${API_URL}/v1/manga/list?format=manhwa&page=1&page_size=10&is_recommended=true`,
-                    method: 'GET'
-                }),                
+                path: '/v1/manga/list?format=manhwa&limit=10&offset=0&is_recommended=true',
                 section: App.createHomeSection({
                     id: 'featured',
                     title: 'Featured Series',
@@ -145,10 +145,7 @@ export class Shinigami extends Source {
                 })
             },
             {
-                request: createRequestObject({
-                    url: `${API_URL}/v1/manga/list?type=mirror&page=1&page_size=15&is_update=true&sort=latest&sort_order=desc`,
-                    method: 'GET'
-                }),
+                path: '/v1/manga/list?type=mirror&limit=15&offset=0&is_update=true&sort=latest&sort_order=desc',
                 section: App.createHomeSection({
                     id: 'mirror',
                     title: 'Mirror Project',
@@ -157,10 +154,7 @@ export class Shinigami extends Source {
                 })
             },
             {
-                request: createRequestObject({
-                    url: `${API_URL}/v1/manga/list?page=1&page_size=24&genre_include_mode=or&genre_exclude_mode=or&format=manga&sort=popularity&sort_order=desc`,
-                    method: 'GET'
-                }),
+                path: `/v1/manga/list?limit=${PAGE_SIZE}&offset=0&format=manga&sort=popularity&sort_order=desc`,
                 section: App.createHomeSection({
                     id: 'manga',
                     title: 'Popular Manga',
@@ -169,10 +163,7 @@ export class Shinigami extends Source {
                 })
             },
             {
-                request: createRequestObject({
-                    url: `${API_URL}/v1/manga/list?page=1&page_size=24&genre_include_mode=or&genre_exclude_mode=or&format=manhua&sort=popularity&sort_order=desc`,
-                    method: 'GET'
-                }),
+                path: `/v1/manga/list?limit=${PAGE_SIZE}&offset=0&format=manhua&sort=popularity&sort_order=desc`,
                 section: App.createHomeSection({
                     id: 'manhua',
                     title: 'Popular Manhua',
@@ -182,63 +173,84 @@ export class Shinigami extends Source {
             }
         ]
 
-        for (const section of sections) {
-            sectionCallback(section.section)
-            const response = await this.requestManager.schedule(section.request, 1)
-            const data = JSON.parse(response.data as string)
-
-            if (data.retcode !== 0) continue
-
-            section.section.items = parseMangaList(data)
-            sectionCallback(section.section)
+        for (const item of sections) {
+            sectionCallback(item.section)
+            try {
+                const data = await this.apiGet(item.path)
+                if (data.retcode !== 0) continue
+                item.section.items = parseMangaList(data)
+                sectionCallback(item.section)
+            } catch (error) {
+                console.log(`Error loading section ${item.section.id}:`, error)
+            }
         }
     }
 
+    private async fetchTaxonomyList(type: string): Promise<any[]> {
+        const items: any[] = []
+        let offset = 0
+        const limit = 100
+
+        for (let i = 0; i < 10; i++) {
+            const data = await this.apiGet(`/v1/taxonomy/list?type=${encodeURIComponent(type)}&limit=${limit}&offset=${offset}`)
+            if (data.retcode !== 0) break
+            const batch = Array.isArray(data.data) ? data.data : []
+            items.push(...batch)
+            if (!data?.meta?.has_next || batch.length === 0) break
+            offset += batch.length
+        }
+
+        return items
+    }
+
     override async getSearchTags(): Promise<TagSection[]> {
-        const requests = [
-            {
-                request: createRequestObject({
-                    url: `${API_URL}/v1/genre/list`,
-                    method: 'GET'
-                }),
-                section: 'genres'
-            },
-            {
-                request: createRequestObject({
-                    url: `${API_URL}/v1/format/list`,
-                    method: 'GET'
-                }),
-                section: 'formats'
-            }
-        ]
+        const [genresRaw, formatsRaw] = await Promise.all([
+            this.fetchTaxonomyList('genre'),
+            this.fetchTaxonomyList('format')
+        ])
 
         const tags: TagSection[] = []
 
-        for (const req of requests) {
-            const response = await this.requestManager.schedule(req.request, 1)
-            const data = JSON.parse(response.data as string)
-
-            if (data.retcode !== 0) continue
-
-            // Ids are prefixed per section so getSearchResults can tell a genre from a
-            // format in the single flat includedTags list the app hands back
-            const prefix = req.section === 'genres' ? 'genre' : 'format'
-
+        if (genresRaw.length > 0) {
             tags.push(App.createTagSection({
-                id: req.section,
-                label: req.section.charAt(0).toUpperCase() + req.section.slice(1),
-                tags: data.data.map((item: any) => App.createTag({
-                    id: `${prefix}:${item.slug}`,
-                    label: item.name
-                }))
+                id: 'genres',
+                label: 'Genres',
+                tags: genresRaw
+                    .filter((item: any) => item?.slug && item?.name)
+                    .sort((a: any, b: any) => String(a.name).localeCompare(String(b.name)))
+                    .map((item: any) => App.createTag({
+                        id: `genre:${item.slug}`,
+                        label: item.name
+                    }))
             }))
         }
+
+        if (formatsRaw.length > 0) {
+            tags.push(App.createTagSection({
+                id: 'formats',
+                label: 'Formats',
+                tags: formatsRaw
+                    .filter((item: any) => item?.slug && item?.name)
+                    .map((item: any) => App.createTag({
+                        id: `format:${item.slug}`,
+                        label: item.name
+                    }))
+            }))
+        }
+
+        tags.push(App.createTagSection({
+            id: 'status',
+            label: 'Status',
+            tags: [
+                { id: 'status:ongoing', label: 'Ongoing' },
+                { id: 'status:completed', label: 'Completed' },
+                { id: 'status:hiatus', label: 'Hiatus' }
+            ].map(t => App.createTag(t))
+        }))
 
         return tags
     }
 
-    // The API filters on taxonomy SLUGS (`genre_include=action`, `format=manhwa`);
-    // numeric taxonomy_ids return zero results / a validation error.
     private getTagSlugs(query: SearchRequest, prefix: string): string[] {
         const tags = (query as any)?.includedTags as Array<{ id: string }> | undefined
         if (!Array.isArray(tags)) return []
@@ -252,25 +264,23 @@ export class Shinigami extends Source {
     }
 
     override async getSearchResults(query: SearchRequest, metadata: any): Promise<PagedResults> {
-        const page: number = metadata?.page ?? 1
-        const pageSize = 24
+        const offset: number = Number(metadata?.offset ?? 0)
 
         const params = [
-            `page=${page}`,
-            `page_size=${pageSize}`,
-            'genre_include_mode=or',
-            'genre_exclude_mode=or',
+            `limit=${PAGE_SIZE}`,
+            `offset=${offset}`,
             'sort=popularity',
             'sort_order=desc'
         ]
 
-        if (query.title) {
-            params.push(`q=${encodeURIComponent(query.title)}`)
+        const title = query.title?.trim()
+        if (title) {
+            params.push(`q=${encodeURIComponent(title)}`)
         }
 
         const genres = this.getTagSlugs(query, 'genre')
         if (genres.length) {
-            params.push(`genre_include=${genres.map(slug => encodeURIComponent(slug)).join(',')}`)
+            params.push(`genre=${genres.map(slug => encodeURIComponent(slug)).join(',')}`)
         }
 
         const formats = this.getTagSlugs(query, 'format')
@@ -278,77 +288,60 @@ export class Shinigami extends Source {
             params.push(`format=${formats.map(slug => encodeURIComponent(slug)).join(',')}`)
         }
 
-        const request = createRequestObject({
-            url: `${API_URL}/v1/manga/list`,
-            param: `?${params.join('&')}`,
-            method: 'GET'
-        })
-
-        const response = await this.requestManager.schedule(request, 1)
-        const data = JSON.parse(response.data as string)
-
-        if (data.retcode !== 0) {
-            return App.createPagedResults({
-                results: []
-            })
+        const status = this.getTagSlugs(query, 'status')[0]
+        if (status) {
+            params.push(`status=${encodeURIComponent(status)}`)
         }
 
-        const totalPage = Number(data?.meta?.total_page ?? 0)
-        const hasMore = totalPage > 0
-            ? page < totalPage
-            : (data.data?.length ?? 0) >= pageSize
+        const data = await this.apiGet(`/v1/manga/list?${params.join('&')}`)
+        if (data.retcode !== 0) {
+            return App.createPagedResults({ results: [] })
+        }
+
+        const results = parseMangaList(data)
+        const hasMore = Boolean(data?.meta?.has_next) && results.length > 0
 
         return App.createPagedResults({
-            results: parseMangaList(data),
-            metadata: hasMore ? { page: page + 1 } : undefined
+            results,
+            metadata: hasMore ? { offset: offset + results.length } : undefined
         })
     }
 
     override async getViewMoreItems(homepageSectionId: string, metadata: any): Promise<PagedResults> {
-        const page = metadata?.page ?? 1
-        let param = ''
+        const offset: number = Number(metadata?.offset ?? 0)
+        let query = ''
 
         switch (homepageSectionId) {
             case 'latest':
-                param = `?type=project&page=${page}&page_size=24&is_update=true&sort=latest&sort_order=desc`
+                query = `type=project&limit=${PAGE_SIZE}&offset=${offset}&is_update=true&sort=latest&sort_order=desc`
                 break
             case 'featured':
-                param = `?format=manhwa&page=${page}&page_size=30&is_recommended=true`
+                query = `format=manhwa&limit=${PAGE_SIZE}&offset=${offset}&is_recommended=true`
                 break
             case 'mirror':
-                param = `?type=mirror&page=${page}&page_size=30&is_update=true&sort=latest&sort_order=desc`
+                query = `type=mirror&limit=${PAGE_SIZE}&offset=${offset}&is_update=true&sort=latest&sort_order=desc`
                 break
             case 'manga':
-                param = `?page=${page}&page_size=24&genre_include_mode=or&genre_exclude_mode=or&format=manga&sort=popularity&sort_order=desc`
+                query = `limit=${PAGE_SIZE}&offset=${offset}&format=manga&sort=popularity&sort_order=desc`
                 break
             case 'manhua':
-                param = `?page=${page}&page_size=24&genre_include_mode=or&genre_exclude_mode=or&format=manhua&sort=popularity&sort_order=desc`
+                query = `limit=${PAGE_SIZE}&offset=${offset}&format=manhua&sort=popularity&sort_order=desc`
                 break
             default:
                 throw new Error(`Invalid homepage section id: ${homepageSectionId}`)
         }
 
-        const request = createRequestObject({
-            url: `${API_URL}/v1/manga/list${param}`,
-            method: 'GET'
-        })
-
-        const response = await this.requestManager.schedule(request, 1)
-        const data = JSON.parse(response.data as string)
-
+        const data = await this.apiGet(`/v1/manga/list?${query}`)
         if (data.retcode !== 0) {
-            return App.createPagedResults({
-                results: []
-            })
+            return App.createPagedResults({ results: [] })
         }
 
-        // Check if there are more pages
-        const pageSize = homepageSectionId === 'latest' ? 24 : 30
-        const hasNextPage = data.data.length === pageSize
+        const results = parseMangaList(data)
+        const hasMore = Boolean(data?.meta?.has_next) && results.length > 0
 
         return App.createPagedResults({
-            results: parseMangaList(data),
-            metadata: hasNextPage ? { page: page + 1 } : undefined
+            results,
+            metadata: hasMore ? { offset: offset + results.length } : undefined
         })
     }
 
