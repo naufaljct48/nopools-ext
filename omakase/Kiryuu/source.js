@@ -730,7 +730,7 @@ var _Sources = (() => {
   var import_types = __toESM(require_lib());
 
   // src/Kiryuu/KiryuuHelper.ts
-  var WEBSITE_BASE = "https://v5.kiryuu.to";
+  var WEBSITE_BASE = "https://v7.kiryuu.to";
   var createRequestObject = (requestObj) => {
     const isImage = /\.(png|jpe?g|webp|gif)$/i.test(requestObj.url || "");
     const headers = {
@@ -1035,7 +1035,7 @@ var _Sources = (() => {
   };
 
   // src/Kiryuu/Kiryuu.ts
-  var WEBSITE_BASE2 = "https://v5.kiryuu.to";
+  var WEBSITE_BASE2 = "https://v7.kiryuu.to";
   var getSearchNonce = async (requestManager) => {
     const request = createRequestObject({
       url: `${WEBSITE_BASE2}/wp-admin/admin-ajax.php?type=search_form&action=get_nonce`,
@@ -1078,7 +1078,7 @@ var _Sources = (() => {
     return results;
   };
   var KiryuuInfo = {
-    version: "2.2.11",
+    version: "2.2.12",
     name: "Kiryuu",
     icon: "icon.png",
     author: "NaufalJCT48",
