@@ -23,10 +23,10 @@
 | Ikiru 🇮🇩 | ✅ Working | Mature |
 | Kanzenin 🇮🇩 | ✅ Working | **Yes** |
 | Kiryuu 🇮🇩 | ✅ Working | Mature |
-| Komikcast 🇮🇩 | ⚠️ Backend Down | Mature |
+| Komikcast 🇮🇩 | ✅ Working | Mature |
 | KomikIndoTop 🇮🇩 | ✅ Working | **Yes** |
 | Komiknesia 🇮🇩 | ✅ Working | Mature |
-| Komiksin 🇮🇩 | ✅ Working | No |
+| Komiksin 🇮🇩 | ⚠️ Backend Down | No |
 | KomikTap 🇮🇩 | ✅ Working | **Yes** |
 | Komiku 🇮🇩 | ✅ Working | Mature |
 | KomikuAsia 🇮🇩 | ✅ Working | No |
@@ -39,8 +39,8 @@
 | WestManga 🇮🇩 | ✅ Working | No |
 
 ## 📅 Last Update
-- **Date:** August 17, 2026
-- **Status:** 18/20 working — Komikcast (Backend Down), Tenshi (Backend Down).
+- **Date:** November 19, 2026
+- **Status:** 18/20 working — Komiksin (Backend Down), Tenshi (Backend Down).
 <!-- SOURCES:END -->
 
 ## 📝 Notes
