@@ -1,6 +1,6 @@
 import { Request } from '@paperback/types'
 
-const WEBSITE_BASE = 'https://v5.kiryuu.to'
+const WEBSITE_BASE = 'https://v7.kiryuu.to'
 
 export const createRequestObject = (requestObj: any): Request => {
     const isImage = /\.(png|jpe?g|webp|gif)$/i.test(requestObj.url || '')

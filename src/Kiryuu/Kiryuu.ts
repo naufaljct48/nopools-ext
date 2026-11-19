@@ -24,7 +24,7 @@ import {
     parseSearchTags
 } from './KiryuuParser'
 
-const WEBSITE_BASE = 'https://v5.kiryuu.to'
+const WEBSITE_BASE = 'https://v7.kiryuu.to'
 
 const getSearchNonce = async (requestManager: any): Promise<string> => {
     const request = createRequestObject({
@@ -72,7 +72,7 @@ const getIncludedTagsByPrefix = (query: SearchRequest, prefix: string): string[]
 }
 
 export const KiryuuInfo: SourceInfo = {
-    version: '2.2.11',
+    version: '2.2.12',
     name: 'Kiryuu',
     icon: 'icon.png',
     author: 'NaufalJCT48',
