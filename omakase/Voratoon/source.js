@@ -730,16 +730,23 @@ var _Sources = (() => {
   var import_types = __toESM(require_lib());
 
   // src/Voratoon/VoratoonHelper.ts
-  var BASE_URL = "https://v1.voratoon.com";
-  var API_URL = "https://api.voratoon.com";
+  var BASE_URL = "https://13.voratoon.com";
+  var FALLBACK_BASES = [
+    "https://13.voratoon.com",
+    "https://voratoon.co"
+  ];
+  var PORTAL_URL = "https://voratoon.id/";
+  var DEFAULT_RUN_API_ACTION = "405a35a66edd5e9e3fa2d903049435d5a3f9aaad0b";
+  var DEFAULT_UNLOCK_PAGES_ACTION = "603e8cd8a82ce1bd958c99197d5816de779f853c41";
   var PRESIGN_HOST = "cvr.voratoon.id";
-  var createRequestObject = (requestObj) => {
+  var createRequestObject = (requestObj, baseUrl = BASE_URL) => {
     const isImage = /\.(png|jpe?g|webp|gif|avif)$/i.test((requestObj.url || "").split("?")[0] ?? "");
     const headers = {
       "Accept": isImage ? "image/avif,image/webp,image/apng,image/*,*/*;q=0.8" : "application/json, text/plain, */*",
-      "Referer": `${BASE_URL}/`,
-      "Origin": BASE_URL,
-      "Sec-GPC": "1"
+      "Referer": `${baseUrl}/`,
+      "Origin": baseUrl,
+      "Sec-GPC": "1",
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
     };
     return App.createRequest({
       ...requestObj,
@@ -782,15 +789,65 @@ var _Sources = (() => {
     if (isNaN(expiresAt)) return false;
     return Date.now() >= expiresAt - 60 * 1e3;
   };
-  var refreshCoverUrl = async (requestManager, url) => {
-    const slug = url.match(/\/series\/([^/]+)\//)?.[1];
-    if (!slug) return url;
-    const response = await requestManager.schedule(createRequestObject({
-      url: `${API_URL}/series/${slug}?includeMeta=true`,
-      method: "GET"
-    }), 1);
-    const data = JSON.parse(response.data);
-    return data?.data?.data?.coverImage || url;
+  var parseFlightPayload = (raw) => {
+    const text = String(raw ?? "");
+    const textRefs = {};
+    const parsedChunks = {};
+    let pos = 0;
+    while (pos < text.length) {
+      const colon = text.indexOf(":", pos);
+      if (colon < 0) break;
+      const id = text.slice(pos, colon).trim();
+      const after = colon + 1;
+      if (after >= text.length) break;
+      if (text[after] === "T") {
+        const comma = text.indexOf(",", after + 1);
+        if (comma < 0) break;
+        const hexLen = parseInt(text.slice(after + 1, comma), 16);
+        if (!isNaN(hexLen) && hexLen >= 0) {
+          const start = comma + 1;
+          textRefs[`$${id}`] = text.slice(start, start + hexLen);
+          pos = start + hexLen;
+          if (text[pos] === "\n") pos++;
+          continue;
+        }
+      }
+      const nl = text.indexOf("\n", after);
+      const lineEnd = nl < 0 ? text.length : nl;
+      const payload = text.slice(after, lineEnd).trim();
+      pos = nl < 0 ? text.length : nl + 1;
+      if (payload.startsWith("[") || payload.startsWith("{")) {
+        try {
+          parsedChunks[id] = JSON.parse(payload);
+        } catch {
+        }
+      }
+    }
+    const resolveRefs = (val) => {
+      if (typeof val === "string" && textRefs[val] !== void 0) return textRefs[val];
+      if (Array.isArray(val)) return val.map(resolveRefs);
+      if (val && typeof val === "object") {
+        const out = {};
+        for (const k of Object.keys(val)) out[k] = resolveRefs(val[k]);
+        return out;
+      }
+      return val;
+    };
+    if (parsedChunks["1"] !== void 0) {
+      return resolveRefs(parsedChunks["1"]);
+    }
+    for (const k of Object.keys(parsedChunks)) {
+      if (k === "0") continue;
+      return resolveRefs(parsedChunks[k]);
+    }
+    return null;
+  };
+  var parseFlightResult = (raw) => {
+    const payload = parseFlightPayload(raw);
+    if (Array.isArray(payload) && payload.length > 0 && payload[0] && typeof payload[0] === "object" && "ok" in payload[0]) {
+      return payload[0];
+    }
+    return null;
   };
 
   // src/Voratoon/VoratoonParser.ts
@@ -921,7 +978,7 @@ var _Sources = (() => {
   // src/Voratoon/Voratoon.ts
   var PAGE_SIZE = 24;
   var VoratoonInfo = {
-    version: "1.0.0",
+    version: "1.1.0",
     name: "Voratoon",
     icon: "icon.png",
     author: "NaufalJCT48",
@@ -945,6 +1002,9 @@ var _Sources = (() => {
   var Voratoon = class extends import_types.Source {
     constructor() {
       super(...arguments);
+      this.activeBase = BASE_URL;
+      this.actionId = DEFAULT_RUN_API_ACTION;
+      this.unlockActionId = DEFAULT_UNLOCK_PAGES_ACTION;
       this.requestManager = App.createRequestManager({
         requestsPerSecond: 4,
         requestTimeout: 15e3,
@@ -952,7 +1012,12 @@ var _Sources = (() => {
           interceptRequest: async (request) => {
             if (request.url.includes(PRESIGN_HOST) && isPresignExpired(request.url)) {
               try {
-                request.url = await refreshCoverUrl(this.requestManager, request.url);
+                const slug = request.url.match(/\/series\/([^/]+)\//)?.[1];
+                if (slug) {
+                  const refreshed = await this.apiGet(`/series/${slug}`, { includeMeta: true });
+                  const freshUrl = refreshed?.data?.data?.coverImage;
+                  if (freshUrl) request.url = freshUrl;
+                }
               } catch (error) {
                 console.log("Failed to refresh expired cover URL:", error);
               }
@@ -961,12 +1026,11 @@ var _Sources = (() => {
             request.headers = isImage ? {
               ...request.headers ?? {},
               "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
-              "Referer": `${BASE_URL}/`
+              "Referer": `${this.activeBase}/`
             } : {
               ...request.headers ?? {},
-              "Accept": "application/json, text/plain, */*",
-              "Origin": BASE_URL,
-              "Referer": `${BASE_URL}/`,
+              "Origin": this.activeBase,
+              "Referer": `${this.activeBase}/`,
               "Sec-GPC": "1"
             };
             return request;
@@ -977,34 +1041,161 @@ var _Sources = (() => {
         }
       });
     }
-    async apiGet(url) {
-      const response = await this.requestManager.schedule(createRequestObject({ url, method: "GET" }), 1);
+    async discoverPortalDomains() {
+      try {
+        const response = await this.requestManager.schedule(createRequestObject({
+          url: PORTAL_URL,
+          method: "GET",
+          headers: { "Accept": "text/html,*/*" }
+        }, this.activeBase), 1);
+        const html = String(response.data ?? "");
+        const matches = html.match(/https?:\/\/[a-z0-9.-]*voratoon\.[a-z]+/gi) ?? [];
+        const domains = [];
+        for (const m of matches) {
+          const clean = m.replace(/\/+$/, "");
+          if (!/voratoon\.id$/i.test(clean) && !domains.includes(clean)) domains.push(clean);
+        }
+        return domains;
+      } catch {
+        return [];
+      }
+    }
+    async refreshActionIdForBase(base) {
+      try {
+        const homeRes = await this.requestManager.schedule(createRequestObject({
+          url: `${base}/`,
+          method: "GET",
+          headers: { "Accept": "text/html,*/*" }
+        }, base), 1);
+        if (homeRes.status !== 200) return null;
+        const html = String(homeRes.data ?? "");
+        const chunks = html.match(/\/_next\/static\/chunks\/[^"'<> ]+\.js/g) ?? [];
+        const seen = {};
+        for (const chunk of chunks) {
+          if (seen[chunk]) continue;
+          seen[chunk] = true;
+          if (/webpack|main-app|framework|polyfills|4bd1b696|3794/.test(chunk)) continue;
+          const chunkRes = await this.requestManager.schedule(createRequestObject({
+            url: `${base}${chunk}`,
+            method: "GET",
+            headers: { "Accept": "*/*" }
+          }, base), 1);
+          const js = String(chunkRes.data ?? "");
+          const m = js.match(/createServerReference\)\("([0-9a-f]{32,})"[^)]*"runApiCalls"/);
+          if (m?.[1]) return m[1];
+        }
+      } catch {
+      }
+      return null;
+    }
+    async callServerAction(base, actionId, path, query) {
+      const callObj = { path, method: "GET", token: null };
+      if (query && Object.keys(query).length > 0) callObj.query = query;
+      const response = await this.requestManager.schedule(createRequestObject({
+        url: `${base}/`,
+        method: "POST",
+        headers: {
+          "Accept": "text/x-component",
+          "Content-Type": "text/plain;charset=UTF-8",
+          "Next-Action": actionId
+        },
+        data: JSON.stringify([[callObj]])
+      }, base), 1);
       if (response.status === 403 || response.status === 503) {
         throw new Error(`CLOUDFLARE BYPASS ERROR:
-Please go to the homepage of <${BASE_URL}> and press the cloud icon.`);
+Please go to the homepage of <${base}> and press the cloud icon.`);
       }
-      const data = JSON.parse(response.data);
-      if (data?.status !== 200) {
-        throw new Error(`Voratoon API error: ${data?.message ?? "unknown response"}`);
+      if (response.status !== 200) return null;
+      return parseFlightResult(String(response.data ?? ""));
+    }
+    async apiGet(path, query) {
+      try {
+        const res = await this.callServerAction(this.activeBase, this.actionId, path, query);
+        if (res?.ok && res?.envelope) {
+          if (res.envelope.status !== void 0 && res.envelope.status !== 200) {
+            throw new Error(`Voratoon API error: ${res.envelope.message ?? "unknown response"}`);
+          }
+          return res.envelope;
+        }
+        if (res && res.ok === false) {
+          throw new Error(`Voratoon API error: ${res.message ?? res.payload?.message ?? "request failed"}`);
+        }
+      } catch (err) {
+        if (String(err?.message ?? "").includes("CLOUDFLARE BYPASS") || String(err?.message ?? "").includes("Voratoon API error")) {
+          throw err;
+        }
       }
-      return data;
+      const candidates = [this.activeBase];
+      for (const fb of FALLBACK_BASES) {
+        if (!candidates.includes(fb)) candidates.push(fb);
+      }
+      const portalDomains = await this.discoverPortalDomains();
+      for (const pd of portalDomains) {
+        if (!candidates.includes(pd)) candidates.push(pd);
+      }
+      for (const base of candidates) {
+        const freshAction = await this.refreshActionIdForBase(base);
+        const actionToUse = freshAction ?? this.actionId;
+        try {
+          const res = await this.callServerAction(base, actionToUse, path, query);
+          if (res?.ok && res?.envelope) {
+            this.activeBase = base;
+            this.actionId = actionToUse;
+            return res.envelope;
+          }
+        } catch {
+        }
+      }
+      throw new Error(`Voratoon API error: unable to fetch ${path} from ${this.activeBase}`);
     }
     async getMangaDetails(mangaId) {
-      const data = await this.apiGet(`${API_URL}/series/${mangaId}?includeMeta=true`);
+      const data = await this.apiGet(`/series/${mangaId}`, { includeMeta: true });
       return parseMangaDetails(data.data, mangaId);
     }
     async getChapters(mangaId) {
-      const data = await this.apiGet(`${API_URL}/series/${mangaId}/chapters`);
+      const data = await this.apiGet(`/series/${mangaId}/chapters`);
       return parseChapterList(data.data, mangaId);
     }
     async getChapterDetails(mangaId, chapterId) {
-      const data = await this.apiGet(`${API_URL}/series/${mangaId}/chapters/${chapterId}`);
-      return parseChapterDetails(data.data, mangaId, chapterId);
+      const data = await this.apiGet(`/series/${mangaId}/chapters/${chapterId}`);
+      const chapterData = data?.data;
+      const existingImages = chapterData?.data?.images;
+      if (Array.isArray(existingImages) && existingImages.length > 0) {
+        return parseChapterDetails(chapterData, mangaId, chapterId);
+      }
+      const ticket = chapterData?.pagesTicket;
+      if (typeof ticket === "string" && ticket.length > 0) {
+        const response = await this.requestManager.schedule(createRequestObject({
+          url: `${this.activeBase}/series/${mangaId}/chapter/${chapterId}`,
+          method: "POST",
+          headers: {
+            "Accept": "text/x-component",
+            "Content-Type": "text/plain;charset=UTF-8",
+            "Next-Action": this.unlockActionId
+          },
+          data: JSON.stringify([ticket])
+        }, this.activeBase), 1);
+        if (response.status === 403 || response.status === 503) {
+          throw new Error(`CLOUDFLARE BYPASS ERROR:
+Please go to <${this.activeBase}/series/${mangaId}/chapter/${chapterId}> and complete the verification.`);
+        }
+        const unlocked = parseFlightPayload(String(response.data ?? ""));
+        if (unlocked?.ok && Array.isArray(unlocked.images) && unlocked.images.length > 0) {
+          return parseChapterDetails({ data: { images: unlocked.images } }, mangaId, chapterId);
+        }
+        if (unlocked?.reason === "challenge") {
+          throw new Error(`CLOUDFLARE BYPASS ERROR:
+Voratoon requires Turnstile verification to read chapters. Open <${this.activeBase}> via the cloud icon, solve verification on any chapter, then retry.`);
+        }
+        throw new Error(`Voratoon unlockChapterPages error: ${unlocked?.message ?? "unknown response"}`);
+      }
+      return parseChapterDetails(chapterData, mangaId, chapterId);
     }
     async getHomePageSections(sectionCallback) {
       const sections = [
         {
-          url: `${API_URL}/series?preset=banner&includeMeta=true`,
+          path: "/series",
+          query: { preset: "banner", includeMeta: true },
           section: App.createHomeSection({
             id: "featured",
             title: "Featured",
@@ -1013,7 +1204,8 @@ Please go to the homepage of <${BASE_URL}> and press the cloud icon.`);
           })
         },
         {
-          url: `${API_URL}/series?takeChapter=2&includeMeta=true&sort=latest&sortOrder=desc&take=${PAGE_SIZE}&page=1`,
+          path: "/series",
+          query: { takeChapter: 2, includeMeta: true, sort: "latest", sortOrder: "desc", take: PAGE_SIZE, page: 1 },
           section: App.createHomeSection({
             id: "latest_update",
             title: "Latest Update",
@@ -1022,7 +1214,8 @@ Please go to the homepage of <${BASE_URL}> and press the cloud icon.`);
           })
         },
         {
-          url: `${API_URL}/series?takeChapter=1&includeMeta=true&sort=popular&sortOrder=desc&take=${PAGE_SIZE}&page=1`,
+          path: "/popular/all",
+          query: { includeMeta: 1, take: PAGE_SIZE, page: 1 },
           section: App.createHomeSection({
             id: "popular",
             title: "Popular",
@@ -1031,7 +1224,8 @@ Please go to the homepage of <${BASE_URL}> and press the cloud icon.`);
           })
         },
         {
-          url: `${API_URL}/series/recommendations?take=10&page=1&method=all`,
+          path: "/series/recommendations",
+          query: { take: 10, page: 1, method: "all" },
           section: App.createHomeSection({
             id: "recommendations",
             title: "Recommendations",
@@ -1043,7 +1237,7 @@ Please go to the homepage of <${BASE_URL}> and press the cloud icon.`);
       for (const item of sections) {
         sectionCallback(item.section);
         try {
-          const data = await this.apiGet(item.url);
+          const data = await this.apiGet(item.path, item.query);
           item.section.items = parseMangaList(data.data);
           sectionCallback(item.section);
         } catch (error) {
@@ -1055,27 +1249,30 @@ Please go to the homepage of <${BASE_URL}> and press the cloud icon.`);
       return this.getHomePageSections(sectionCallback);
     }
     async getSearchTags() {
-      const data = await this.apiGet(`${API_URL}/genres`);
+      const data = await this.apiGet("/genres");
       return parseSearchTags(data.data);
     }
     async getSearchResults(query, metadata) {
       const page = metadata?.page ?? 1;
-      const params = [`page=${page}`, `take=${PAGE_SIZE}`, "includeMeta=true"];
+      const params = {
+        page,
+        take: PAGE_SIZE,
+        includeMeta: true,
+        sort: "latest",
+        sortOrder: "desc"
+      };
       const title = query.title?.trim();
       const genres = getTagValues(query, "genre:");
       if (title) {
-        const term = encodeURIComponent(title);
-        params.push(`filter=title=like="${term}",nativeTitle=like="${term}"`);
+        params.filter = `title=like="${title}",nativeTitle=like="${title}"`;
       } else if (genres.length) {
-        params.push(`filter=${encodeURIComponent(`genreIds=in=(${genres.join(",")})`)}`);
+        params.filter = `genreIds=in=(${genres.join(",")})`;
       }
       const status = getTagValues(query, "status:")[0];
-      if (status) params.push(`status=${encodeURIComponent(status)}`);
+      if (status) params.status = status;
       const format = getTagValues(query, "format:")[0];
-      if (format) params.push(`format=${encodeURIComponent(format)}`);
-      params.push("sort=latest");
-      params.push("sortOrder=desc");
-      const data = await this.apiGet(`${API_URL}/series?${params.join("&")}`);
+      if (format) params.format = format;
+      const data = await this.apiGet("/series", params);
       const results = parseMangaList(data.data);
       return App.createPagedResults({
         results,
@@ -1084,21 +1281,25 @@ Please go to the homepage of <${BASE_URL}> and press the cloud icon.`);
     }
     async getViewMoreItems(homepageSectionId, metadata) {
       const page = metadata?.page ?? 1;
-      let url;
+      let path;
+      let query;
       switch (homepageSectionId) {
         case "latest_update":
-          url = `${API_URL}/series?takeChapter=2&includeMeta=true&sort=latest&sortOrder=desc&take=${PAGE_SIZE}&page=${page}`;
+          path = "/series";
+          query = { takeChapter: 2, includeMeta: true, sort: "latest", sortOrder: "desc", take: PAGE_SIZE, page };
           break;
         case "popular":
-          url = `${API_URL}/series?takeChapter=1&includeMeta=true&sort=popular&sortOrder=desc&take=${PAGE_SIZE}&page=${page}`;
+          path = "/popular/all";
+          query = { includeMeta: 1, take: PAGE_SIZE, page };
           break;
         case "recommendations":
-          url = `${API_URL}/series/recommendations?take=${PAGE_SIZE}&page=${page}&method=all`;
+          path = "/series/recommendations";
+          query = { take: PAGE_SIZE, page, method: "all" };
           break;
         default:
           throw new Error(`View more not supported for section: ${homepageSectionId}`);
       }
-      const data = await this.apiGet(url);
+      const data = await this.apiGet(path, query);
       const results = parseMangaList(data.data);
       return App.createPagedResults({
         results,
@@ -1107,27 +1308,27 @@ Please go to the homepage of <${BASE_URL}> and press the cloud icon.`);
     }
     async getCloudflareBypassRequestAsync() {
       return App.createRequest({
-        url: `${BASE_URL}/`,
+        url: `${this.activeBase}/`,
         method: "GET",
         headers: {
-          "referer": `${BASE_URL}/`,
-          "origin": `${BASE_URL}/`,
+          "referer": `${this.activeBase}/`,
+          "origin": `${this.activeBase}/`,
           "user-agent": await this.requestManager.getDefaultUserAgent()
         }
       });
     }
     getCloudflareBypassRequest() {
       return App.createRequest({
-        url: `${BASE_URL}/`,
+        url: `${this.activeBase}/`,
         method: "GET",
         headers: {
-          "referer": `${BASE_URL}/`,
-          "origin": `${BASE_URL}/`
+          "referer": `${this.activeBase}/`,
+          "origin": `${this.activeBase}/`
         }
       });
     }
     getMangaShareUrl(mangaId) {
-      return `${BASE_URL}/series/${mangaId}`;
+      return `${this.activeBase}/series/${mangaId}`;
     }
   };
   return __toCommonJS(Voratoon_exports);

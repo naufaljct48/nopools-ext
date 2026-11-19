@@ -730,187 +730,34 @@ var _Sources = (() => {
   var import_types = __toESM(require_lib());
 
   // src/WestManga/WestMangaHelper.ts
-  var WEBSITE_BASE = "https://westmanga.co";
-  var isApiUrl = (url) => /data\.mantweh\.online\/api/i.test(url);
-  var ACCESS_KEY = "WM_WEB_FRONT_END";
-  var SECRET_KEY = "xxxoidj";
-  var SIGNATURE_MESSAGE = "wm-api-request";
-  var SHA256_K = [
-    1116352408,
-    1899447441,
-    3049323471,
-    3921009573,
-    961987163,
-    1508970993,
-    2453635748,
-    2870763221,
-    3624381080,
-    310598401,
-    607225278,
-    1426881987,
-    1925078388,
-    2162078206,
-    2614888103,
-    3248222580,
-    3835390401,
-    4022224774,
-    264347078,
-    604807628,
-    770255983,
-    1249150122,
-    1555081692,
-    1996064986,
-    2554220882,
-    2821834349,
-    2952996808,
-    3210313671,
-    3336571891,
-    3584528711,
-    113926993,
-    338241895,
-    666307205,
-    773529912,
-    1294757372,
-    1396182291,
-    1695183700,
-    1986661051,
-    2177026350,
-    2456956037,
-    2730485921,
-    2820302411,
-    3259730800,
-    3345764771,
-    3516065817,
-    3600352804,
-    4094571909,
-    275423344,
-    430227734,
-    506948616,
-    659060556,
-    883997877,
-    958139571,
-    1322822218,
-    1537002063,
-    1747873779,
-    1955562222,
-    2024104815,
-    2227730452,
-    2361852424,
-    2428436474,
-    2756734187,
-    3204031479,
-    3329325298
+  var WEBSITE_BASE = "https://v1.westmanga.my";
+  var FALLBACK_BASES = [
+    "https://v1.westmanga.my",
+    "https://v1.westmanga.top"
   ];
-  var rightRotate = (value, amount) => value >>> amount | value << 32 - amount;
-  var utf8ToBytes = (text) => {
-    const bytes = [];
-    for (let i = 0; i < text.length; i++) {
-      const code = text.charCodeAt(i);
-      if (code < 128) bytes.push(code);
-      else if (code < 2048) bytes.push(192 | code >> 6, 128 | code & 63);
-      else bytes.push(224 | code >> 12, 128 | code >> 6 & 63, 128 | code & 63);
-    }
-    return bytes;
+  var PORTAL_URL = "https://westmanga.site/";
+  var normalizeUrl = (url, baseUrl = WEBSITE_BASE) => {
+    const trimmed = String(url ?? "").trim();
+    if (!trimmed) return "";
+    if (/^https?:\/\//i.test(trimmed)) return trimmed.replace(/^http:\/\//i, "https://");
+    if (trimmed.startsWith("//")) return `https:${trimmed}`;
+    if (trimmed.startsWith("/")) return `${baseUrl}${trimmed}`;
+    return `${baseUrl}/${trimmed}`;
   };
-  var sha256 = (input) => {
-    const bytes = input.slice();
-    const bitLength = bytes.length * 8;
-    const hash = [1779033703, 3144134277, 1013904242, 2773480762, 1359893119, 2600822924, 528734635, 1541459225];
-    bytes.push(128);
-    while (bytes.length % 64 !== 56) bytes.push(0);
-    const high = Math.floor(bitLength / 4294967296);
-    const low = bitLength >>> 0;
-    bytes.push(high >>> 24 & 255, high >>> 16 & 255, high >>> 8 & 255, high & 255);
-    bytes.push(low >>> 24 & 255, low >>> 16 & 255, low >>> 8 & 255, low & 255);
-    for (let offset = 0; offset < bytes.length; offset += 64) {
-      const w = new Array(64);
-      for (let i = 0; i < 16; i++) {
-        const j = offset + i * 4;
-        w[i] = ((bytes[j] ?? 0) << 24 | (bytes[j + 1] ?? 0) << 16 | (bytes[j + 2] ?? 0) << 8 | (bytes[j + 3] ?? 0)) >>> 0;
-      }
-      for (let i = 16; i < 64; i++) {
-        const w15 = w[i - 15] ?? 0;
-        const w2 = w[i - 2] ?? 0;
-        const s0 = rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ w15 >>> 3;
-        const s1 = rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ w2 >>> 10;
-        w[i] = (w[i - 16] ?? 0) + s0 + (w[i - 7] ?? 0) + s1 >>> 0;
-      }
-      let a = hash[0] ?? 0;
-      let b = hash[1] ?? 0;
-      let c = hash[2] ?? 0;
-      let d = hash[3] ?? 0;
-      let e = hash[4] ?? 0;
-      let f = hash[5] ?? 0;
-      let g = hash[6] ?? 0;
-      let h = hash[7] ?? 0;
-      for (let i = 0; i < 64; i++) {
-        const s1 = rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25);
-        const ch = e & f ^ ~e & g;
-        const temp1 = h + s1 + ch + (SHA256_K[i] ?? 0) + (w[i] ?? 0) >>> 0;
-        const s0 = rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22);
-        const maj = a & b ^ a & c ^ b & c;
-        const temp2 = s0 + maj >>> 0;
-        h = g;
-        g = f;
-        f = e;
-        e = d + temp1 >>> 0;
-        d = c;
-        c = b;
-        b = a;
-        a = temp1 + temp2 >>> 0;
-      }
-      hash[0] = (hash[0] ?? 0) + a >>> 0;
-      hash[1] = (hash[1] ?? 0) + b >>> 0;
-      hash[2] = (hash[2] ?? 0) + c >>> 0;
-      hash[3] = (hash[3] ?? 0) + d >>> 0;
-      hash[4] = (hash[4] ?? 0) + e >>> 0;
-      hash[5] = (hash[5] ?? 0) + f >>> 0;
-      hash[6] = (hash[6] ?? 0) + g >>> 0;
-      hash[7] = (hash[7] ?? 0) + h >>> 0;
-    }
-    const output = [];
-    for (const value of hash) output.push(value >>> 24 & 255, value >>> 16 & 255, value >>> 8 & 255, value & 255);
-    return output;
-  };
-  var bytesToHex = (bytes) => bytes.map((byte) => `0${byte.toString(16)}`.slice(-2)).join("");
-  var hmacSha256 = (message, key) => {
-    let keyBytes = utf8ToBytes(key);
-    if (keyBytes.length > 64) keyBytes = sha256(keyBytes);
-    while (keyBytes.length < 64) keyBytes.push(0);
-    const innerKey = keyBytes.map((byte) => byte ^ 54);
-    const outerKey = keyBytes.map((byte) => byte ^ 92);
-    const innerHash = sha256(innerKey.concat(utf8ToBytes(message)));
-    return bytesToHex(sha256(outerKey.concat(innerHash)));
-  };
-  var generateSignature = (urlPath, method, timestamp) => {
-    const key = timestamp + method + urlPath + ACCESS_KEY + SECRET_KEY;
-    return hmacSha256(SIGNATURE_MESSAGE, key);
-  };
-  var createRequestObject = (requestObj) => {
+  var createRequestObject = (requestObj, baseUrl = WEBSITE_BASE) => {
     const url = requestObj?.url ?? "";
-    const isImage = /(\.(png|jpe?g|webp|gif)$)|storage\./i.test(url);
-    const api = isApiUrl(url);
-    const accept = api ? "application/json,*/*;q=0.8" : isImage ? "image/avif,image/webp,image/apng,image/*,*/*;q=0.8" : "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
+    const isImage = /(\.(png|jpe?g|webp|gif|avif)$)|\/img\/|storage\./i.test(url.split("?")[0] ?? "");
+    const isApi = /\/api\//i.test(url);
+    const accept = isApi ? "application/json, text/plain, */*" : isImage ? "image/avif,image/webp,image/apng,image/*,*/*;q=0.8" : "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
     const defaultHeaders = {
       "Accept": accept,
-      "Origin": WEBSITE_BASE,
-      "Referer": `${WEBSITE_BASE}/`,
+      "Origin": baseUrl,
+      "Referer": `${baseUrl}/`,
       "DNT": "1",
       "Sec-GPC": "1",
-      "Accept-Encoding": "gzip, deflate, br",
-      "Accept-Language": "en-US,en;q=0.9",
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+      "Accept-Language": "en-US,en;q=0.9,id;q=0.8",
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
     };
-    if (api) {
-      const now = Math.floor(Date.now() / 1e3).toString();
-      const method = requestObj.method?.toUpperCase() || "GET";
-      const withoutProtocol = url.replace(/^https?:\/\//, "");
-      const pathStart = withoutProtocol.indexOf("/");
-      const urlPath = pathStart !== -1 ? withoutProtocol.substring(pathStart).split("?")[0]?.split("#")[0] ?? "/" : "/";
-      defaultHeaders["x-wm-accses-key"] = ACCESS_KEY;
-      defaultHeaders["x-wm-request-time"] = now;
-      defaultHeaders["x-wm-request-signature"] = generateSignature(urlPath, method, now);
-    }
     const extraHeadersObj = requestObj.headers ?? {};
     const extraHeaders = {};
     for (const k of Object.keys(extraHeadersObj)) {
@@ -918,6 +765,7 @@ var _Sources = (() => {
       if (typeof v === "string") extraHeaders[k] = v;
     }
     return App.createRequest({
+      method: "GET",
       ...requestObj,
       headers: {
         ...defaultHeaders,
@@ -1086,14 +934,14 @@ var _Sources = (() => {
   }
 
   // src/WestManga/WestMangaParser.ts
-  var parseMangaDetails = (json, mangaId) => {
+  var parseMangaDetails = (json, mangaId, baseUrl = WEBSITE_BASE) => {
     const data = json?.data ?? {};
     const titles = [];
     const title = data?.title ?? "";
     if (title) titles.push(decode(title));
-    const image = data?.cover ?? "";
+    const image = normalizeUrl(data?.cover ?? "", baseUrl);
     const statusRaw = String(data?.status ?? "").toLowerCase();
-    const status = statusRaw === "ongoing" ? "Ongoing" : statusRaw === "completed" ? "Completed" : "Unknown";
+    const status = statusRaw === "ongoing" ? "Ongoing" : statusRaw === "completed" ? "Completed" : statusRaw === "hiatus" ? "Hiatus" : "Unknown";
     const author = data?.author ?? "Unknown";
     const arrayTags = (Array.isArray(data?.genres) ? data.genres : []).map((g) => ({
       id: String(g?.id ?? ""),
@@ -1101,11 +949,11 @@ var _Sources = (() => {
     })).filter((t) => t.id && t.label);
     const tagSections = [App.createTagSection({ id: "0", label: "genres", tags: arrayTags.map((x) => App.createTag(x)) })];
     const rawDesc = data?.sinopsis ?? "";
-    const desc = rawDesc.replace(/<[^>]*>/g, "").trim();
+    const desc = decode(rawDesc.replace(/<[^>]*>/g, "")).trim();
     return App.createSourceManga({
       id: mangaId,
       mangaInfo: App.createMangaInfo({
-        titles,
+        titles: titles.length ? titles : [mangaId],
         image,
         status,
         author,
@@ -1139,18 +987,18 @@ var _Sources = (() => {
     }
     return chapters;
   };
-  var parseChapterDetails = (json, mangaId, chapterId) => {
-    const pages = (Array.isArray(json?.data?.images) ? json.data.images : []).map((x) => String(x)).filter((x) => x.length > 0);
+  var parseChapterDetails = (json, mangaId, chapterId, baseUrl = WEBSITE_BASE) => {
+    const pages = (Array.isArray(json?.data?.images) ? json.data.images : []).map((x) => normalizeUrl(String(x ?? ""), baseUrl)).filter((x) => x.length > 0);
     if (pages.length === 0) throw new Error(`Failed to find any pages for chapter ${chapterId} of manga ${mangaId}`);
     return App.createChapterDetails({ id: chapterId, mangaId, pages });
   };
-  var parseMangaList = (json) => {
+  var parseMangaList = (json, baseUrl = WEBSITE_BASE) => {
     const items = Array.isArray(json?.data) ? json.data : [];
     const results = [];
     for (const it of items) {
       const slug = it?.slug ?? "";
       const title = it?.title ?? "";
-      const image = it?.cover ?? "";
+      const image = normalizeUrl(it?.cover ?? "", baseUrl);
       const lastCh = Array.isArray(it?.lastChapters) ? it.lastChapters[0] : void 0;
       const subtitle = lastCh ? `Ch. ${lastCh.number}` : "";
       if (!slug || !title) continue;
@@ -1170,40 +1018,40 @@ var _Sources = (() => {
   };
 
   // src/WestManga/WestManga.ts
-  var WEBSITE_BASE2 = "https://westmanga.co";
-  var API_BASE = "https://data.mantweh.online";
   var WestMangaInfo = {
-    version: "1.1.13",
+    version: "1.2.0",
     name: "WestManga",
     icon: "icon.png",
     author: "NaufalJCT48",
     authorWebsite: "https://github.com/naufaljct48",
     description: "Extension yang mengambil manga dari WestManga (API)",
     contentRating: import_types.ContentRating.EVERYONE,
-    websiteBaseURL: WEBSITE_BASE2,
+    websiteBaseURL: WEBSITE_BASE,
     sourceTags: [{ text: "Indonesian", type: import_types.BadgeColor.GREY }],
     intents: import_types.SourceIntents.MANGA_CHAPTERS | import_types.SourceIntents.HOMEPAGE_SECTIONS | import_types.SourceIntents.CLOUDFLARE_BYPASS_REQUIRED | import_types.SourceIntents.SETTINGS_UI
   };
   var WestManga = class extends import_types.Source {
     constructor() {
       super(...arguments);
+      this.activeBase = WEBSITE_BASE;
+      this.visitToken = null;
+      this.visitExpiresAt = 0;
       this.requestManager = App.createRequestManager({
         requestsPerSecond: 4,
         requestTimeout: 15e3,
         interceptor: {
           interceptRequest: async (request) => {
-            const isImage = /(\.(png|jpe?g|webp|gif)$)|storage\./i.test(request.url);
-            const isApi = /data\.mantweh\.online\/api/i.test(request.url);
+            const isImage = /(\.(png|jpe?g|webp|gif|avif)$)|\/img\/|storage\./i.test((request.url || "").split("?")[0] ?? "");
+            const isApi = /\/api\//i.test(request.url);
             request.headers = {
               ...request.headers ?? {},
-              "Accept": isApi ? "application/json,*/*;q=0.8" : isImage ? "image/avif,image/webp,image/apng,image/*,*/*;q=0.8" : "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-              "Origin": WEBSITE_BASE2,
-              "Referer": `${WEBSITE_BASE2}/`,
+              "Accept": isApi ? "application/json, text/plain, */*" : isImage ? "image/avif,image/webp,image/apng,image/*,*/*;q=0.8" : "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+              "Origin": this.activeBase,
+              "Referer": `${this.activeBase}/`,
               "DNT": "1",
               "Sec-GPC": "1",
-              "Accept-Encoding": "gzip, deflate, br",
-              "Accept-Language": "en-US,en;q=0.9",
-              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+              "Accept-Language": "en-US,en;q=0.9,id;q=0.8",
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
             };
             return request;
           },
@@ -1218,57 +1066,131 @@ var _Sources = (() => {
       if (!data) return {};
       try {
         return typeof data === "string" ? JSON.parse(data) : data;
-      } catch (e) {
-        return data;
+      } catch {
+        return {};
       }
     }
+    async discoverPortalDomains() {
+      try {
+        const req = createRequestObject({ url: PORTAL_URL, method: "GET" }, this.activeBase);
+        const res = await this.requestManager.schedule(req, 1);
+        const html = String(res.data ?? "");
+        const matches = html.match(/https?:\/\/[a-z0-9.-]*westmanga\.[a-z]+/gi) ?? [];
+        const out = [];
+        for (const m of matches) {
+          const clean = m.replace(/\/+$/, "");
+          if (!/westmanga\.site$/i.test(clean) && !out.includes(clean)) out.push(clean);
+        }
+        return out;
+      } catch {
+        return [];
+      }
+    }
+    async fetchVisitTokenForBase(base) {
+      try {
+        const req = createRequestObject({ url: `${base}/api/visit-token`, method: "GET" }, base);
+        const res = await this.requestManager.schedule(req, 1);
+        if (res.status !== 200) return null;
+        const json = this.parseJSON(res);
+        if (typeof json?.token === "string" && json.token) {
+          return { token: json.token, expiresAt: Number(json.expires_at ?? 0) };
+        }
+      } catch {
+      }
+      return null;
+    }
+    async ensureVisitToken(forceRefresh = false) {
+      const nowSec = Math.floor(Date.now() / 1e3);
+      if (!forceRefresh && this.visitToken && (this.visitExpiresAt === 0 || this.visitExpiresAt - nowSec > 300)) {
+        return this.visitToken;
+      }
+      const candidates = [this.activeBase];
+      for (const fb of FALLBACK_BASES) {
+        if (!candidates.includes(fb)) candidates.push(fb);
+      }
+      for (const base of candidates) {
+        const result = await this.fetchVisitTokenForBase(base);
+        if (result) {
+          this.activeBase = base;
+          this.visitToken = result.token;
+          this.visitExpiresAt = result.expiresAt;
+          return result.token;
+        }
+      }
+      const portalDomains = await this.discoverPortalDomains();
+      for (const base of portalDomains) {
+        if (candidates.includes(base)) continue;
+        const result = await this.fetchVisitTokenForBase(base);
+        if (result) {
+          this.activeBase = base;
+          this.visitToken = result.token;
+          this.visitExpiresAt = result.expiresAt;
+          return result.token;
+        }
+      }
+      throw new Error(`Failed to obtain WestManga visit token from ${this.activeBase}`);
+    }
+    async apiGet(pathAndQuery) {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const token = await this.ensureVisitToken(attempt > 0);
+        const req = createRequestObject({
+          url: `${this.activeBase}${pathAndQuery}`,
+          method: "GET",
+          headers: { "X-WM-Visit": token }
+        }, this.activeBase);
+        const res = await this.requestManager.schedule(req, 1);
+        if (res.status === 403 && attempt === 0) {
+          this.visitToken = null;
+          this.visitExpiresAt = 0;
+          continue;
+        }
+        if (res.status === 403 || res.status === 503) {
+          throw new Error(`CLOUDFLARE BYPASS ERROR:
+Please go to the homepage of <${this.activeBase}> and press the cloud icon.`);
+        }
+        return this.parseJSON(res);
+      }
+      return {};
+    }
     async getMangaDetails(mangaId) {
-      const request = createRequestObject({ url: `${API_BASE}/api/comic/${mangaId}`, method: "GET" });
-      const response = await this.requestManager.schedule(request, 1);
-      const json = this.parseJSON(response);
-      return parseMangaDetails(json, mangaId);
+      const json = await this.apiGet(`/api/comic/${mangaId}`);
+      return parseMangaDetails(json, mangaId, this.activeBase);
     }
     async getChapters(mangaId) {
-      const request = createRequestObject({ url: `${API_BASE}/api/comic/${mangaId}`, method: "GET" });
-      const response = await this.requestManager.schedule(request, 1);
-      const json = this.parseJSON(response);
+      const json = await this.apiGet(`/api/comic/${mangaId}`);
       return parseChapterList(json);
     }
     async getChapterDetails(mangaId, chapterId) {
       const slug = chapterId.replace(/^\/?v\//, "");
-      const request = createRequestObject({ url: `${API_BASE}/api/v/${slug}`, method: "GET" });
-      const response = await this.requestManager.schedule(request, 1);
-      const json = this.parseJSON(response);
-      return parseChapterDetails(json, mangaId, chapterId);
+      const json = await this.apiGet(`/api/v/${slug}`);
+      return parseChapterDetails(json, mangaId, chapterId, this.activeBase);
     }
     async getHomePageSections(sectionCallback) {
       const sections = [
         {
-          request: createRequestObject({ url: `${API_BASE}/api/contents?page=1&per_page=25&orderBy=Popular&project=false`, method: "GET" }),
+          path: "/api/contents?page=1&per_page=25&orderBy=Popular&project=false",
           section: App.createHomeSection({ id: "popular_today", title: "Popular Today", type: import_types.HomeSectionType.singleRowNormal, containsMoreItems: true })
         },
         {
-          request: createRequestObject({ url: `${API_BASE}/api/contents?page=1&per_page=25&project=false`, method: "GET" }),
+          path: "/api/contents?page=1&per_page=25&project=false",
           section: App.createHomeSection({ id: "latest_update", title: "Latest Update", type: import_types.HomeSectionType.singleRowNormal, containsMoreItems: true })
         }
       ];
       for (const s of sections) {
         sectionCallback(s.section);
-        const response = await this.requestManager.schedule(s.request, 1);
-        const json = this.parseJSON(response);
-        s.section.items = parseMangaList(json);
+        const json = await this.apiGet(s.path);
+        s.section.items = parseMangaList(json, this.activeBase);
         sectionCallback(s.section);
       }
     }
     async getSearchTags() {
-      const request = createRequestObject({ url: `${API_BASE}/api/contents/genres`, method: "GET" });
-      const response = await this.requestManager.schedule(request, 1);
-      const json = this.parseJSON(response);
+      const json = await this.apiGet("/api/contents/genres");
       return parseSearchTags(json);
     }
-    async getSearchResults(query) {
+    async getSearchResults(query, metadata) {
+      const page = Number(metadata?.page ?? 1);
       const title = query.title?.trim();
-      const params = ["page=1", "per_page=25", "project=false"];
+      const params = [`page=${page}`, "per_page=25", "project=false"];
       if (title) params.push(`q=${encodeURIComponent(title)}`);
       const included = query?.includedTags;
       if (Array.isArray(included) && included.length) {
@@ -1277,12 +1199,10 @@ var _Sources = (() => {
           if (id) params.push(`genre%5B%5D=${encodeURIComponent(id)}`);
         }
       }
-      const request = createRequestObject({ url: `${API_BASE}/api/contents?${params.join("&")}`, method: "GET" });
-      const response = await this.requestManager.schedule(request, 1);
-      const json = this.parseJSON(response);
-      const results = parseMangaList(json);
-      const current = Number(json?.paginator?.current_page ?? 1);
-      const last = Number(json?.paginator?.last_page ?? 1);
+      const json = await this.apiGet(`/api/contents?${params.join("&")}`);
+      const results = parseMangaList(json, this.activeBase);
+      const current = Number(json?.paginator?.current_page ?? page);
+      const last = Number(json?.paginator?.last_page ?? page);
       return App.createPagedResults({ results, metadata: current < last ? { page: current + 1, last } : void 0 });
     }
     async getViewMoreItems(homepageSectionId, metadata) {
@@ -1290,27 +1210,25 @@ var _Sources = (() => {
       const params = [`page=${page}`, "per_page=25", "project=false"];
       if (homepageSectionId === "popular_today") params.push("orderBy=Popular");
       else if (homepageSectionId !== "latest_update") throw new Error(`Invalid homepage section id: ${homepageSectionId}`);
-      const request = createRequestObject({ url: `${API_BASE}/api/contents?${params.join("&")}`, method: "GET" });
-      const response = await this.requestManager.schedule(request, 1);
-      const json = this.parseJSON(response);
-      const results = parseMangaList(json);
+      const json = await this.apiGet(`/api/contents?${params.join("&")}`);
+      const results = parseMangaList(json, this.activeBase);
       const current = Number(json?.paginator?.current_page ?? page);
       const last = Number(json?.paginator?.last_page ?? page);
       return App.createPagedResults({ results, metadata: current < last ? { page: current + 1, last } : void 0 });
     }
     async getCloudflareBypassRequestAsync() {
       return App.createRequest({
-        url: `${WEBSITE_BASE2}/`,
+        url: `${this.activeBase}/`,
         method: "GET",
         headers: {
-          "referer": `${WEBSITE_BASE2}/`,
-          "origin": `${WEBSITE_BASE2}/`,
+          "referer": `${this.activeBase}/`,
+          "origin": `${this.activeBase}/`,
           "user-agent": await this.requestManager.getDefaultUserAgent()
         }
       });
     }
     getMangaShareUrl(mangaId) {
-      return `${WEBSITE_BASE2}/manga/${mangaId}`;
+      return `${this.activeBase}/manga/${mangaId}`;
     }
   };
   return __toCommonJS(WestManga_exports);

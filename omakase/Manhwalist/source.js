@@ -15951,9 +15951,9 @@ Please go to the homepage of <${this.baseUrl}> and press the cloud icon.`);
   };
 
   // src/Manhwalist/Manhwalist.ts
-  var DOMAIN = "https://manhwalist02.asia";
+  var DOMAIN = "https://m1.manhwalist.my.id";
   var ManhwalistInfo = {
-    version: getExportVersion("0.0.1"),
+    version: getExportVersion("0.0.2"),
     name: "Manhwalist",
     description: `Extension that pulls manga from ${DOMAIN}`,
     author: "NaufalJCT48",

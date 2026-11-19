@@ -725,27 +725,24 @@ var _Sources = (() => {
   var Komikcast_exports = {};
   __export(Komikcast_exports, {
     Komikcast: () => Komikcast,
-    KomikcastInfo: () => KomikcastInfo,
-    isPresignExpired: () => isPresignExpired
+    KomikcastInfo: () => KomikcastInfo
   });
   var import_types = __toESM(require_lib());
 
   // src/Komikcast/KomikcastHelper.ts
-  var API_URL = "https://be.komikcast.fit";
-  var BASE_URL = "https://v2.komikcast.fit";
-  var AUTH_TOKEN = "oat_NTQwNjU.eVU0Tjc4aEhpNmlwcDJkNWlDSU9GT0w2VXJxR25UdFc5UnV0dHRGdzY1MDY1NjYyNw";
+  var BASE_URL = "https://komikcast.info";
   var createRequestObject = (requestObj) => {
-    const isImage = /\.(png|jpe?g|webp|gif)$/i.test(requestObj.url || "");
+    const url = requestObj?.url ?? "";
+    const isImage = /\.(png|jpe?g|webp|gif|avif)$/i.test(url.split("?")[0] ?? "");
     const headers = {
-      "Accept": isImage ? "image/avif,image/webp,image/apng,image/*,*/*;q=0.8" : "application/json, text/plain, */*",
+      "Accept": isImage ? "image/avif,image/webp,image/apng,image/*,*/*;q=0.8" : "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
       "Referer": `${BASE_URL}/`,
-      "Origin": BASE_URL,
-      "Sec-GPC": "1"
+      ...isImage ? {} : { "Origin": BASE_URL },
+      "Accept-Language": "en-US,en;q=0.9,id;q=0.8",
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
     };
-    if (!isImage && (requestObj.url || "").includes(API_URL)) {
-      headers["Authorization"] = `Bearer ${AUTH_TOKEN}`;
-    }
     return App.createRequest({
+      method: "GET",
       ...requestObj,
       headers: {
         ...headers,
@@ -753,45 +750,101 @@ var _Sources = (() => {
       }
     });
   };
+  var normalizeUrl = (url) => {
+    const trimmed = String(url ?? "").trim();
+    if (!trimmed) return "";
+    if (trimmed.startsWith("http://")) return `https://${trimmed.slice("http://".length)}`;
+    if (trimmed.startsWith("https://")) return trimmed;
+    if (trimmed.startsWith("//")) return `https:${trimmed}`;
+    if (trimmed.startsWith("/")) return `${BASE_URL}${trimmed}`;
+    return `${BASE_URL}/${trimmed}`;
+  };
   var parseStatus = (status) => {
-    switch (status?.toLowerCase()) {
+    switch (String(status ?? "").toLowerCase()) {
       case "ongoing":
+      case "publishing":
         return "Ongoing";
       case "completed":
+      case "tamat":
+      case "finished":
         return "Completed";
+      case "hiatus":
+        return "Hiatus";
+      case "dropped":
+      case "cancelled":
+        return "Dropped";
       default:
         return "Unknown";
     }
   };
   var parseDate = (dateStr) => {
     if (!dateStr) return /* @__PURE__ */ new Date();
-    try {
-      return new Date(dateStr);
-    } catch {
-      return /* @__PURE__ */ new Date();
-    }
+    const d = new Date(dateStr);
+    return isNaN(d.getTime()) ? /* @__PURE__ */ new Date() : d;
+  };
+  var stripHtml = (raw) => {
+    if (!raw) return "";
+    return raw.replace(/<br\s*\/?>/gi, "\n").replace(/<\/(p|div|li|h[1-6])>/gi, "\n").replace(/<(p|div|li|h[1-6])(?:\s[^>]*)?>/gi, "").replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#0?39;|&apos;/g, "'").replace(/\n{3,}/g, "\n\n").trim();
   };
 
   // src/Komikcast/KomikcastParser.ts
-  var parseMangaDetails = (data, mangaId) => {
-    const mangaData = data.data;
-    const titles = [mangaData.title];
-    if (mangaData.nativeTitle) {
-      titles.push(mangaData.nativeTitle);
+  var parseMangaList = (items) => {
+    const results = [];
+    const seen = {};
+    for (const item of items ?? []) {
+      const slug = String(item?.slug ?? "").trim();
+      const title = String(item?.title ?? "").trim();
+      if (!slug || !title || seen[slug]) continue;
+      seen[slug] = true;
+      const parts = [];
+      const lastCh = item?.last_chapter?.chapter_number ?? item?.latest_chapter?.chapter_number ?? item?.chapters?.[0]?.chapter_number ?? item?.last_chapter_number;
+      if (lastCh !== void 0 && lastCh !== null && lastCh !== "") {
+        parts.push(`Ch. ${lastCh}`);
+      }
+      const rating = Number(item?.rating ?? 0);
+      if (rating > 0) parts.push(`\u2605 ${rating}`);
+      results.push(App.createPartialSourceManga({
+        mangaId: slug,
+        image: normalizeUrl(item?.poster || item?.cover || ""),
+        title,
+        subtitle: parts.join(" \u2022 ")
+      }));
     }
-    const genreTags = (mangaData.genres || []).map((genre) => App.createTag({
-      id: `genre_${genre.id}`,
-      label: genre.data?.name || ""
-    }));
+    return results;
+  };
+  var parseMangaDetails = (manga, mangaId) => {
+    const titles = [];
+    if (manga?.title) titles.push(String(manga.title).trim());
+    const altRaw = manga?.alternative_titles;
+    if (Array.isArray(altRaw)) {
+      for (const a of altRaw) {
+        const clean = String(a ?? "").trim();
+        if (clean && !titles.includes(clean)) titles.push(clean);
+      }
+    } else if (typeof altRaw === "string" && altRaw.trim()) {
+      for (const a of altRaw.split(/[,;/]/)) {
+        const clean = a.trim();
+        if (clean && !titles.includes(clean)) titles.push(clean);
+      }
+    }
+    if (titles.length === 0) titles.push(mangaId);
+    const authorRaw = String(manga?.author ?? "").trim();
+    const artistRaw = String(manga?.artist ?? "").trim();
+    const author = authorRaw && authorRaw !== "-" ? authorRaw : "Unknown";
+    const artist = artistRaw && artistRaw !== "-" ? artistRaw : author;
+    const genreTags = (Array.isArray(manga?.genres) ? manga.genres : []).map((g) => ({
+      id: g?.slug ? `genre:${g.slug}` : "",
+      label: String(g?.name ?? "").trim()
+    })).filter((t) => t.id.length > 0 && t.label.length > 0).map((t) => App.createTag(t));
     return App.createSourceManga({
       id: mangaId,
       mangaInfo: App.createMangaInfo({
         titles,
-        image: mangaData.coverImage || "",
-        status: parseStatus(mangaData.status),
-        author: mangaData.author || "Unknown",
-        artist: mangaData.author || "Unknown",
-        desc: mangaData.synopsis || "",
+        image: normalizeUrl(manga?.poster || manga?.cover || ""),
+        status: parseStatus(manga?.status),
+        author,
+        artist,
+        desc: stripHtml(manga?.synopsis ?? ""),
         tags: [
           App.createTagSection({
             id: "genres",
@@ -802,161 +855,135 @@ var _Sources = (() => {
       })
     });
   };
-  var parseChapterList = (data, mangaId) => {
+  var parseChapterList = (chaptersRaw, mangaId) => {
     const chapters = [];
+    const seen = {};
     let sortingIndex = 0;
-    for (const chapter of data || []) {
-      const chapterData = chapter.data;
-      const chapterIndex = chapterData.index?.toString() || "";
+    for (const ch of chaptersRaw ?? []) {
+      const num = ch?.chapter_number;
+      if (num === void 0 || num === null || num === "") continue;
+      const id = String(num);
+      if (seen[id]) continue;
+      seen[id] = true;
+      const chapNum = parseFloat(id);
       chapters.push(App.createChapter({
-        id: chapterIndex,
-        chapNum: chapterData.index || 0,
-        name: chapterData.title || `Chapter ${chapterData.index}`,
-        time: parseDate(chapter.createdAt),
+        id,
+        chapNum: isNaN(chapNum) ? 0 : chapNum,
+        name: String(ch?.title ?? "").trim() || `Chapter ${id}`,
+        time: parseDate(ch?.created_at || ch?.updated_at || ""),
         langCode: "\u{1F1EE}\u{1F1E9}",
+        volume: 0,
+        group: "",
         sortingIndex: sortingIndex--
       }));
     }
+    if (chapters.length === 0) {
+      throw new Error(`Couldn't find any chapters for mangaId: ${mangaId}!`);
+    }
     return chapters;
   };
-  var parseChapterDetails = (data, mangaId, chapterId) => {
-    const chapterData = data.data;
-    const pages = chapterData.images || [];
+  var parseChapterDetails = (chapter, mangaId, chapterId) => {
+    const rawImages = Array.isArray(chapter?.images) ? chapter.images.slice() : [];
+    rawImages.sort((a, b) => Number(a?.order ?? 0) - Number(b?.order ?? 0));
+    const pages = rawImages.map((img) => normalizeUrl(img?.r2_url || img?.image_path || img?.url || "")).filter((u) => u.length > 0);
+    if (pages.length === 0) {
+      throw new Error(`Failed to find any pages for chapter ${chapterId} of manga ${mangaId}`);
+    }
     return App.createChapterDetails({
       id: chapterId,
       mangaId,
       pages
     });
   };
-  var parseMangaList = (data) => {
-    const results = [];
-    for (const item of data || []) {
-      const mangaData = item.data;
-      const chapters = item.chapters || [];
-      const latestChapter = chapters[0];
-      let subtitle = "";
-      if (latestChapter?.data?.index) {
-        subtitle = `Ch. ${latestChapter.data.index}`;
-      } else if (mangaData.totalChapters) {
-        subtitle = `${mangaData.totalChapters} Chapters`;
-      }
-      results.push(App.createPartialSourceManga({
-        mangaId: mangaData.slug || item.id.toString(),
-        image: mangaData.coverImage || "",
-        title: mangaData.title || "",
-        subtitle
-      }));
-    }
-    return results;
-  };
-  var parseSearchTags = (data) => {
-    const tagSections = [];
-    const genres = [];
-    for (const genre of data || []) {
-      const genreName = genre.data?.name || "";
-      genres.push(App.createTag({
-        id: genreName,
-        label: genreName
-      }));
-    }
-    if (genres.length > 0) {
-      tagSections.push(App.createTagSection({
+  var parseSearchTags = (genresRaw) => {
+    const genreTags = (genresRaw ?? []).map((g) => ({
+      id: g?.slug ? `genre:${g.slug}` : "",
+      label: String(g?.name ?? "").trim()
+    })).filter((t) => t.id.length > 0 && t.label.length > 0).map((t) => App.createTag(t));
+    const sections = [];
+    if (genreTags.length > 0) {
+      sections.push(App.createTagSection({
         id: "genres",
         label: "Genres",
-        tags: genres
+        tags: genreTags
       }));
     }
-    const statuses = [
-      { id: "ongoing", label: "Ongoing" },
-      { id: "completed", label: "Completed" },
-      { id: "hiatus", label: "Hiatus" },
-      { id: "cancelled", label: "Cancelled" }
-    ];
-    tagSections.push(App.createTagSection({
+    sections.push(App.createTagSection({
+      id: "type",
+      label: "Type",
+      tags: [
+        { id: "type:Manga", label: "Manga" },
+        { id: "type:Manhwa", label: "Manhwa" },
+        { id: "type:Manhua", label: "Manhua" }
+      ].map((t) => App.createTag(t))
+    }));
+    sections.push(App.createTagSection({
       id: "status",
       label: "Status",
-      tags: statuses.map((s) => App.createTag(s))
+      tags: [
+        { id: "status:Ongoing", label: "Ongoing" },
+        { id: "status:Completed", label: "Completed" },
+        { id: "status:Hiatus", label: "Hiatus" }
+      ].map((t) => App.createTag(t))
     }));
-    const formats = [
-      { id: "manga", label: "Manga" },
-      { id: "manhwa", label: "Manhwa" },
-      { id: "manhua", label: "Manhua" },
-      { id: "webtoon", label: "Webtoon" }
-    ];
-    tagSections.push(App.createTagSection({
-      id: "format",
-      label: "Format",
-      tags: formats.map((f) => App.createTag(f))
+    sections.push(App.createTagSection({
+      id: "sort",
+      label: "Sort By",
+      tags: [
+        { id: "sort:latest", label: "Latest Update" },
+        { id: "sort:popular", label: "Popular" }
+      ].map((t) => App.createTag(t))
     }));
-    return tagSections;
+    return sections;
   };
 
   // src/Komikcast/Komikcast.ts
-  var API_URL2 = "https://be.komikcast.cc";
-  var BASE_URL2 = "https://v3.komikcast.fit";
-  var AUTH_TOKEN2 = "oat_NTQwNjU.eVU0Tjc4aEhpNmlwcDJkNWlDSU9GT0w2VXJxR25UdFc5UnV0dHRGdzY1MDY1NjYyNw";
-  var PRESIGN_HOST = "minio.imgkc1.my.id";
-  var isPresignExpired = (url) => {
-    const signedAt = url.match(/X-Amz-Date=(\d{8}T\d{6}Z)/)?.[1];
-    const lifetime = Number(url.match(/X-Amz-Expires=(\d+)/)?.[1] ?? 0);
-    if (!signedAt || !lifetime) return false;
-    const iso = `${signedAt.slice(0, 4)}-${signedAt.slice(4, 6)}-${signedAt.slice(6, 8)}T${signedAt.slice(9, 11)}:${signedAt.slice(11, 13)}:${signedAt.slice(13, 15)}Z`;
-    const expiresAt = Date.parse(iso) + lifetime * 1e3;
-    if (isNaN(expiresAt)) return false;
-    return Date.now() >= expiresAt - 60 * 1e3;
-  };
-  var refreshCoverUrl = async (requestManager, url) => {
-    const slug = url.match(/\/series\/([^/]+)\//)?.[1];
-    if (!slug) return url;
-    const response = await requestManager.schedule(createRequestObject({
-      url: `${API_URL2}/series/${slug}?includeMeta=true`,
-      method: "GET"
-    }), 1);
-    const data = JSON.parse(response.data);
-    return data?.data?.data?.coverImage || url;
+  var getTagValues = (query, prefix) => {
+    const tags = query?.includedTags;
+    if (!Array.isArray(tags)) return [];
+    const out = [];
+    for (const t of tags) {
+      const val = String(t?.id ?? "");
+      if (val.startsWith(prefix)) out.push(val.replace(prefix, ""));
+    }
+    return out;
   };
   var KomikcastInfo = {
-    version: "4.0.10",
+    version: "5.0.0",
     name: "Komikcast",
     icon: "icon.png",
     author: "NaufalJCT48",
     authorWebsite: "https://github.com/naufaljct48",
-    description: "Extension that pulls manga from Komikcast (API-based)",
+    description: "Extension that pulls manga from Komikcast (komikcast.info)",
     contentRating: import_types.ContentRating.MATURE,
-    websiteBaseURL: BASE_URL2,
+    websiteBaseURL: BASE_URL,
     sourceTags: [{ text: "Indonesian", type: import_types.BadgeColor.GREY }],
     intents: import_types.SourceIntents.MANGA_CHAPTERS | import_types.SourceIntents.HOMEPAGE_SECTIONS | import_types.SourceIntents.CLOUDFLARE_BYPASS_REQUIRED | import_types.SourceIntents.SETTINGS_UI
   };
   var Komikcast = class extends import_types.Source {
     constructor() {
       super(...arguments);
+      this.inertiaVersion = null;
       this.requestManager = App.createRequestManager({
         requestsPerSecond: 4,
         requestTimeout: 15e3,
         interceptor: {
           interceptRequest: async (request) => {
-            if (request.url.includes(PRESIGN_HOST) && isPresignExpired(request.url)) {
-              try {
-                request.url = await refreshCoverUrl(this.requestManager, request.url);
-              } catch (error) {
-                console.log("Failed to refresh expired cover URL:", error);
-              }
-            }
-            const isImage = /\.(png|jpe?g|webp|gif)$/i.test(request.url.split("?")[0] ?? "");
+            const isImage = /\.(png|jpe?g|webp|gif|avif)$/i.test((request.url || "").split("?")[0] ?? "");
             if (isImage) {
-              request.headers = {
+              const headers = {
                 ...request.headers ?? {},
                 "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
-                "Referer": `${BASE_URL2}/`
+                "Referer": `${BASE_URL}/`
               };
+              delete headers["Origin"];
+              delete headers["origin"];
+              request.headers = headers;
             } else {
               request.headers = {
                 ...request.headers ?? {},
-                "Accept": "application/json, text/plain, */*",
-                "Authorization": `Bearer ${AUTH_TOKEN2}`,
-                "Origin": BASE_URL2,
-                "Referer": `${BASE_URL2}/`,
-                "Sec-GPC": "1"
+                "Referer": `${BASE_URL}/`,
+                "Origin": BASE_URL
               };
             }
             return request;
@@ -967,201 +994,150 @@ var _Sources = (() => {
         }
       });
     }
-    async getMangaDetails(mangaId) {
-      const request = createRequestObject({
-        url: `${API_URL2}/series/${mangaId}?includeMeta=true`,
-        method: "GET"
-      });
-      const response = await this.requestManager.schedule(request, 1);
-      const data = JSON.parse(response.data);
-      if (data.status !== 200) {
-        throw new Error(`Failed to get manga details: ${data.message}`);
-      }
-      return parseMangaDetails(data.data, mangaId);
-    }
-    async getChapters(mangaId) {
-      const request = createRequestObject({
-        url: `${API_URL2}/series/${mangaId}/chapters`,
-        method: "GET"
-      });
-      const response = await this.requestManager.schedule(request, 1);
-      const data = JSON.parse(response.data);
-      if (data.status !== 200) {
-        return [];
-      }
-      return parseChapterList(data.data, mangaId);
-    }
-    async getChapterDetails(mangaId, chapterId) {
-      const request = createRequestObject({
-        url: `${API_URL2}/series/${mangaId}/chapters/${chapterId}`,
-        method: "GET"
-      });
-      const response = await this.requestManager.schedule(request, 1);
-      const data = JSON.parse(response.data);
-      if (data.status !== 200) {
-        throw new Error(`Failed to get chapter details: ${data.message}`);
-      }
-      return parseChapterDetails(data.data, mangaId, chapterId);
-    }
-    async getHomePageSections(sectionCallback) {
-      const sections = [
-        {
-          request: createRequestObject({
-            url: `${API_URL2}/series?preset=banner&includeMeta=true`,
-            method: "GET"
-          }),
-          section: App.createHomeSection({
-            id: "featured",
-            title: "Featured",
-            type: import_types.HomeSectionType.featured,
-            containsMoreItems: false
-          })
-        },
-        {
-          request: createRequestObject({
-            url: `${API_URL2}/series?takeChapter=2&includeMeta=true&sort=latest&sortOrder=desc&take=12&page=1`,
-            method: "GET"
-          }),
-          section: App.createHomeSection({
-            id: "latest_update",
-            title: "Latest Update",
-            type: import_types.HomeSectionType.singleRowNormal,
-            containsMoreItems: true
-          })
-        },
-        {
-          request: createRequestObject({
-            url: `${API_URL2}/series/recommendations?take=10&page=1&method=all`,
-            method: "GET"
-          }),
-          section: App.createHomeSection({
-            id: "recommendations",
-            title: "Recommendations",
-            type: import_types.HomeSectionType.singleRowNormal,
-            containsMoreItems: true
-          })
-        }
-      ];
-      for (const item of sections) {
-        sectionCallback(item.section);
-        try {
-          const response = await this.requestManager.schedule(item.request, 1);
-          const data = JSON.parse(response.data);
-          if (data.status === 200 && data.data) {
-            item.section.items = parseMangaList(data.data);
-            sectionCallback(item.section);
+    async fetchInertiaProps(pathAndQuery) {
+      const url = `${BASE_URL}${pathAndQuery}`;
+      if (this.inertiaVersion) {
+        const req = createRequestObject({
+          url,
+          headers: {
+            "Accept": "text/html, application/xhtml+xml",
+            "X-Inertia": "true",
+            "X-Inertia-Version": this.inertiaVersion,
+            "X-Requested-With": "XMLHttpRequest"
           }
-        } catch (error) {
-          console.log(`Error loading section ${item.section.id}:`, error);
+        });
+        const res = await this.requestManager.schedule(req, 1);
+        if (res.status === 403 || res.status === 503) {
+          throw new Error(`CLOUDFLARE BYPASS ERROR:
+Please go to the homepage of <${BASE_URL}> and press the cloud icon.`);
         }
-      }
-    }
-    async getSearchTags() {
-      const request = createRequestObject({
-        url: `${API_URL2}/genres`,
-        method: "GET"
-      });
-      const response = await this.requestManager.schedule(request, 1);
-      const data = JSON.parse(response.data);
-      if (data.status !== 200) {
-        return [];
-      }
-      return parseSearchTags(data.data);
-    }
-    async getSearchResults(query, metadata) {
-      const page = metadata?.page ?? 1;
-      const params = [];
-      params.push(`page=${page}`);
-      params.push("take=24");
-      if (query.title) {
-        const searchTerm = encodeURIComponent(query.title);
-        const filterParam = `title=like="${searchTerm}",nativeTitle=like="${searchTerm}"`;
-        params.push(`filter=${filterParam}`);
-      }
-      if (query.includedTags?.length) {
-        const tagsResponse = await this.getSearchTags();
-        for (const tag of query.includedTags) {
-          for (const section of tagsResponse) {
-            const foundTag = section.tags.find((t) => t.id === tag.id);
-            if (foundTag) {
-              if (section.id === "genres") {
-                params.push(`genreIds=${encodeURIComponent(tag.id)}`);
-              } else if (section.id === "status") {
-                params.push(`status=${encodeURIComponent(tag.id)}`);
-              } else if (section.id === "format") {
-                params.push(`format=${encodeURIComponent(tag.id)}`);
-              }
-              break;
+        if (res.status === 200) {
+          const raw = String(res.data ?? "").trim();
+          if (raw.startsWith("{")) {
+            try {
+              const page2 = JSON.parse(raw);
+              if (page2?.version) this.inertiaVersion = String(page2.version);
+              if (page2?.props) return page2.props;
+            } catch {
             }
           }
         }
+        this.inertiaVersion = null;
       }
-      params.push("includeMeta=true");
-      params.push("sort=latest");
-      params.push("sortOrder=desc");
-      const queryString = params.join("&");
-      const request = createRequestObject({
-        url: `${API_URL2}/series?${queryString}`,
-        method: "GET"
+      const htmlReq = createRequestObject({ url });
+      const htmlRes = await this.requestManager.schedule(htmlReq, 1);
+      if (htmlRes.status === 403 || htmlRes.status === 503) {
+        throw new Error(`CLOUDFLARE BYPASS ERROR:
+Please go to the homepage of <${BASE_URL}> and press the cloud icon.`);
+      }
+      const $ = this.cheerio.load(String(htmlRes.data ?? ""));
+      const dataPage = $("#app").attr("data-page");
+      if (!dataPage) {
+        throw new Error(`Failed to parse Komikcast page data at ${pathAndQuery}`);
+      }
+      const page = JSON.parse(dataPage);
+      if (page?.version) this.inertiaVersion = String(page.version);
+      return page?.props ?? {};
+    }
+    async getMangaDetails(mangaId) {
+      const props = await this.fetchInertiaProps(`/manga/${encodeURIComponent(mangaId)}`);
+      return parseMangaDetails(props?.manga ?? {}, mangaId);
+    }
+    async getChapters(mangaId) {
+      const props = await this.fetchInertiaProps(`/manga/${encodeURIComponent(mangaId)}`);
+      return parseChapterList(props?.manga?.chapters ?? [], mangaId);
+    }
+    async getChapterDetails(mangaId, chapterId) {
+      const props = await this.fetchInertiaProps(`/manga/${encodeURIComponent(mangaId)}/chapter/${encodeURIComponent(chapterId)}`);
+      return parseChapterDetails(props?.chapter ?? {}, mangaId, chapterId);
+    }
+    async getHomePageSections(sectionCallback) {
+      const popularSection = App.createHomeSection({
+        id: "popular",
+        title: "Popular",
+        type: import_types.HomeSectionType.featured,
+        containsMoreItems: true
       });
-      const response = await this.requestManager.schedule(request, 1);
-      const data = JSON.parse(response.data);
-      if (data.status !== 200) {
-        return App.createPagedResults({
-          results: []
-        });
+      const latestSection = App.createHomeSection({
+        id: "latest_update",
+        title: "Latest Update",
+        type: import_types.HomeSectionType.singleRowNormal,
+        containsMoreItems: true
+      });
+      sectionCallback(popularSection);
+      sectionCallback(latestSection);
+      try {
+        const homeProps = await this.fetchInertiaProps("/");
+        popularSection.items = parseMangaList(homeProps?.popularManga ?? []);
+        sectionCallback(popularSection);
+      } catch (error) {
+        console.log("Error loading section popular:", error);
       }
-      const results = parseMangaList(data.data);
-      const hasMore = data.data.length >= 24;
+      try {
+        const latestProps = await this.fetchInertiaProps("/manga?sort=latest&page=1");
+        latestSection.items = parseMangaList(latestProps?.mangas?.data ?? []);
+        sectionCallback(latestSection);
+      } catch (error) {
+        console.log("Error loading section latest_update:", error);
+      }
+    }
+    async getSearchTags() {
+      const props = await this.fetchInertiaProps("/manga");
+      return parseSearchTags(props?.genres ?? []);
+    }
+    async getSearchResults(query, metadata) {
+      const page = Number(metadata?.page ?? 1);
+      const params = [`page=${page}`];
+      const title = query.title?.trim();
+      if (title) params.push(`search=${encodeURIComponent(title)}`);
+      const genre = getTagValues(query, "genre:")[0];
+      if (genre) params.push(`genre=${encodeURIComponent(genre)}`);
+      const type = getTagValues(query, "type:")[0];
+      if (type) params.push(`type=${encodeURIComponent(type)}`);
+      const status = getTagValues(query, "status:")[0];
+      if (status) params.push(`status=${encodeURIComponent(status)}`);
+      const sort = getTagValues(query, "sort:")[0];
+      if (sort) params.push(`sort=${encodeURIComponent(sort)}`);
+      const props = await this.fetchInertiaProps(`/manga?${params.join("&")}`);
+      const mangas = props?.mangas ?? {};
+      const results = parseMangaList(mangas?.data ?? []);
+      const current = Number(mangas?.current_page ?? page);
+      const last = Number(mangas?.last_page ?? page);
       return App.createPagedResults({
         results,
-        metadata: hasMore ? { page: page + 1 } : void 0
+        metadata: current < last ? { page: current + 1 } : void 0
       });
     }
     async getViewMoreItems(homepageSectionId, metadata) {
-      const page = metadata?.page ?? 1;
-      let url = "";
-      switch (homepageSectionId) {
-        case "latest_update":
-          url = `${API_URL2}/series?takeChapter=2&includeMeta=true&sort=latest&sortOrder=desc&take=24&page=${page}`;
-          break;
-        case "recommendations":
-          url = `${API_URL2}/series/recommendations?take=24&page=${page}&method=all`;
-          break;
-        default:
-          throw new Error(`View more not supported for section: ${homepageSectionId}`);
+      const page = Number(metadata?.page ?? 1);
+      let sort = "latest";
+      if (homepageSectionId === "popular") sort = "popular";
+      else if (homepageSectionId !== "latest_update") {
+        throw new Error(`View more not supported for section: ${homepageSectionId}`);
       }
-      const request = createRequestObject({
-        url,
-        method: "GET"
-      });
-      const response = await this.requestManager.schedule(request, 1);
-      const data = JSON.parse(response.data);
-      if (data.status !== 200) {
-        return App.createPagedResults({
-          results: []
-        });
-      }
-      const results = parseMangaList(data.data);
-      const hasMore = data.data.length >= 24;
+      const props = await this.fetchInertiaProps(`/manga?sort=${sort}&page=${page}`);
+      const mangas = props?.mangas ?? {};
+      const results = parseMangaList(mangas?.data ?? []);
+      const current = Number(mangas?.current_page ?? page);
+      const last = Number(mangas?.last_page ?? page);
       return App.createPagedResults({
         results,
-        metadata: hasMore ? { page: page + 1 } : void 0
+        metadata: current < last ? { page: current + 1 } : void 0
       });
     }
     async getCloudflareBypassRequestAsync() {
       return App.createRequest({
-        url: `${BASE_URL2}/`,
+        url: `${BASE_URL}/`,
         method: "GET",
         headers: {
-          "referer": `${BASE_URL2}/`,
-          "origin": `${BASE_URL2}/`,
+          "referer": `${BASE_URL}/`,
+          "origin": `${BASE_URL}/`,
           "user-agent": await this.requestManager.getDefaultUserAgent()
         }
       });
     }
     getMangaShareUrl(mangaId) {
-      return `${BASE_URL2}/series/${mangaId}`;
+      return `${BASE_URL}/manga/${mangaId}`;
     }
   };
   return __toCommonJS(Komikcast_exports);
