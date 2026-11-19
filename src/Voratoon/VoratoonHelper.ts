@@ -1,21 +1,30 @@
 import { Request } from '@paperback/types'
 
-export const BASE_URL = 'https://v1.voratoon.com'
-export const API_URL = 'https://api.voratoon.com'
+export const BASE_URL = 'https://13.voratoon.com'
+export const FALLBACK_BASES = [
+    'https://13.voratoon.com',
+    'https://voratoon.co'
+]
+export const PORTAL_URL = 'https://voratoon.id/'
+
+// Next.js Server Action hashes (auto-refreshed from chunks if rotated)
+export const DEFAULT_RUN_API_ACTION = '405a35a66edd5e9e3fa2d903049435d5a3f9aaad0b'
+export const DEFAULT_UNLOCK_PAGES_ACTION = '603e8cd8a82ce1bd958c99197d5816de779f853c41'
 
 // Covers are presigned S3 links on this host; page images live on cdn.voratoon.com unsigned
 export const PRESIGN_HOST = 'cvr.voratoon.id'
 
-export const createRequestObject = (requestObj: any): Request => {
+export const createRequestObject = (requestObj: any, baseUrl: string = BASE_URL): Request => {
     const isImage = /\.(png|jpe?g|webp|gif|avif)$/i.test((requestObj.url || '').split('?')[0] ?? '')
 
     const headers: Record<string, string> = {
         'Accept': isImage
             ? 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8'
             : 'application/json, text/plain, */*',
-        'Referer': `${BASE_URL}/`,
-        'Origin': BASE_URL,
-        'Sec-GPC': '1'
+        'Referer': `${baseUrl}/`,
+        'Origin': baseUrl,
+        'Sec-GPC': '1',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36'
     }
 
     return App.createRequest({
@@ -75,16 +84,74 @@ export const isPresignExpired = (url: string): boolean => {
     return Date.now() >= expiresAt - 60 * 1000
 }
 
-// /prod/series/<slug>/cover/... — ask the API for the same series to get a fresh signature
-export const refreshCoverUrl = async (requestManager: any, url: string): Promise<string> => {
-    const slug = url.match(/\/series\/([^/]+)\//)?.[1]
-    if (!slug) return url
+// Parse Next.js Server Action Flight response, resolving `<id>:T<hexLen>,<text>` refs (`"$2"`)
+export const parseFlightPayload = (raw: string): any => {
+    const text = String(raw ?? '')
+    const textRefs: Record<string, string> = {}
+    const parsedChunks: Record<string, any> = {}
 
-    const response = await requestManager.schedule(createRequestObject({
-        url: `${API_URL}/series/${slug}?includeMeta=true`,
-        method: 'GET'
-    }), 1)
-    const data = JSON.parse(response.data as string)
+    let pos = 0
+    while (pos < text.length) {
+        const colon = text.indexOf(':', pos)
+        if (colon < 0) break
+        const id = text.slice(pos, colon).trim()
+        const after = colon + 1
+        if (after >= text.length) break
 
-    return data?.data?.data?.coverImage || url
+        // Flight large text chunk: `<id>:T<hexByteLen>,<utf8 text>` (ASCII base64url tickets match char len)
+        if (text[after] === 'T') {
+            const comma = text.indexOf(',', after + 1)
+            if (comma < 0) break
+            const hexLen = parseInt(text.slice(after + 1, comma), 16)
+            if (!isNaN(hexLen) && hexLen >= 0) {
+                const start = comma + 1
+                textRefs[`$${id}`] = text.slice(start, start + hexLen)
+                pos = start + hexLen
+                if (text[pos] === '\n') pos++
+                continue
+            }
+        }
+
+        const nl = text.indexOf('\n', after)
+        const lineEnd = nl < 0 ? text.length : nl
+        const payload = text.slice(after, lineEnd).trim()
+        pos = nl < 0 ? text.length : nl + 1
+
+        if (payload.startsWith('[') || payload.startsWith('{')) {
+            try {
+                parsedChunks[id] = JSON.parse(payload)
+            } catch {
+                // Ignore non-JSON flight frames
+            }
+        }
+    }
+
+    const resolveRefs = (val: any): any => {
+        if (typeof val === 'string' && textRefs[val] !== undefined) return textRefs[val]
+        if (Array.isArray(val)) return val.map(resolveRefs)
+        if (val && typeof val === 'object') {
+            const out: Record<string, any> = {}
+            for (const k of Object.keys(val)) out[k] = resolveRefs(val[k])
+            return out
+        }
+        return val
+    }
+
+    // Prefer chunk '1' (standard Next.js server action return slot)
+    if (parsedChunks['1'] !== undefined) {
+        return resolveRefs(parsedChunks['1'])
+    }
+    for (const k of Object.keys(parsedChunks)) {
+        if (k === '0') continue
+        return resolveRefs(parsedChunks[k])
+    }
+    return null
+}
+
+export const parseFlightResult = (raw: string): any => {
+    const payload = parseFlightPayload(raw)
+    if (Array.isArray(payload) && payload.length > 0 && payload[0] && typeof payload[0] === 'object' && 'ok' in payload[0]) {
+        return payload[0]
+    }
+    return null
 }

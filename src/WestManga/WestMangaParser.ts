@@ -1,18 +1,19 @@
 import { Chapter, ChapterDetails, PartialSourceManga, SourceManga, Tag, TagSection } from '@paperback/types'
 import { decode as decodeHTMLEntity } from 'html-entities'
+import { normalizeUrl, WEBSITE_BASE } from './WestMangaHelper'
 
 // Parser untuk API WestManga (JSON)
 
-export const parseMangaDetails = (json: any, mangaId: string): SourceManga => {
+export const parseMangaDetails = (json: any, mangaId: string, baseUrl: string = WEBSITE_BASE): SourceManga => {
     const data = json?.data ?? {}
 
     const titles: string[] = []
     const title = data?.title ?? ''
     if (title) titles.push(decodeHTMLEntity(title))
 
-    const image: string = data?.cover ?? ''
+    const image: string = normalizeUrl(data?.cover ?? '', baseUrl)
     const statusRaw: string = String(data?.status ?? '').toLowerCase()
-    const status: string = statusRaw === 'ongoing' ? 'Ongoing' : statusRaw === 'completed' ? 'Completed' : 'Unknown'
+    const status: string = statusRaw === 'ongoing' ? 'Ongoing' : statusRaw === 'completed' ? 'Completed' : statusRaw === 'hiatus' ? 'Hiatus' : 'Unknown'
     const author: string = data?.author ?? 'Unknown'
 
     const arrayTags: Tag[] = (Array.isArray(data?.genres) ? data.genres : []).map((g: any) => ({
@@ -21,15 +22,14 @@ export const parseMangaDetails = (json: any, mangaId: string): SourceManga => {
     })).filter((t: Tag) => t.id && t.label)
 
     const tagSections: TagSection[] = [App.createTagSection({ id: '0', label: 'genres', tags: arrayTags.map((x) => App.createTag(x)) })]
-    
-    // Strip HTML tags from description
+
     const rawDesc: string = data?.sinopsis ?? ''
-    const desc: string = rawDesc.replace(/<[^>]*>/g, '').trim()
+    const desc: string = decodeHTMLEntity(rawDesc.replace(/<[^>]*>/g, '')).trim()
 
     return App.createSourceManga({
         id: mangaId,
         mangaInfo: App.createMangaInfo({
-            titles,
+            titles: titles.length ? titles : [mangaId],
             image,
             status,
             author,
@@ -64,13 +64,12 @@ export const parseChapterList = (json: any): Chapter[] => {
         }))
     }
 
-    // Return the created Chapter array directly to maintain the correct return type expected by Paperback
     return chapters
 }
 
-export const parseChapterDetails = (json: any, mangaId: string, chapterId: string): ChapterDetails => {
+export const parseChapterDetails = (json: any, mangaId: string, chapterId: string, baseUrl: string = WEBSITE_BASE): ChapterDetails => {
     const pages: string[] = (Array.isArray(json?.data?.images) ? json.data.images : [])
-        .map((x: any) => String(x))
+        .map((x: any) => normalizeUrl(String(x ?? ''), baseUrl))
         .filter((x: string) => x.length > 0)
 
     if (pages.length === 0) throw new Error(`Failed to find any pages for chapter ${chapterId} of manga ${mangaId}`)
@@ -78,14 +77,13 @@ export const parseChapterDetails = (json: any, mangaId: string, chapterId: strin
     return App.createChapterDetails({ id: chapterId, mangaId, pages })
 }
 
-// Digunakan untuk homepage sections dan hasil pencarian (contents)
-export const parseMangaList = (json: any): PartialSourceManga[] => {
+export const parseMangaList = (json: any, baseUrl: string = WEBSITE_BASE): PartialSourceManga[] => {
     const items = Array.isArray(json?.data) ? json.data : []
     const results: PartialSourceManga[] = []
     for (const it of items) {
         const slug: string = it?.slug ?? ''
         const title: string = it?.title ?? ''
-        const image: string = it?.cover ?? ''
+        const image: string = normalizeUrl(it?.cover ?? '', baseUrl)
         const lastCh = Array.isArray(it?.lastChapters) ? it.lastChapters[0] : undefined
         const subtitle: string = lastCh ? `Ch. ${lastCh.number}` : ''
         if (!slug || !title) continue

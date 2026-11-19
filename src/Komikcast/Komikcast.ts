@@ -1,110 +1,77 @@
 import {
-    Source,
+    BadgeColor,
     Chapter,
     ChapterDetails,
-    HomeSection,
-    SearchRequest,
-    PagedResults,
-    HomeSectionType,
-    SourceInfo,
     ContentRating,
-    BadgeColor,
-    SourceIntents,
-    TagSection,
+    HomeSection,
+    HomeSectionType,
+    PagedResults,
     Request,
     Response,
-    SourceManga
+    SearchRequest,
+    Source,
+    SourceInfo,
+    SourceIntents,
+    SourceManga,
+    TagSection
 } from '@paperback/types'
-import { createRequestObject } from './KomikcastHelper'
+import { BASE_URL, createRequestObject } from './KomikcastHelper'
 import {
-    parseMangaDetails,
-    parseChapterList,
     parseChapterDetails,
+    parseChapterList,
+    parseMangaDetails,
     parseMangaList,
     parseSearchTags
 } from './KomikcastParser'
 
-const API_URL = 'https://be.komikcast.cc'
-const BASE_URL = 'https://v3.komikcast.fit'
-
-// Token from your curl request - might need to be dynamic/rotated
-const AUTH_TOKEN = 'oat_NTQwNjU.eVU0Tjc4aEhpNmlwcDJkNWlDSU9GT0w2VXJxR25UdFc5UnV0dHRGdzY1MDY1NjYyNw'
-
-const PRESIGN_HOST = 'minio.imgkc1.my.id'
-
-// Covers are presigned S3 links that die after X-Amz-Expires seconds (24h today), so any
-// URL the app kept from an earlier session points at a dead signature.
-export const isPresignExpired = (url: string): boolean => {
-    const signedAt = url.match(/X-Amz-Date=(\d{8}T\d{6}Z)/)?.[1]
-    const lifetime = Number(url.match(/X-Amz-Expires=(\d+)/)?.[1] ?? 0)
-    if (!signedAt || !lifetime) return false
-
-    const iso = `${signedAt.slice(0, 4)}-${signedAt.slice(4, 6)}-${signedAt.slice(6, 8)}T${signedAt.slice(9, 11)}:${signedAt.slice(11, 13)}:${signedAt.slice(13, 15)}Z`
-    const expiresAt = Date.parse(iso) + lifetime * 1000
-    if (isNaN(expiresAt)) return false
-
-    return Date.now() >= expiresAt - 60 * 1000
-}
-
-// /prod/series/<slug>/cover/... — ask the API for the same series to get a fresh signature
-const refreshCoverUrl = async (requestManager: any, url: string): Promise<string> => {
-    const slug = url.match(/\/series\/([^/]+)\//)?.[1]
-    if (!slug) return url
-
-    const response = await requestManager.schedule(createRequestObject({
-        url: `${API_URL}/series/${slug}?includeMeta=true`,
-        method: 'GET'
-    }), 1)
-    const data = JSON.parse(response.data as string)
-
-    return data?.data?.data?.coverImage || url
+const getTagValues = (query: SearchRequest, prefix: string): string[] => {
+    const tags = (query as any)?.includedTags as Array<{ id: string }> | undefined
+    if (!Array.isArray(tags)) return []
+    const out: string[] = []
+    for (const t of tags) {
+        const val = String(t?.id ?? '')
+        if (val.startsWith(prefix)) out.push(val.replace(prefix, ''))
+    }
+    return out
 }
 
 export const KomikcastInfo: SourceInfo = {
-    version: '4.0.10',
+    version: '5.0.0',
     name: 'Komikcast',
     icon: 'icon.png',
     author: 'NaufalJCT48',
     authorWebsite: 'https://github.com/naufaljct48',
-    description: 'Extension that pulls manga from Komikcast (API-based)',
+    description: 'Extension that pulls manga from Komikcast (komikcast.info)',
     contentRating: ContentRating.MATURE,
     websiteBaseURL: BASE_URL,
     sourceTags: [{ text: 'Indonesian', type: BadgeColor.GREY }],
-    intents: SourceIntents.MANGA_CHAPTERS | SourceIntents.HOMEPAGE_SECTIONS | SourceIntents.CLOUDFLARE_BYPASS_REQUIRED | SourceIntents.SETTINGS_UI,
+    intents: SourceIntents.MANGA_CHAPTERS | SourceIntents.HOMEPAGE_SECTIONS | SourceIntents.CLOUDFLARE_BYPASS_REQUIRED | SourceIntents.SETTINGS_UI
 }
 
 export class Komikcast extends Source {
+    private inertiaVersion: string | null = null
+
     requestManager = App.createRequestManager({
         requestsPerSecond: 4,
         requestTimeout: 15000,
         interceptor: {
             interceptRequest: async (request: Request): Promise<Request> => {
-                if (request.url.includes(PRESIGN_HOST) && isPresignExpired(request.url)) {
-                    try {
-                        request.url = await refreshCoverUrl(this.requestManager, request.url)
-                    } catch (error) {
-                        console.log('Failed to refresh expired cover URL:', error)
-                    }
-                }
-
-                // Cover URLs are presigned S3 links, so the extension check must ignore the query string
-                const isImage = /\.(png|jpe?g|webp|gif)$/i.test(request.url.split('?')[0] ?? '')
-                
+                const isImage = /\.(png|jpe?g|webp|gif|avif)$/i.test((request.url || '').split('?')[0] ?? '')
                 if (isImage) {
-                    request.headers = {
+                    const headers: Record<string, string> = {
                         ...(request.headers ?? {}),
                         'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
-                        'Referer': `${BASE_URL}/`,
+                        'Referer': `${BASE_URL}/`
                     }
+                    // direct-stor.berkasdrive.com returns 403 when Origin is sent on image GETs
+                    delete headers['Origin']
+                    delete headers['origin']
+                    request.headers = headers
                 } else {
-                    // API requests
                     request.headers = {
                         ...(request.headers ?? {}),
-                        'Accept': 'application/json, text/plain, */*',
-                        'Authorization': `Bearer ${AUTH_TOKEN}`,
-                        'Origin': BASE_URL,
                         'Referer': `${BASE_URL}/`,
-                        'Sec-GPC': '1',
+                        'Origin': BASE_URL
                     }
                 }
                 return request
@@ -115,233 +82,159 @@ export class Komikcast extends Source {
         }
     })
 
-    override async getMangaDetails(mangaId: string): Promise<SourceManga> {
-        const request = createRequestObject({
-            url: `${API_URL}/series/${mangaId}?includeMeta=true`,
-            method: 'GET'
-        })
-        
-        const response = await this.requestManager.schedule(request, 1)
-        const data = JSON.parse(response.data as string)
-        
-        if (data.status !== 200) {
-            throw new Error(`Failed to get manga details: ${data.message}`)
+    private async fetchInertiaProps(pathAndQuery: string): Promise<any> {
+        const url = `${BASE_URL}${pathAndQuery}`
+
+        // Fast JSON path when we already know the current Inertia asset version
+        if (this.inertiaVersion) {
+            const req = createRequestObject({
+                url,
+                headers: {
+                    'Accept': 'text/html, application/xhtml+xml',
+                    'X-Inertia': 'true',
+                    'X-Inertia-Version': this.inertiaVersion,
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            const res = await this.requestManager.schedule(req, 1)
+            if (res.status === 403 || res.status === 503) {
+                throw new Error(`CLOUDFLARE BYPASS ERROR:\nPlease go to the homepage of <${BASE_URL}> and press the cloud icon.`)
+            }
+            if (res.status === 200) {
+                const raw = String(res.data ?? '').trim()
+                if (raw.startsWith('{')) {
+                    try {
+                        const page = JSON.parse(raw)
+                        if (page?.version) this.inertiaVersion = String(page.version)
+                        if (page?.props) return page.props
+                    } catch {
+                        // Fall through to full HTML parse
+                    }
+                }
+            }
+            // 409 or non-JSON: reset version and fall back to HTML
+            this.inertiaVersion = null
         }
-        
-        return parseMangaDetails(data.data, mangaId)
+
+        const htmlReq = createRequestObject({ url })
+        const htmlRes = await this.requestManager.schedule(htmlReq, 1)
+        if (htmlRes.status === 403 || htmlRes.status === 503) {
+            throw new Error(`CLOUDFLARE BYPASS ERROR:\nPlease go to the homepage of <${BASE_URL}> and press the cloud icon.`)
+        }
+
+        const $ = this.cheerio.load(String(htmlRes.data ?? ''))
+        const dataPage = $('#app').attr('data-page')
+        if (!dataPage) {
+            throw new Error(`Failed to parse Komikcast page data at ${pathAndQuery}`)
+        }
+
+        const page = JSON.parse(dataPage)
+        if (page?.version) this.inertiaVersion = String(page.version)
+        return page?.props ?? {}
+    }
+
+    override async getMangaDetails(mangaId: string): Promise<SourceManga> {
+        const props = await this.fetchInertiaProps(`/manga/${encodeURIComponent(mangaId)}`)
+        return parseMangaDetails(props?.manga ?? {}, mangaId)
     }
 
     override async getChapters(mangaId: string): Promise<Chapter[]> {
-        // Get chapters from separate endpoint
-        const request = createRequestObject({
-            url: `${API_URL}/series/${mangaId}/chapters`,
-            method: 'GET'
-        })
-        
-        const response = await this.requestManager.schedule(request, 1)
-        const data = JSON.parse(response.data as string)
-        
-        if (data.status !== 200) {
-            return []
-        }
-        
-        return parseChapterList(data.data, mangaId)
+        const props = await this.fetchInertiaProps(`/manga/${encodeURIComponent(mangaId)}`)
+        return parseChapterList(props?.manga?.chapters ?? [], mangaId)
     }
 
     override async getChapterDetails(mangaId: string, chapterId: string): Promise<ChapterDetails> {
-        // chapterId is the chapter index (e.g., "148")
-        const request = createRequestObject({
-            url: `${API_URL}/series/${mangaId}/chapters/${chapterId}`,
-            method: 'GET'
-        })
-        
-        const response = await this.requestManager.schedule(request, 1)
-        const data = JSON.parse(response.data as string)
-        
-        if (data.status !== 200) {
-            throw new Error(`Failed to get chapter details: ${data.message}`)
-        }
-        
-        return parseChapterDetails(data.data, mangaId, chapterId)
+        const props = await this.fetchInertiaProps(`/manga/${encodeURIComponent(mangaId)}/chapter/${encodeURIComponent(chapterId)}`)
+        return parseChapterDetails(props?.chapter ?? {}, mangaId, chapterId)
     }
 
     override async getHomePageSections(sectionCallback: (section: HomeSection) => void): Promise<void> {
-        const sections = [
-            {
-                request: createRequestObject({
-                    url: `${API_URL}/series?preset=banner&includeMeta=true`,
-                    method: 'GET'
-                }),
-                section: App.createHomeSection({
-                    id: 'featured',
-                    title: 'Featured',
-                    type: HomeSectionType.featured,
-                    containsMoreItems: false
-                })
-            },
-            {
-                request: createRequestObject({
-                    url: `${API_URL}/series?takeChapter=2&includeMeta=true&sort=latest&sortOrder=desc&take=12&page=1`,
-                    method: 'GET'
-                }),
-                section: App.createHomeSection({
-                    id: 'latest_update',
-                    title: 'Latest Update',
-                    type: HomeSectionType.singleRowNormal,
-                    containsMoreItems: true
-                })
-            },
-            {
-                request: createRequestObject({
-                    url: `${API_URL}/series/recommendations?take=10&page=1&method=all`,
-                    method: 'GET'
-                }),
-                section: App.createHomeSection({
-                    id: 'recommendations',
-                    title: 'Recommendations',
-                    type: HomeSectionType.singleRowNormal,
-                    containsMoreItems: true
-                })
-            }
-        ]
+        const popularSection = App.createHomeSection({
+            id: 'popular',
+            title: 'Popular',
+            type: HomeSectionType.featured,
+            containsMoreItems: true
+        })
+        const latestSection = App.createHomeSection({
+            id: 'latest_update',
+            title: 'Latest Update',
+            type: HomeSectionType.singleRowNormal,
+            containsMoreItems: true
+        })
 
-        for (const item of sections) {
-            sectionCallback(item.section)
-            
-            try {
-                const response = await this.requestManager.schedule(item.request, 1)
-                const data = JSON.parse(response.data as string)
-                
-                if (data.status === 200 && data.data) {
-                    item.section.items = parseMangaList(data.data)
-                    sectionCallback(item.section)
-                }
-            } catch (error) {
-                console.log(`Error loading section ${item.section.id}:`, error)
-            }
+        sectionCallback(popularSection)
+        sectionCallback(latestSection)
+
+        try {
+            const homeProps = await this.fetchInertiaProps('/')
+            popularSection.items = parseMangaList(homeProps?.popularManga ?? [])
+            sectionCallback(popularSection)
+        } catch (error) {
+            console.log('Error loading section popular:', error)
+        }
+
+        try {
+            const latestProps = await this.fetchInertiaProps('/manga?sort=latest&page=1')
+            latestSection.items = parseMangaList(latestProps?.mangas?.data ?? [])
+            sectionCallback(latestSection)
+        } catch (error) {
+            console.log('Error loading section latest_update:', error)
         }
     }
 
     override async getSearchTags(): Promise<TagSection[]> {
-        const request = createRequestObject({
-            url: `${API_URL}/genres`,
-            method: 'GET'
-        })
-        
-        const response = await this.requestManager.schedule(request, 1)
-        const data = JSON.parse(response.data as string)
-        
-        if (data.status !== 200) {
-            return []
-        }
-        
-        return parseSearchTags(data.data)
+        const props = await this.fetchInertiaProps('/manga')
+        return parseSearchTags(props?.genres ?? [])
     }
 
     override async getSearchResults(query: SearchRequest, metadata: any): Promise<PagedResults> {
-        const page = metadata?.page ?? 1
-        const params: string[] = []
+        const page = Number(metadata?.page ?? 1)
+        const params: string[] = [`page=${page}`]
 
-        params.push(`page=${page}`)
-        params.push('take=24')
+        const title = query.title?.trim()
+        if (title) params.push(`search=${encodeURIComponent(title)}`)
 
-        // Handle text search with filter parameter
-        // Format: filter=title=like="solo",nativeTitle=like="solo"
-        if (query.title) {
-            const searchTerm = encodeURIComponent(query.title)
-            const filterParam = `title=like="${searchTerm}",nativeTitle=like="${searchTerm}"`
-            params.push(`filter=${filterParam}`)
-        }
+        const genre = getTagValues(query, 'genre:')[0]
+        if (genre) params.push(`genre=${encodeURIComponent(genre)}`)
 
-        // Handle filters from tags
-        // We need to determine which section each tag belongs to
-        if (query.includedTags?.length) {
-            // Get all available tags to determine sections
-            const tagsResponse = await this.getSearchTags()
+        const type = getTagValues(query, 'type:')[0]
+        if (type) params.push(`type=${encodeURIComponent(type)}`)
 
-            for (const tag of query.includedTags) {
-                // Find which section this tag belongs to
-                for (const section of tagsResponse) {
-                    const foundTag = section.tags.find(t => t.id === tag.id)
-                    if (foundTag) {
-                        if (section.id === 'genres') {
-                            params.push(`genreIds=${encodeURIComponent(tag.id)}`)
-                        } else if (section.id === 'status') {
-                            params.push(`status=${encodeURIComponent(tag.id)}`)
-                        } else if (section.id === 'format') {
-                            params.push(`format=${encodeURIComponent(tag.id)}`)
-                        }
-                        break
-                    }
-                }
-            }
-        }
+        const status = getTagValues(query, 'status:')[0]
+        if (status) params.push(`status=${encodeURIComponent(status)}`)
 
-        // Add parameters for better results
-        params.push('includeMeta=true')
-        params.push('sort=latest')
-        params.push('sortOrder=desc')
+        const sort = getTagValues(query, 'sort:')[0]
+        if (sort) params.push(`sort=${encodeURIComponent(sort)}`)
 
-        const queryString = params.join('&')
+        const props = await this.fetchInertiaProps(`/manga?${params.join('&')}`)
+        const mangas = props?.mangas ?? {}
+        const results = parseMangaList(mangas?.data ?? [])
+        const current = Number(mangas?.current_page ?? page)
+        const last = Number(mangas?.last_page ?? page)
 
-        const request = createRequestObject({
-            url: `${API_URL}/series?${queryString}`,
-            method: 'GET'
-        })
-        
-        const response = await this.requestManager.schedule(request, 1)
-        const data = JSON.parse(response.data as string)
-        
-        if (data.status !== 200) {
-            return App.createPagedResults({
-                results: []
-            })
-        }
-        
-        const results = parseMangaList(data.data)
-        const hasMore = data.data.length >= 24
-        
         return App.createPagedResults({
             results,
-            metadata: hasMore ? { page: page + 1 } : undefined
+            metadata: current < last ? { page: current + 1 } : undefined
         })
     }
 
     override async getViewMoreItems(homepageSectionId: string, metadata: any): Promise<PagedResults> {
-        const page = metadata?.page ?? 1
-        let url = ''
-        
-        switch (homepageSectionId) {
-            case 'latest_update':
-                url = `${API_URL}/series?takeChapter=2&includeMeta=true&sort=latest&sortOrder=desc&take=24&page=${page}`
-                break
-            case 'recommendations':
-                url = `${API_URL}/series/recommendations?take=24&page=${page}&method=all`
-                break
-            default:
-                throw new Error(`View more not supported for section: ${homepageSectionId}`)
+        const page = Number(metadata?.page ?? 1)
+        let sort = 'latest'
+        if (homepageSectionId === 'popular') sort = 'popular'
+        else if (homepageSectionId !== 'latest_update') {
+            throw new Error(`View more not supported for section: ${homepageSectionId}`)
         }
-        
-        const request = createRequestObject({
-            url,
-            method: 'GET'
-        })
-        
-        const response = await this.requestManager.schedule(request, 1)
-        const data = JSON.parse(response.data as string)
-        
-        if (data.status !== 200) {
-            return App.createPagedResults({
-                results: []
-            })
-        }
-        
-        const results = parseMangaList(data.data)
-        const hasMore = data.data.length >= 24
-        
+
+        const props = await this.fetchInertiaProps(`/manga?sort=${sort}&page=${page}`)
+        const mangas = props?.mangas ?? {}
+        const results = parseMangaList(mangas?.data ?? [])
+        const current = Number(mangas?.current_page ?? page)
+        const last = Number(mangas?.last_page ?? page)
+
         return App.createPagedResults({
             results,
-            metadata: hasMore ? { page: page + 1 } : undefined
+            metadata: current < last ? { page: current + 1 } : undefined
         })
     }
 
@@ -358,6 +251,6 @@ export class Komikcast extends Source {
     }
 
     override getMangaShareUrl(mangaId: string): string {
-        return `${BASE_URL}/series/${mangaId}`
+        return `${BASE_URL}/manga/${mangaId}`
     }
 }

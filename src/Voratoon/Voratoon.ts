@@ -17,12 +17,16 @@ import {
 } from '@paperback/types'
 
 import {
-    API_URL,
     BASE_URL,
     createRequestObject,
+    DEFAULT_RUN_API_ACTION,
+    DEFAULT_UNLOCK_PAGES_ACTION,
+    FALLBACK_BASES,
     isPresignExpired,
-    PRESIGN_HOST,
-    refreshCoverUrl
+    parseFlightPayload,
+    parseFlightResult,
+    PORTAL_URL,
+    PRESIGN_HOST
 } from './VoratoonHelper'
 import {
     parseChapterDetails,
@@ -35,7 +39,7 @@ import {
 const PAGE_SIZE = 24
 
 export const VoratoonInfo: SourceInfo = {
-    version: '1.0.0',
+    version: '1.1.0',
     name: 'Voratoon',
     icon: 'icon.png',
     author: 'NaufalJCT48',
@@ -62,6 +66,10 @@ const getTagValues = (query: SearchRequest, prefix: string): string[] => {
 }
 
 export class Voratoon extends Source {
+    private activeBase: string = BASE_URL
+    private actionId: string = DEFAULT_RUN_API_ACTION
+    private unlockActionId: string = DEFAULT_UNLOCK_PAGES_ACTION
+
     requestManager = App.createRequestManager({
         requestsPerSecond: 4,
         requestTimeout: 15000,
@@ -69,7 +77,12 @@ export class Voratoon extends Source {
             interceptRequest: async (request: Request): Promise<Request> => {
                 if (request.url.includes(PRESIGN_HOST) && isPresignExpired(request.url)) {
                     try {
-                        request.url = await refreshCoverUrl(this.requestManager, request.url)
+                        const slug = request.url.match(/\/series\/([^/]+)\//)?.[1]
+                        if (slug) {
+                            const refreshed = await this.apiGet(`/series/${slug}`, { includeMeta: true })
+                            const freshUrl = refreshed?.data?.data?.coverImage
+                            if (freshUrl) request.url = freshUrl
+                        }
                     } catch (error) {
                         console.log('Failed to refresh expired cover URL:', error)
                     }
@@ -81,12 +94,11 @@ export class Voratoon extends Source {
                 request.headers = isImage ? {
                     ...(request.headers ?? {}),
                     'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
-                    'Referer': `${BASE_URL}/`
+                    'Referer': `${this.activeBase}/`
                 } : {
                     ...(request.headers ?? {}),
-                    'Accept': 'application/json, text/plain, */*',
-                    'Origin': BASE_URL,
-                    'Referer': `${BASE_URL}/`,
+                    'Origin': this.activeBase,
+                    'Referer': `${this.activeBase}/`,
                     'Sec-GPC': '1'
                 }
                 return request
@@ -97,40 +109,182 @@ export class Voratoon extends Source {
         }
     })
 
-    private async apiGet(url: string): Promise<any> {
-        const response = await this.requestManager.schedule(createRequestObject({ url, method: 'GET' }), 1)
+    private async discoverPortalDomains(): Promise<string[]> {
+        try {
+            const response = await this.requestManager.schedule(createRequestObject({
+                url: PORTAL_URL,
+                method: 'GET',
+                headers: { 'Accept': 'text/html,*/*' }
+            }, this.activeBase), 1)
+            const html = String(response.data ?? '')
+            const matches = html.match(/https?:\/\/[a-z0-9.-]*voratoon\.[a-z]+/gi) ?? []
+            const domains: string[] = []
+            for (const m of matches) {
+                const clean = m.replace(/\/+$/, '')
+                if (!/voratoon\.id$/i.test(clean) && !domains.includes(clean)) domains.push(clean)
+            }
+            return domains
+        } catch {
+            return []
+        }
+    }
+
+    private async refreshActionIdForBase(base: string): Promise<string | null> {
+        try {
+            const homeRes = await this.requestManager.schedule(createRequestObject({
+                url: `${base}/`,
+                method: 'GET',
+                headers: { 'Accept': 'text/html,*/*' }
+            }, base), 1)
+            if (homeRes.status !== 200) return null
+            const html = String(homeRes.data ?? '')
+            const chunks = html.match(/\/_next\/static\/chunks\/[^"'<> ]+\.js/g) ?? []
+            const seen: Record<string, boolean> = {}
+            for (const chunk of chunks) {
+                if (seen[chunk]) continue
+                seen[chunk] = true
+                // Skip large framework/react bundles
+                if (/webpack|main-app|framework|polyfills|4bd1b696|3794/.test(chunk)) continue
+                const chunkRes = await this.requestManager.schedule(createRequestObject({
+                    url: `${base}${chunk}`,
+                    method: 'GET',
+                    headers: { 'Accept': '*/*' }
+                }, base), 1)
+                const js = String(chunkRes.data ?? '')
+                const m = js.match(/createServerReference\)\("([0-9a-f]{32,})"[^)]*"runApiCalls"/)
+                if (m?.[1]) return m[1]
+            }
+        } catch {
+            // Try next mirror
+        }
+        return null
+    }
+
+    private async callServerAction(base: string, actionId: string, path: string, query?: Record<string, any>): Promise<any> {
+        const callObj: Record<string, any> = { path, method: 'GET', token: null }
+        if (query && Object.keys(query).length > 0) callObj.query = query
+
+        const response = await this.requestManager.schedule(createRequestObject({
+            url: `${base}/`,
+            method: 'POST',
+            headers: {
+                'Accept': 'text/x-component',
+                'Content-Type': 'text/plain;charset=UTF-8',
+                'Next-Action': actionId
+            },
+            data: JSON.stringify([[callObj]])
+        }, base), 1)
 
         if (response.status === 403 || response.status === 503) {
-            throw new Error(`CLOUDFLARE BYPASS ERROR:\nPlease go to the homepage of <${BASE_URL}> and press the cloud icon.`)
+            throw new Error(`CLOUDFLARE BYPASS ERROR:\nPlease go to the homepage of <${base}> and press the cloud icon.`)
+        }
+        if (response.status !== 200) return null
+
+        return parseFlightResult(String(response.data ?? ''))
+    }
+
+    private async apiGet(path: string, query?: Record<string, any>): Promise<any> {
+        // Fast path: active domain + cached server action id
+        try {
+            const res = await this.callServerAction(this.activeBase, this.actionId, path, query)
+            if (res?.ok && res?.envelope) {
+                if (res.envelope.status !== undefined && res.envelope.status !== 200) {
+                    throw new Error(`Voratoon API error: ${res.envelope.message ?? 'unknown response'}`)
+                }
+                return res.envelope
+            }
+            if (res && res.ok === false) {
+                throw new Error(`Voratoon API error: ${res.message ?? res.payload?.message ?? 'request failed'}`)
+            }
+        } catch (err: any) {
+            if (String(err?.message ?? '').includes('CLOUDFLARE BYPASS') || String(err?.message ?? '').includes('Voratoon API error')) {
+                throw err
+            }
         }
 
-        const data = JSON.parse(response.data as string)
-        if (data?.status !== 200) {
-            throw new Error(`Voratoon API error: ${data?.message ?? 'unknown response'}`)
+        // Recovery path: refresh action id or switch to working mirror / portal domain
+        const candidates: string[] = [this.activeBase]
+        for (const fb of FALLBACK_BASES) {
+            if (!candidates.includes(fb)) candidates.push(fb)
         }
-        return data
+        const portalDomains = await this.discoverPortalDomains()
+        for (const pd of portalDomains) {
+            if (!candidates.includes(pd)) candidates.push(pd)
+        }
+
+        for (const base of candidates) {
+            const freshAction = await this.refreshActionIdForBase(base)
+            const actionToUse = freshAction ?? this.actionId
+            try {
+                const res = await this.callServerAction(base, actionToUse, path, query)
+                if (res?.ok && res?.envelope) {
+                    this.activeBase = base
+                    this.actionId = actionToUse
+                    return res.envelope
+                }
+            } catch {
+                // Try next candidate
+            }
+        }
+
+        throw new Error(`Voratoon API error: unable to fetch ${path} from ${this.activeBase}`)
     }
 
     override async getMangaDetails(mangaId: string): Promise<SourceManga> {
-        const data = await this.apiGet(`${API_URL}/series/${mangaId}?includeMeta=true`)
+        const data = await this.apiGet(`/series/${mangaId}`, { includeMeta: true })
         return parseMangaDetails(data.data, mangaId)
     }
 
     override async getChapters(mangaId: string): Promise<Chapter[]> {
-        const data = await this.apiGet(`${API_URL}/series/${mangaId}/chapters`)
+        const data = await this.apiGet(`/series/${mangaId}/chapters`)
         return parseChapterList(data.data, mangaId)
     }
 
     override async getChapterDetails(mangaId: string, chapterId: string): Promise<ChapterDetails> {
         // chapterId is the chapter index, which is what the endpoint takes
-        const data = await this.apiGet(`${API_URL}/series/${mangaId}/chapters/${chapterId}`)
-        return parseChapterDetails(data.data, mangaId, chapterId)
+        const data = await this.apiGet(`/series/${mangaId}/chapters/${chapterId}`)
+        const chapterData = data?.data
+        const existingImages = chapterData?.data?.images
+        if (Array.isArray(existingImages) && existingImages.length > 0) {
+            return parseChapterDetails(chapterData, mangaId, chapterId)
+        }
+
+        // Voratoon now issues a `pagesTicket` unlocked via the `unlockChapterPages` Server Action
+        const ticket = chapterData?.pagesTicket
+        if (typeof ticket === 'string' && ticket.length > 0) {
+            const response = await this.requestManager.schedule(createRequestObject({
+                url: `${this.activeBase}/series/${mangaId}/chapter/${chapterId}`,
+                method: 'POST',
+                headers: {
+                    'Accept': 'text/x-component',
+                    'Content-Type': 'text/plain;charset=UTF-8',
+                    'Next-Action': this.unlockActionId
+                },
+                data: JSON.stringify([ticket])
+            }, this.activeBase), 1)
+
+            if (response.status === 403 || response.status === 503) {
+                throw new Error(`CLOUDFLARE BYPASS ERROR:\nPlease go to <${this.activeBase}/series/${mangaId}/chapter/${chapterId}> and complete the verification.`)
+            }
+
+            const unlocked = parseFlightPayload(String(response.data ?? ''))
+            if (unlocked?.ok && Array.isArray(unlocked.images) && unlocked.images.length > 0) {
+                return parseChapterDetails({ data: { images: unlocked.images } }, mangaId, chapterId)
+            }
+            if (unlocked?.reason === 'challenge') {
+                throw new Error(`CLOUDFLARE BYPASS ERROR:\nVoratoon requires Turnstile verification to read chapters. Open <${this.activeBase}> via the cloud icon, solve verification on any chapter, then retry.`)
+            }
+            throw new Error(`Voratoon unlockChapterPages error: ${unlocked?.message ?? 'unknown response'}`)
+        }
+
+        return parseChapterDetails(chapterData, mangaId, chapterId)
     }
 
     override async getHomePageSections(sectionCallback: (section: HomeSection) => void): Promise<void> {
-        const sections = [
+        const sections: Array<{ path: string, query: Record<string, any>, section: HomeSection }> = [
             {
-                url: `${API_URL}/series?preset=banner&includeMeta=true`,
+                path: '/series',
+                query: { preset: 'banner', includeMeta: true },
                 section: App.createHomeSection({
                     id: 'featured',
                     title: 'Featured',
@@ -139,7 +293,8 @@ export class Voratoon extends Source {
                 })
             },
             {
-                url: `${API_URL}/series?takeChapter=2&includeMeta=true&sort=latest&sortOrder=desc&take=${PAGE_SIZE}&page=1`,
+                path: '/series',
+                query: { takeChapter: 2, includeMeta: true, sort: 'latest', sortOrder: 'desc', take: PAGE_SIZE, page: 1 },
                 section: App.createHomeSection({
                     id: 'latest_update',
                     title: 'Latest Update',
@@ -148,7 +303,8 @@ export class Voratoon extends Source {
                 })
             },
             {
-                url: `${API_URL}/series?takeChapter=1&includeMeta=true&sort=popular&sortOrder=desc&take=${PAGE_SIZE}&page=1`,
+                path: '/popular/all',
+                query: { includeMeta: 1, take: PAGE_SIZE, page: 1 },
                 section: App.createHomeSection({
                     id: 'popular',
                     title: 'Popular',
@@ -157,7 +313,8 @@ export class Voratoon extends Source {
                 })
             },
             {
-                url: `${API_URL}/series/recommendations?take=10&page=1&method=all`,
+                path: '/series/recommendations',
+                query: { take: 10, page: 1, method: 'all' },
                 section: App.createHomeSection({
                     id: 'recommendations',
                     title: 'Recommendations',
@@ -171,7 +328,7 @@ export class Voratoon extends Source {
             sectionCallback(item.section)
 
             try {
-                const data = await this.apiGet(item.url)
+                const data = await this.apiGet(item.path, item.query)
                 item.section.items = parseMangaList(data.data)
                 sectionCallback(item.section)
             } catch (error) {
@@ -185,36 +342,36 @@ export class Voratoon extends Source {
     }
 
     override async getSearchTags(): Promise<TagSection[]> {
-        const data = await this.apiGet(`${API_URL}/genres`)
+        const data = await this.apiGet('/genres')
         return parseSearchTags(data.data)
     }
 
     override async getSearchResults(query: SearchRequest, metadata: any): Promise<PagedResults> {
         const page: number = metadata?.page ?? 1
-
-        // Manual query building — URLSearchParams does not exist in the Paperback iOS runtime
-        const params: string[] = [`page=${page}`, `take=${PAGE_SIZE}`, 'includeMeta=true']
+        const params: Record<string, any> = {
+            page,
+            take: PAGE_SIZE,
+            includeMeta: true,
+            sort: 'latest',
+            sortOrder: 'desc'
+        }
 
         const title = query.title?.trim()
         const genres = getTagValues(query, 'genre:')
         // `filter` is RSQL and only one expression is honoured, so a text query wins
         // over genre ids. Plain `genres=`/`genreIds=` params are silently ignored.
         if (title) {
-            const term = encodeURIComponent(title)
-            params.push(`filter=title=like="${term}",nativeTitle=like="${term}"`)
+            params.filter = `title=like="${title}",nativeTitle=like="${title}"`
         } else if (genres.length) {
-            params.push(`filter=${encodeURIComponent(`genreIds=in=(${genres.join(',')})`)}`)
+            params.filter = `genreIds=in=(${genres.join(',')})`
         }
 
         const status = getTagValues(query, 'status:')[0]
-        if (status) params.push(`status=${encodeURIComponent(status)}`)
+        if (status) params.status = status
         const format = getTagValues(query, 'format:')[0]
-        if (format) params.push(`format=${encodeURIComponent(format)}`)
+        if (format) params.format = format
 
-        params.push('sort=latest')
-        params.push('sortOrder=desc')
-
-        const data = await this.apiGet(`${API_URL}/series?${params.join('&')}`)
+        const data = await this.apiGet('/series', params)
         const results = parseMangaList(data.data)
 
         return App.createPagedResults({
@@ -226,22 +383,26 @@ export class Voratoon extends Source {
     override async getViewMoreItems(homepageSectionId: string, metadata: any): Promise<PagedResults> {
         const page: number = metadata?.page ?? 1
 
-        let url: string
+        let path: string
+        let query: Record<string, any>
         switch (homepageSectionId) {
             case 'latest_update':
-                url = `${API_URL}/series?takeChapter=2&includeMeta=true&sort=latest&sortOrder=desc&take=${PAGE_SIZE}&page=${page}`
+                path = '/series'
+                query = { takeChapter: 2, includeMeta: true, sort: 'latest', sortOrder: 'desc', take: PAGE_SIZE, page }
                 break
             case 'popular':
-                url = `${API_URL}/series?takeChapter=1&includeMeta=true&sort=popular&sortOrder=desc&take=${PAGE_SIZE}&page=${page}`
+                path = '/popular/all'
+                query = { includeMeta: 1, take: PAGE_SIZE, page }
                 break
             case 'recommendations':
-                url = `${API_URL}/series/recommendations?take=${PAGE_SIZE}&page=${page}&method=all`
+                path = '/series/recommendations'
+                query = { take: PAGE_SIZE, page, method: 'all' }
                 break
             default:
                 throw new Error(`View more not supported for section: ${homepageSectionId}`)
         }
 
-        const data = await this.apiGet(url)
+        const data = await this.apiGet(path, query)
         const results = parseMangaList(data.data)
 
         return App.createPagedResults({
@@ -252,11 +413,11 @@ export class Voratoon extends Source {
 
     override async getCloudflareBypassRequestAsync(): Promise<Request> {
         return App.createRequest({
-            url: `${BASE_URL}/`,
+            url: `${this.activeBase}/`,
             method: 'GET',
             headers: {
-                'referer': `${BASE_URL}/`,
-                'origin': `${BASE_URL}/`,
+                'referer': `${this.activeBase}/`,
+                'origin': `${this.activeBase}/`,
                 'user-agent': await this.requestManager.getDefaultUserAgent()
             }
         })
@@ -264,16 +425,16 @@ export class Voratoon extends Source {
 
     override getCloudflareBypassRequest(): Request {
         return App.createRequest({
-            url: `${BASE_URL}/`,
+            url: `${this.activeBase}/`,
             method: 'GET',
             headers: {
-                'referer': `${BASE_URL}/`,
-                'origin': `${BASE_URL}/`
+                'referer': `${this.activeBase}/`,
+                'origin': `${this.activeBase}/`
             }
         })
     }
 
     override getMangaShareUrl(mangaId: string): string {
-        return `${BASE_URL}/series/${mangaId}`
+        return `${this.activeBase}/series/${mangaId}`
     }
 }

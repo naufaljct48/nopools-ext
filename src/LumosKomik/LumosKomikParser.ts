@@ -160,7 +160,8 @@ export const parseChapterList = (html: string, mangaId: string): Chapter[] => {
         const content = String(match[3] ?? '')
         const chapNum = parseFloat(String(match[2] ?? '')) || parseFloat(chapterId.replace(/[^\d.]/g, '')) || 0
         const name = cleanText(extractText(content, /<span[^>]*>([\s\S]*?)<\/span>/i)) || `Chapter ${chapNum}`
-        const time = extractText(content, /tabular-nums[^>]*>([\s\S]*?)<\/span>/i)
+        const time = extractText(content, /tabular-nums\s+text-right[^>]*>([\s\S]*?)<\/span>/i) ||
+            extractText(content, /tabular-nums[^>]*>([\s\S]*?)<\/span>\s*<\/div>/i)
 
         chapters.push(App.createChapter({
             id: chapterId,

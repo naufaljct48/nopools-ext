@@ -52,7 +52,7 @@ const buildBrowseUrl = (params: Record<string, string | undefined>): string => {
 }
 
 export const LumosKomikInfo: SourceInfo = {
-    version: '1.0.3',
+    version: '1.0.4',
     name: 'LumosKomik',
     icon: 'icon.png',
     author: 'NaufalJCT48',

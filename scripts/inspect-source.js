@@ -155,6 +155,7 @@ async function headCheck(url) {
     }
 
     console.log(`\n================ ${name} done ================\n`)
+    process.exit(0)
 })().catch(error => {
     console.error(`\n!!! ${name} FAILED: ${error.message}`)
     console.error(error.stack?.split('\n').slice(1, 4).join('\n'))
